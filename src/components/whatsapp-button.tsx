@@ -1,10 +1,11 @@
 "use client";
 
-import { SubmitButton } from "@/components/submit-button";
+import { useRef } from "react";
+import { buttonClass } from "@/components/ui";
 
-// Opens WhatsApp (wa.me) with the pre-filled message in a new tab, and logs
-// the send to the message log via the server action. Disabled when the parent
-// has no phone on file.
+// A real anchor (reliably opens WhatsApp via wa.me, no popup-blocker issues).
+// On click it also fires the server action to log the send. Disabled when the
+// parent has no phone on file.
 export function WhatsAppButton({
   waUrl,
   action,
@@ -16,17 +17,27 @@ export function WhatsAppButton({
   fields: Record<string, string>;
   label?: string;
 }) {
+  const logged = useRef(false);
+
   if (!waUrl) {
     return <span className="text-xs text-slate-400">No phone</span>;
   }
+
   return (
-    <form action={action} onSubmit={() => window.open(waUrl, "_blank", "noopener")}>
-      {Object.entries(fields).map(([k, v]) => (
-        <input key={k} type="hidden" name={k} value={v} />
-      ))}
-      <SubmitButton variant="secondary" pendingText="Opening…">
-        {label}
-      </SubmitButton>
-    </form>
+    <a
+      href={waUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={buttonClass("secondary")}
+      onClick={() => {
+        if (logged.current) return;
+        logged.current = true;
+        const fd = new FormData();
+        for (const [k, v] of Object.entries(fields)) fd.append(k, v);
+        void action(fd); // fire-and-forget: record in the message log
+      }}
+    >
+      {label}
+    </a>
   );
 }

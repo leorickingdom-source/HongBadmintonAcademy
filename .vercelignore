@@ -1,11 +1,12 @@
-# Keep the upload lean + keep secrets out of the deployment bundle.
-node_modules
-.next
-.tools
-.claude
-_brief
-scripts
-supabase
+# Keep the upload lean. Leading "/" anchors to the repo root, so these do NOT
+# match nested paths like src/lib/supabase/ (which the app needs to build).
+/node_modules
+/.next
+/.tools
+/.claude
+/_brief
+/scripts
+/supabase
 .env
 .env.*
 *.log

@@ -58,6 +58,11 @@ const client = new Client({
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      // Trim background work / memory on small (1 GB) VMs.
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-renderer-backgrounding",
+      "--disable-backgrounding-occluded-windows",
     ],
     // On ARM/Raspberry Pi the bundled Chromium won't run — point at system
     // chromium via CHROME_PATH (see .env.example).
@@ -121,21 +126,31 @@ app.post("/send", async (req, res) => {
   if (!to || !text) {
     return res.status(400).json({ status: "failed", error: "missing 'to' or 'text'" });
   }
-  try {
-    const digits = String(to).replace(/[^\d]/g, "");
-    if (!digits) return res.status(400).json({ status: "failed", error: "invalid number" });
+  const digits = String(to).replace(/[^\d]/g, "");
+  if (!digits) return res.status(400).json({ status: "failed", error: "invalid number" });
 
-    // Resolve to a real WhatsApp chat id — also tells us if the number isn't on
-    // WhatsApp instead of silently dropping the message.
-    const numberId = await client.getNumberId(digits);
-    if (!numberId) {
-      return res.status(422).json({ status: "failed", error: "number not on WhatsApp" });
+  // On low-RAM hosts the WhatsApp Web page occasionally reloads mid-call,
+  // throwing "Execution context was destroyed". Retry such transient errors a
+  // few times before giving up.
+  const transient = /Execution context was destroyed|Protocol error|Target closed|Session closed/i;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      // Resolve to a real WhatsApp chat id — also tells us if the number isn't
+      // on WhatsApp instead of silently dropping the message.
+      const numberId = await client.getNumberId(digits);
+      if (!numberId) {
+        return res.status(422).json({ status: "failed", error: "number not on WhatsApp" });
+      }
+      const msg = await client.sendMessage(numberId._serialized, String(text));
+      return res.json({ status: "sent", providerMessageId: msg?.id?._serialized });
+    } catch (e) {
+      const m = String(e?.message || e);
+      if (transient.test(m) && attempt < 3) {
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      return res.status(500).json({ status: "failed", error: m });
     }
-
-    const msg = await client.sendMessage(numberId._serialized, String(text));
-    res.json({ status: "sent", providerMessageId: msg?.id?._serialized });
-  } catch (e) {
-    res.status(500).json({ status: "failed", error: String(e?.message || e) });
   }
 });
 

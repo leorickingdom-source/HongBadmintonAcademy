@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Field, Input, Select, Textarea, Button, LinkButton } from "@/components/ui";
+import { PageHeader, Section, Field, Input, Select, Textarea, Button, LinkButton } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
 import { createInvoice } from "../actions";
 
@@ -24,10 +24,13 @@ export default async function NewInvoicePage({
 
   return (
     <div>
-      <PageHeader title="New invoice" />
-      <Card className="max-w-xl p-6">
+      <PageHeader
+        title="New invoice"
+        action={<LinkButton href="/admin/invoices" variant="ghost">← All invoices</LinkButton>}
+      />
+      <Section title="Invoice details" className="max-w-xl">
         <form action={createInvoice} className="space-y-4">
-          {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
           <Field label="Student" required hint="Parent is linked automatically from the student.">
             <Select name="student_id" required defaultValue="">
@@ -74,7 +77,7 @@ export default async function NewInvoicePage({
             <LinkButton href="/admin/invoices" variant="secondary">Cancel</LinkButton>
           </div>
         </form>
-      </Card>
+      </Section>
     </div>
   );
 }

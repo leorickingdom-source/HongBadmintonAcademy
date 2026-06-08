@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { deleteScheme } from "./actions";
 
@@ -21,40 +21,42 @@ export default async function SchemesPage() {
       />
 
       {schemes && schemes.length > 0 ? (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Name</Th>
-              <Th>Criteria</Th>
-              <Th>Active</Th>
-              <Th className="text-right">Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {schemes.map((s: any) => (
-              <tr key={s.id}>
-                <Td className="font-medium text-slate-900">{s.name}</Td>
-                <Td>{s.marking_criteria?.[0]?.count ?? 0}</Td>
-                <Td>
-                  <Badge tone={s.is_active ? "green" : "slate"}>
-                    {s.is_active ? "active" : "inactive"}
-                  </Badge>
-                </Td>
-                <Td className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <LinkButton href={`/admin/marking-schemes/${s.id}`} variant="secondary">
-                      Manage
-                    </LinkButton>
-                    <form action={deleteScheme}>
-                      <input type="hidden" name="id" value={s.id} />
-                      <ConfirmButton confirmText={`Delete scheme "${s.name}" and its criteria?`} />
-                    </form>
-                  </div>
-                </Td>
+        <Section title={`Schemes (${schemes.length})`} flush>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Criteria</Th>
+                <Th>Active</Th>
+                <Th className="text-right">Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {schemes.map((s: any) => (
+                <tr key={s.id} className="hover:bg-slate-50">
+                  <Td className="font-medium text-slate-900">{s.name}</Td>
+                  <Td className="tabular-nums text-slate-500">{s.marking_criteria?.[0]?.count ?? 0}</Td>
+                  <Td>
+                    <Badge tone={s.is_active ? "green" : "slate"}>
+                      {s.is_active ? "active" : "inactive"}
+                    </Badge>
+                  </Td>
+                  <Td className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <LinkButton href={`/admin/marking-schemes/${s.id}`} variant="secondary">
+                        Manage
+                      </LinkButton>
+                      <form action={deleteScheme}>
+                        <input type="hidden" name="id" value={s.id} />
+                        <ConfirmButton confirmText={`Delete scheme "${s.name}" and its criteria?`} />
+                      </form>
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Section>
       ) : (
         <EmptyState message="No marking schemes yet." />
       )}

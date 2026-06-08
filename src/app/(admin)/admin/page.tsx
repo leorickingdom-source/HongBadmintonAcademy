@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Card, Badge, EmptyState } from "@/components/ui";
-import { formatCurrency, formatTime } from "@/lib/format";
+import { PageHeader, StatCard, Section, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -36,36 +36,43 @@ export default async function AdminDashboard() {
       <PageHeader
         title="Dashboard"
         description="Academy overview at a glance."
+        action={
+          <>
+            <LinkButton href="/admin/students/new" variant="secondary">+ Student</LinkButton>
+            <LinkButton href="/admin/invoices/new">+ Invoice</LinkButton>
+          </>
+        }
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <StatCard label="Active students" value={students} />
+        <StatCard label="Active students" value={students} tone="green" />
         <StatCard label="Coaches" value={coaches} />
         <StatCard label="Parents" value={parents} />
-        <StatCard label="Active classes" value={classes} />
-        <StatCard label="Unpaid invoices" value={unpaid} sub="incl. overdue" />
-        <StatCard label="Queued messages" value={queued} sub="WhatsApp" />
+        <StatCard label="Active classes" value={classes} tone="blue" />
+        <StatCard label="Unpaid invoices" value={unpaid} sub="incl. overdue" tone={unpaid ? "red" : "slate"} />
+        <StatCard label="Queued messages" value={queued} sub="WhatsApp" tone={queued ? "amber" : "slate"} />
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Today&apos;s sessions</h2>
-        {todaySessions && todaySessions.length > 0 ? (
-          <Card className="divide-y divide-slate-100">
-            {todaySessions.map((s: any) => (
-              <div key={s.id} className="flex items-center justify-between px-5 py-3">
-                <div>
-                  <div className="font-medium text-slate-800">{s.classes?.name ?? "Class"}</div>
-                  <div className="text-sm text-slate-500">
-                    {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
+        <Section title="Today's sessions" flush>
+          {todaySessions && todaySessions.length > 0 ? (
+            <ul className="divide-y divide-slate-100">
+              {todaySessions.map((s: any) => (
+                <li key={s.id} className="flex items-center justify-between px-5 py-3.5">
+                  <div>
+                    <div className="font-medium text-slate-900">{s.classes?.name ?? "Class"}</div>
+                    <div className="text-sm text-slate-500">
+                      {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
+                    </div>
                   </div>
-                </div>
-                <Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge>
-              </div>
-            ))}
-          </Card>
-        ) : (
-          <EmptyState message="No sessions scheduled today." />
-        )}
+                  <Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="p-5"><EmptyState message="No sessions scheduled today." /></div>
+          )}
+        </Section>
       </div>
     </div>
   );

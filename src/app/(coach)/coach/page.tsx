@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Card, EmptyState, Badge, LinkButton } from "@/components/ui";
+import { PageHeader, StatCard, Section, EmptyState, Badge, LinkButton } from "@/components/ui";
 import { formatTime } from "@/lib/format";
 import { coachClassIds } from "./_data";
 
@@ -34,38 +34,43 @@ export default async function CoachDashboard() {
 
   return (
     <div>
-      <PageHeader title={`Welcome, ${me.full_name ?? "Coach"}`} description="Your classes and today's sessions." />
+      <PageHeader
+        title={`Welcome, ${me.full_name ?? "Coach"}`}
+        description="Your classes and today's sessions."
+        action={
+          <>
+            <LinkButton href="/coach/marking">Go to marking</LinkButton>
+            <LinkButton href="/coach/attendance" variant="secondary">View attendance</LinkButton>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Your classes" value={classIds.length} />
-        <StatCard label="Students" value={studentCount} />
-        <StatCard label="Sessions today" value={sessions.length} />
-      </div>
-
-      <div className="mt-8 flex gap-3">
-        <LinkButton href="/coach/marking">Go to marking</LinkButton>
-        <LinkButton href="/coach/attendance" variant="secondary">View attendance</LinkButton>
+        <StatCard label="Students" value={studentCount} tone="green" />
+        <StatCard label="Sessions today" value={sessions.length} tone={sessions.length ? "blue" : "slate"} />
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Today&apos;s sessions</h2>
-        {sessions.length > 0 ? (
-          <Card className="divide-y divide-slate-100">
-            {sessions.map((s) => (
-              <div key={s.id} className="flex items-center justify-between px-5 py-3">
-                <div>
-                  <div className="font-medium text-slate-800">{s.classes?.name ?? "Class"}</div>
-                  <div className="text-sm text-slate-500">
-                    {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
+        <Section title="Today's sessions" flush>
+          {sessions.length > 0 ? (
+            <ul className="divide-y divide-slate-100">
+              {sessions.map((s) => (
+                <li key={s.id} className="flex items-center justify-between px-5 py-3.5">
+                  <div>
+                    <div className="font-medium text-slate-900">{s.classes?.name ?? "Class"}</div>
+                    <div className="text-sm text-slate-500">
+                      {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
+                    </div>
                   </div>
-                </div>
-                <Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge>
-              </div>
-            ))}
-          </Card>
-        ) : (
-          <EmptyState message="No sessions scheduled today." />
-        )}
+                  <Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="p-5"><EmptyState message="No sessions scheduled today." /></div>
+          )}
+        </Section>
       </div>
     </div>
   );

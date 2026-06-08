@@ -19,7 +19,7 @@ export function ClassForm({
     <Card className="max-w-2xl p-6">
       <form action={action} className="space-y-4">
         {classRow && <input type="hidden" name="id" value={classRow.id} />}
-        {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
         <Field label="Class name" required>
           <Input name="name" defaultValue={classRow?.name ?? ""} required />

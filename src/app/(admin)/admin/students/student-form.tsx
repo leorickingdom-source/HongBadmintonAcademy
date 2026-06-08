@@ -18,7 +18,7 @@ export function StudentForm({
       <form action={action} className="space-y-4">
         {student && <input type="hidden" name="id" value={student.id} />}
         {error && (
-          <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
+          <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
         )}
 
         <Field label="Full name" required>

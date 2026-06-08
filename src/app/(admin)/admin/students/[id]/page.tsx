@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, Card, StatCard, Table, Th, Td, Badge, EmptyState,
+  PageHeader, Section, StatCard, Table, Th, Td, Badge, EmptyState,
   LinkButton, Field, Input, Select,
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
@@ -84,7 +84,7 @@ export default async function StudentProfilePage({
   const classNames = (enrollments ?? []).map((e: any) => e.classes?.name).filter(Boolean).join(", ");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title={student.full_name}
         description={[
@@ -93,126 +93,121 @@ export default async function StudentProfilePage({
           classNames || null,
         ].filter(Boolean).join(" · ")}
         action={
-          <div className="flex gap-2">
+          <>
             <LinkButton href={`/admin/students/${id}/edit`} variant="secondary">Edit</LinkButton>
             <LinkButton href="/admin/students" variant="ghost">← All students</LinkButton>
-          </div>
+          </>
         }
       />
-      {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Attendance rate" value={rate != null ? `${rate}%` : "—"} sub={`${attended}/${total} sessions`} />
+        <StatCard label="Attendance rate" value={rate != null ? `${rate}%` : "—"} sub={`${attended}/${total} sessions`} tone="blue" />
         <StatCard label="Avg skill score" value={avgScore} sub={`${scores.length} assessments`} />
-        <StatCard label="Reward points" value={totalPoints} />
+        <StatCard label="Reward points" value={totalPoints} tone="green" />
         <StatCard label="NFC tag" value={student.nfc_tag_uid ? "✓" : "—"} sub={student.nfc_tag_uid ?? "unbound"} />
       </div>
 
       {/* Attendance history */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Attendance history</h2>
+      <Section title="Attendance history" flush>
         {att.length ? (
           <Table>
             <thead><tr><Th>Date</Th><Th>Class</Th><Th>Status</Th><Th>Tap in</Th><Th>Tap out</Th></tr></thead>
             <tbody>
               {att.map((a: any, i) => (
-                <tr key={i}>
+                <tr key={i} className="hover:bg-slate-50">
                   <Td>{formatDate(a.sessions?.session_date)}</Td>
-                  <Td>{a.sessions?.classes?.name ?? "—"}</Td>
+                  <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
                   <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
-                  <Td>{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
-                  <Td>{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
+                  <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
+                  <Td className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        ) : <EmptyState message="No attendance records yet." />}
-      </section>
+        ) : <div className="p-5"><EmptyState message="No attendance records yet." /></div>}
+      </Section>
 
       {/* Progress */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Progress (assessments)</h2>
+      <Section title="Progress (assessments)" flush>
         {assessments && assessments.length ? (
           <Table>
             <thead><tr><Th>Date</Th><Th>Scheme</Th><Th>Coach</Th><Th>Overall</Th></tr></thead>
             <tbody>
               {assessments.map((a: any, i) => (
-                <tr key={i}>
+                <tr key={i} className="hover:bg-slate-50">
                   <Td>{formatDate(a.assessed_on)}</Td>
-                  <Td>{a.marking_schemes?.name ?? "—"}</Td>
-                  <Td>{a.coach?.full_name ?? "—"}</Td>
+                  <Td className="text-slate-500">{a.marking_schemes?.name ?? "—"}</Td>
+                  <Td className="text-slate-500">{a.coach?.full_name ?? "—"}</Td>
                   <Td><Badge tone="blue">{a.overall_score != null ? `${a.overall_score}%` : "—"}</Badge></Td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        ) : <EmptyState message="No assessments yet." />}
-      </section>
+        ) : <div className="p-5"><EmptyState message="No assessments yet." /></div>}
+      </Section>
 
       {/* Rewards */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Rewards</h2>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Section title="Rewards ledger" flush>
             {ledger && ledger.length ? (
               <Table>
-                <thead><tr><Th>Date</Th><Th>Rule</Th><Th>Reason</Th><Th>Points</Th></tr></thead>
+                <thead><tr><Th>Date</Th><Th>Rule</Th><Th>Reason</Th><Th className="text-right">Points</Th></tr></thead>
                 <tbody>
                   {ledger.map((r: any, i) => (
-                    <tr key={i}>
+                    <tr key={i} className="hover:bg-slate-50">
                       <Td>{formatDate(r.awarded_at)}</Td>
-                      <Td>{r.reward_rules?.name ?? "—"}</Td>
-                      <Td>{r.reason ?? "—"}</Td>
-                      <Td className="font-medium text-green-700">+{r.points}</Td>
+                      <Td className="text-slate-500">{r.reward_rules?.name ?? "—"}</Td>
+                      <Td className="text-slate-500">{r.reason ?? "—"}</Td>
+                      <Td className="text-right font-semibold text-green-700">+{r.points}</Td>
                     </tr>
                   ))}
                 </tbody>
               </Table>
-            ) : <EmptyState message="No rewards awarded yet." />}
-          </div>
-          <Card className="p-5">
-            <h3 className="mb-3 font-medium text-slate-800">Award points</h3>
-            <form action={awardReward} className="space-y-3">
-              <input type="hidden" name="student_id" value={id} />
-              <Field label="Rule (optional)">
-                <Select name="rule_id" defaultValue="">
-                  <option value="">— custom —</option>
-                  {(rules ?? []).map((r: any) => (
-                    <option key={r.id} value={r.id}>{r.name} (+{r.points})</option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Points">
-                <Input type="number" name="points" defaultValue={10} required />
-              </Field>
-              <Field label="Reason">
-                <Input name="reason" placeholder="e.g. Perfect attendance" />
-              </Field>
-              <SubmitButton className="w-full" pendingText="Awarding…">Award</SubmitButton>
-            </form>
-          </Card>
+            ) : <div className="p-5"><EmptyState message="No rewards awarded yet." /></div>}
+          </Section>
         </div>
-      </section>
+        <Section title="Award points">
+          <form action={awardReward} className="space-y-3">
+            <input type="hidden" name="student_id" value={id} />
+            <Field label="Rule (optional)">
+              <Select name="rule_id" defaultValue="">
+                <option value="">— custom —</option>
+                {(rules ?? []).map((r: any) => (
+                  <option key={r.id} value={r.id}>{r.name} (+{r.points})</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Points">
+              <Input type="number" name="points" defaultValue={10} required />
+            </Field>
+            <Field label="Reason">
+              <Input name="reason" placeholder="e.g. Perfect attendance" />
+            </Field>
+            <SubmitButton className="w-full" pendingText="Awarding…">Award</SubmitButton>
+          </form>
+        </Section>
+      </div>
 
       {/* Invoices */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Fees</h2>
+      <Section title="Fees" flush>
         {invoices && invoices.length ? (
           <Table>
             <thead><tr><Th>Invoice</Th><Th>Amount</Th><Th>Due</Th><Th>Status</Th></tr></thead>
             <tbody>
               {invoices.map((inv: any, i) => (
-                <tr key={i}>
-                  <Td className="font-mono text-xs">{inv.invoice_no ?? "—"}</Td>
-                  <Td>{formatCurrency(Number(inv.amount), inv.currency)}</Td>
-                  <Td>{formatDate(inv.due_date)}</Td>
+                <tr key={i} className="hover:bg-slate-50">
+                  <Td className="font-mono text-xs text-slate-500">{inv.invoice_no ?? "—"}</Td>
+                  <Td className="font-medium text-slate-900">{formatCurrency(Number(inv.amount), inv.currency)}</Td>
+                  <Td className="text-slate-500">{formatDate(inv.due_date)}</Td>
                   <Td><Badge tone={INV_TONE[inv.status as InvoiceStatus]}>{inv.status}</Badge></Td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        ) : <EmptyState message="No invoices yet." />}
-      </section>
+        ) : <div className="p-5"><EmptyState message="No invoices yet." /></div>}
+      </Section>
     </div>
   );
 }

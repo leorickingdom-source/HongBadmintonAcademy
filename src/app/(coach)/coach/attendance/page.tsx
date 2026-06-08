@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Section, Badge, EmptyState } from "@/components/ui";
 import { formatTime, formatDateTime } from "@/lib/format";
 import type { AttendanceStatus } from "@/lib/types";
 import { coachClassIds } from "../_data";
@@ -34,7 +34,8 @@ export default async function CoachAttendancePage() {
     ]);
     const map = new Map((att ?? []).map((a: any) => [a.student_id, a]));
     const roster = (enr ?? []).map((e: any) => ({ student: e.students, att: map.get(e.students?.id) }));
-    blocks.push({ session: s, roster });
+    const present = roster.filter((r) => r.att && (r.att.status === "present" || r.att.status === "late")).length;
+    blocks.push({ session: s, roster, present });
   }
 
   return (
@@ -43,33 +44,35 @@ export default async function CoachAttendancePage() {
 
       {blocks.length === 0 && <EmptyState message="No sessions scheduled today." />}
 
-      {blocks.map(({ session, roster }) => (
-        <Card key={session.id} className="p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <div className="font-semibold text-slate-900">{(session as any).classes?.name ?? "Class"}</div>
-              <div className="text-sm text-slate-500">
-                {formatTime(session.start_time)}–{formatTime(session.end_time)} · {session.location ?? "—"}
-              </div>
-            </div>
-          </div>
+      {blocks.map(({ session, roster, present }) => (
+        <Section
+          key={session.id}
+          title={(session as any).classes?.name ?? "Class"}
+          description={`${formatTime(session.start_time)}–${formatTime(session.end_time)} · ${session.location ?? "—"}`}
+          action={
+            <Badge tone={roster.length && present === roster.length ? "green" : "blue"}>
+              {present}/{roster.length} present
+            </Badge>
+          }
+          flush
+        >
           <ul className="divide-y divide-slate-100">
             {roster.map((r) => (
-              <li key={r.student?.id} className="flex items-center justify-between py-2 text-sm">
+              <li key={r.student?.id} className="flex items-center justify-between px-5 py-2.5 text-sm">
                 <span className="text-slate-700">{r.student?.full_name}</span>
                 {r.att ? (
                   <span className="flex items-center gap-2">
-                    <Badge tone={TONE[r.att.status as AttendanceStatus]}>{r.att.status}</Badge>
                     {r.att.tap_in_at && <span className="text-xs text-slate-400">{formatDateTime(r.att.tap_in_at)}</span>}
+                    <Badge tone={TONE[r.att.status as AttendanceStatus]}>{r.att.status}</Badge>
                   </span>
                 ) : (
                   <span className="text-xs text-slate-400">not tapped</span>
                 )}
               </li>
             ))}
-            {roster.length === 0 && <li className="py-2 text-sm text-slate-400">No students enrolled.</li>}
+            {roster.length === 0 && <li className="px-5 py-3 text-sm text-slate-400">No students enrolled.</li>}
           </ul>
-        </Card>
+        </Section>
       ))}
     </div>
   );

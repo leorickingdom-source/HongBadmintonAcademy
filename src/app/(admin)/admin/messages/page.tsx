@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Section, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import type { MessageStatus } from "@/lib/types";
 
@@ -25,26 +25,28 @@ export default async function MessagesPage() {
       />
 
       {messages && messages.length > 0 ? (
-        <Table>
-          <thead>
-            <tr>
-              <Th>When</Th><Th>Type</Th><Th>To</Th><Th>Status</Th><Th>Detail</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {messages.map((m: any) => (
-              <tr key={m.id}>
-                <Td>{formatDateTime(m.created_at)}</Td>
-                <Td><Badge tone="slate">{m.type}</Badge></Td>
-                <Td className="font-mono text-xs">{m.recipient_phone}</Td>
-                <Td><Badge tone={TONE[m.status as MessageStatus]}>{m.status}</Badge></Td>
-                <Td className="max-w-md truncate text-xs text-slate-500" title={m.error ?? m.body ?? ""}>
-                  {m.error ? <span className="text-red-600">{m.error}</span> : m.body}
-                </Td>
+        <Section title={`Messages (${messages.length})`} flush>
+          <Table>
+            <thead>
+              <tr>
+                <Th>When</Th><Th>Type</Th><Th>To</Th><Th>Status</Th><Th>Detail</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {messages.map((m: any) => (
+                <tr key={m.id} className="hover:bg-slate-50">
+                  <Td className="text-slate-500">{formatDateTime(m.created_at)}</Td>
+                  <Td><Badge tone="slate">{m.type}</Badge></Td>
+                  <Td className="font-mono text-xs text-slate-500">{m.recipient_phone}</Td>
+                  <Td><Badge tone={TONE[m.status as MessageStatus]}>{m.status}</Badge></Td>
+                  <Td className="max-w-md truncate text-xs text-slate-500" title={m.error ?? m.body ?? ""}>
+                    {m.error ? <span className="text-red-600">{m.error}</span> : m.body}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Section>
       ) : (
         <EmptyState message="No messages sent yet." />
       )}

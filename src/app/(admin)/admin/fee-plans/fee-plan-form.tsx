@@ -15,7 +15,7 @@ export function FeePlanForm({
     <Card className="max-w-xl p-6">
       <form action={action} className="space-y-4">
         {plan && <input type="hidden" name="id" value={plan.id} />}
-        {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
         <Field label="Plan name" required>
           <Input name="name" defaultValue={plan?.name ?? ""} required />

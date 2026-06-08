@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, Card, Table, Th, Td, Badge, Button, Select, LinkButton, StatCard,
+  PageHeader, Card, Section, Table, Th, Td, Badge, Button, Select, LinkButton, StatCard,
 } from "@/components/ui";
 import { formatDate, formatTime, formatDateTime } from "@/lib/format";
 import type { AttendanceStatus } from "@/lib/types";
@@ -54,19 +54,19 @@ export default async function RosterPage({
       <PageHeader
         title={(session as any).classes?.name ?? "Session"}
         description={`${formatDate(session.session_date)} · ${formatTime(session.start_time)}–${formatTime(session.end_time)} · ${session.location ?? "—"}`}
-        action={<LinkButton href="/admin/attendance" variant="secondary">← All sessions</LinkButton>}
+        action={<LinkButton href="/admin/attendance" variant="ghost">← All sessions</LinkButton>}
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <StatCard label="Present" value={counts.present} />
-        <StatCard label="Late" value={counts.late} />
-        <StatCard label="Absent" value={counts.absent} />
+        <StatCard label="Present" value={counts.present} tone="green" />
+        <StatCard label="Late" value={counts.late} tone="amber" />
+        <StatCard label="Absent" value={counts.absent} tone="red" />
         <StatCard label="Excused" value={counts.excused} />
         <StatCard label="Not tapped" value={counts.none} />
       </div>
 
-      <Card className="flex items-center justify-between p-4">
-        <p className="text-sm text-slate-600">
+      <Card className="flex items-center justify-between gap-4 border-amber-200 bg-amber-50 p-4">
+        <p className="text-sm text-amber-800">
           Finalise: flag late tap-ins and mark no-shows as absent.
         </p>
         <form action={processFlags}>
@@ -75,55 +75,57 @@ export default async function RosterPage({
         </form>
       </Card>
 
-      <Table>
-        <thead>
-          <tr>
-            <Th>Student</Th><Th>Tag</Th><Th>Status</Th><Th>Tap in</Th><Th>Tap out</Th>
-            <Th className="text-right">Actions</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {roster.map((r) => (
-            <tr key={r.student.id}>
-              <Td className="font-medium text-slate-900">{r.student.full_name}</Td>
-              <Td>{r.student.nfc_tag_uid ? <code className="text-xs">{r.student.nfc_tag_uid}</code> : "—"}</Td>
-              <Td>
-                {r.att ? (
-                  <Badge tone={TONE[r.att.status as AttendanceStatus]}>
-                    {r.att.status}{r.att.flagged ? " ⚑" : ""}
-                  </Badge>
-                ) : (
-                  <span className="text-slate-400">not tapped</span>
-                )}
-              </Td>
-              <Td>{r.att?.tap_in_at ? formatDateTime(r.att.tap_in_at) : "—"}</Td>
-              <Td>{r.att?.tap_out_at ? formatDateTime(r.att.tap_out_at) : "—"}</Td>
-              <Td className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <form action={simulateTap}>
-                    <input type="hidden" name="session_id" value={sessionId} />
-                    <input type="hidden" name="student_id" value={r.student.id} />
-                    <Button type="submit" variant="secondary">
-                      {r.att && !r.att.tap_out_at ? "Tap out" : "Tap in"}
-                    </Button>
-                  </form>
-                  <form action={setAttendanceStatus} className="flex items-center gap-1">
-                    <input type="hidden" name="session_id" value={sessionId} />
-                    <input type="hidden" name="student_id" value={r.student.id} />
-                    <Select name="status" defaultValue={r.att?.status ?? "present"} className="py-1">
-                      <option value="present">present</option>
-                      <option value="late">late</option>
-                      <option value="absent">absent</option>
-                      <option value="excused">excused</option>
-                    </Select>
-                    <Button type="submit" variant="ghost">Set</Button>
-                  </form>
-                </div>
-              </Td>
+      <Section title="Roster" flush>
+        <Table>
+          <thead>
+            <tr>
+              <Th>Student</Th><Th>Tag</Th><Th>Status</Th><Th>Tap in</Th><Th>Tap out</Th>
+              <Th className="text-right">Actions</Th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {roster.map((r) => (
+              <tr key={r.student.id} className="hover:bg-slate-50">
+                <Td className="font-medium text-slate-900">{r.student.full_name}</Td>
+                <Td>{r.student.nfc_tag_uid ? <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{r.student.nfc_tag_uid}</code> : "—"}</Td>
+                <Td>
+                  {r.att ? (
+                    <Badge tone={TONE[r.att.status as AttendanceStatus]}>
+                      {r.att.status}{r.att.flagged ? " ⚑" : ""}
+                    </Badge>
+                  ) : (
+                    <span className="text-slate-400">not tapped</span>
+                  )}
+                </Td>
+                <Td className="text-slate-500">{r.att?.tap_in_at ? formatDateTime(r.att.tap_in_at) : "—"}</Td>
+                <Td className="text-slate-500">{r.att?.tap_out_at ? formatDateTime(r.att.tap_out_at) : "—"}</Td>
+                <Td className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <form action={simulateTap}>
+                      <input type="hidden" name="session_id" value={sessionId} />
+                      <input type="hidden" name="student_id" value={r.student.id} />
+                      <Button type="submit" variant="secondary">
+                        {r.att && !r.att.tap_out_at ? "Tap out" : "Tap in"}
+                      </Button>
+                    </form>
+                    <form action={setAttendanceStatus} className="flex items-center gap-1">
+                      <input type="hidden" name="session_id" value={sessionId} />
+                      <input type="hidden" name="student_id" value={r.student.id} />
+                      <Select name="status" defaultValue={r.att?.status ?? "present"} className="!py-1.5">
+                        <option value="present">present</option>
+                        <option value="late">late</option>
+                        <option value="absent">absent</option>
+                        <option value="excused">excused</option>
+                      </Select>
+                      <Button type="submit" variant="ghost">Set</Button>
+                    </form>
+                  </div>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Section>
     </div>
   );
 }

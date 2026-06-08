@@ -20,7 +20,7 @@ export function PersonForm({
     <Card className="max-w-xl p-6">
       <form action={action} className="space-y-4">
         {person && <input type="hidden" name="id" value={person.id} />}
-        {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
         <Field label="Full name" required>
           <Input name="full_name" defaultValue={person?.full_name ?? ""} required />

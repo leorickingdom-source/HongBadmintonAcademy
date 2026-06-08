@@ -1,0 +1,11 @@
+# Keep the upload lean + keep secrets out of the deployment bundle.
+node_modules
+.next
+.tools
+.claude
+_brief
+scripts
+supabase
+.env
+.env.*
+*.log

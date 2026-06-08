@@ -1,0 +1,72 @@
+import { Card, Field, Input, Select, Textarea, Button, LinkButton } from "@/components/ui";
+import type { Student } from "@/lib/types";
+
+export function StudentForm({
+  action,
+  student,
+  parents,
+  error,
+}: {
+  action: (formData: FormData) => void;
+  student?: Student;
+  parents: { id: string; full_name: string | null }[];
+  error?: string;
+}) {
+  return (
+    <Card className="max-w-2xl p-6">
+      <form action={action} className="space-y-4">
+        {student && <input type="hidden" name="id" value={student.id} />}
+        {error && (
+          <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        )}
+
+        <Field label="Full name" required>
+          <Input name="full_name" defaultValue={student?.full_name ?? ""} required />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Date of birth">
+            <Input type="date" name="dob" defaultValue={student?.dob ?? ""} />
+          </Field>
+          <Field label="Gender">
+            <Input name="gender" defaultValue={student?.gender ?? ""} placeholder="M / F" />
+          </Field>
+        </div>
+
+        <Field label="Parent">
+          <Select name="parent_id" defaultValue={student?.parent_id ?? ""}>
+            <option value="">— none —</option>
+            {parents.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name ?? p.id}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="NFC tag UID" hint="Bind a physical tag for tap attendance.">
+            <Input name="nfc_tag_uid" defaultValue={student?.nfc_tag_uid ?? ""} placeholder="04A1B2C3" />
+          </Field>
+          <Field label="Status">
+            <Select name="status" defaultValue={student?.status ?? "active"}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </Select>
+          </Field>
+        </div>
+
+        <Field label="Notes">
+          <Textarea name="notes" defaultValue={student?.notes ?? ""} />
+        </Field>
+
+        <div className="flex gap-2 pt-2">
+          <Button type="submit">{student ? "Save changes" : "Create student"}</Button>
+          <LinkButton href="/admin/students" variant="secondary">
+            Cancel
+          </LinkButton>
+        </div>
+      </form>
+    </Card>
+  );
+}

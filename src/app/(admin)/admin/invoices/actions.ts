@@ -138,3 +138,24 @@ export async function sendReminder(formData: FormData) {
 
   revalidatePath("/admin/invoices");
 }
+
+// WhatsApp click-to-chat: the admin opened wa.me with the reminder; log it.
+export async function logReminderSend(formData: FormData) {
+  const invoice_id = String(formData.get("invoice_id"));
+  const recipient_phone = String(formData.get("recipient_phone") ?? "");
+  const recipient_profile_id = (formData.get("recipient_profile_id") as string) || null;
+  const body = String(formData.get("body") ?? "");
+
+  const supabase = await createClient();
+  await supabase.from("messages").insert({
+    type: "payment_reminder",
+    recipient_profile_id,
+    recipient_phone,
+    body,
+    invoice_id,
+    provider: "wa_click",
+    status: "sent",
+    sent_at: new Date().toISOString(),
+  });
+  revalidatePath("/admin/invoices");
+}

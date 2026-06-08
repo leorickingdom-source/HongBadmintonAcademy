@@ -1,16 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Table, Th, Td, Badge, EmptyState, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { monthLabel, formatDateTime } from "@/lib/format";
-import { generateScorecards, sendScorecard } from "./actions";
+import { getBaseUrl } from "@/lib/url";
+import { waLink } from "@/lib/wa";
+import { generateScorecards, logScorecardSend } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ScorecardsPage() {
   const supabase = await createClient();
+  const baseUrl = await getBaseUrl();
   const { data: cards } = await supabase
     .from("scorecards")
-    .select("*, students(full_name)")
+    .select("*, students(full_name, parent:profiles!students_parent_id_fkey(full_name, phone, id))")
     .order("period_month", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -18,7 +22,7 @@ export default async function ScorecardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Score Cards"
-        description="Monthly score cards and WhatsApp distribution to parents."
+        description="Monthly score cards — send to parents via WhatsApp (click-to-chat)."
       />
 
       <Card className="flex items-center justify-between p-5">
@@ -42,6 +46,14 @@ export default async function ScorecardsPage() {
           <tbody>
             {cards.map((c: any) => {
               const s = c.summary ?? {};
+              const parent = c.students?.parent;
+              const text =
+                `🏸 ${monthLabel(c.period_month)} score card for ${c.students?.full_name ?? "your child"}\n` +
+                `• Avg skill score: ${s.avg_score != null ? Number(s.avg_score).toFixed(1) : "—"}\n` +
+                `• Attendance: ${s.attendance_pct != null ? s.attendance_pct + "%" : "—"}\n` +
+                `• Reward points: ${s.reward_points ?? 0}\n` +
+                `View full card: ${baseUrl}/parent/scorecards`;
+              const waUrl = waLink(parent?.phone, text);
               return (
                 <tr key={c.id}>
                   <Td className="font-medium text-slate-900">{c.students?.full_name ?? "—"}</Td>
@@ -60,19 +72,20 @@ export default async function ScorecardsPage() {
                   <Td className="text-right">
                     <div className="flex justify-end gap-2">
                       {c.pdf_url && (
-                        <LinkButton
-                          href={`/api/scorecards/${c.id}/pdf`}
-                          target="_blank"
-                          rel="noopener"
-                          variant="secondary"
-                        >
+                        <LinkButton href={`/api/scorecards/${c.id}/pdf`} target="_blank" rel="noopener" variant="secondary">
                           PDF
                         </LinkButton>
                       )}
-                      <form action={sendScorecard}>
-                        <input type="hidden" name="id" value={c.id} />
-                        <SubmitButton variant="secondary" pendingText="Sending…">Send WhatsApp</SubmitButton>
-                      </form>
+                      <WhatsAppButton
+                        waUrl={waUrl}
+                        action={logScorecardSend}
+                        fields={{
+                          scorecard_id: c.id,
+                          recipient_phone: parent?.phone ?? "",
+                          recipient_profile_id: parent?.id ?? "",
+                          body: text,
+                        }}
+                      />
                     </div>
                   </Td>
                 </tr>

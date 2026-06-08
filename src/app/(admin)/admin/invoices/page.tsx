@@ -2,9 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { getBaseUrl } from "@/lib/url";
+import { waLink } from "@/lib/wa";
 import type { InvoiceStatus } from "@/lib/types";
-import { markPaid, deleteInvoice, sendReminder } from "./actions";
+import { markPaid, deleteInvoice, logReminderSend } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +18,12 @@ const TONE: Record<InvoiceStatus, "green" | "yellow" | "red" | "slate"> = {
 
 export default async function InvoicesPage() {
   const supabase = await createClient();
+  const baseUrl = await getBaseUrl();
 
   const [{ data: invoices }, { data: payments }] = await Promise.all([
     supabase
       .from("invoices")
-      .select("*, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name)")
+      .select("*, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name, phone, id)")
       .order("created_at", { ascending: false }),
     supabase
       .from("payments")
@@ -33,7 +37,7 @@ export default async function InvoicesPage() {
       <div>
         <PageHeader
           title="Invoices & Payments"
-          description="Raise fees, reconcile payments, send WhatsApp reminders."
+          description="Raise fees, reconcile payments, send WhatsApp reminders (click-to-chat)."
           action={<LinkButton href="/admin/invoices/new">+ New invoice</LinkButton>}
         />
 
@@ -46,34 +50,51 @@ export default async function InvoicesPage() {
               </tr>
             </thead>
             <tbody>
-              {invoices.map((i: any) => (
-                <tr key={i.id}>
-                  <Td className="font-mono text-xs">{i.invoice_no ?? "—"}</Td>
-                  <Td className="font-medium text-slate-900">{i.students?.full_name ?? "—"}</Td>
-                  <Td>{i.parent?.full_name ?? "—"}</Td>
-                  <Td>{formatCurrency(Number(i.amount), i.currency)}</Td>
-                  <Td>{formatDate(i.due_date)}</Td>
-                  <Td><Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge></Td>
-                  <Td className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {i.status !== "paid" && (
-                        <form action={markPaid}>
+              {invoices.map((i: any) => {
+                const payable = i.status !== "paid" && i.status !== "canceled" && i.status !== "refunded";
+                const text =
+                  `Hi ${i.parent?.full_name ?? "Parent"}, the fee of ` +
+                  `${formatCurrency(Number(i.amount), i.currency)} for ${i.students?.full_name ?? "your child"} ` +
+                  `is due ${formatDate(i.due_date)}. Pay here: ${baseUrl}/parent/invoices`;
+                const waUrl = waLink(i.parent?.phone, text);
+                return (
+                  <tr key={i.id}>
+                    <Td className="font-mono text-xs">{i.invoice_no ?? "—"}</Td>
+                    <Td className="font-medium text-slate-900">{i.students?.full_name ?? "—"}</Td>
+                    <Td>{i.parent?.full_name ?? "—"}</Td>
+                    <Td>{formatCurrency(Number(i.amount), i.currency)}</Td>
+                    <Td>{formatDate(i.due_date)}</Td>
+                    <Td><Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge></Td>
+                    <Td className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {i.status !== "paid" && (
+                          <form action={markPaid}>
+                            <input type="hidden" name="id" value={i.id} />
+                            <SubmitButton variant="secondary" pendingText="Saving…">Mark paid</SubmitButton>
+                          </form>
+                        )}
+                        {payable && (
+                          <WhatsAppButton
+                            waUrl={waUrl}
+                            action={logReminderSend}
+                            label="Remind"
+                            fields={{
+                              invoice_id: i.id,
+                              recipient_phone: i.parent?.phone ?? "",
+                              recipient_profile_id: i.parent?.id ?? "",
+                              body: text,
+                            }}
+                          />
+                        )}
+                        <form action={deleteInvoice}>
                           <input type="hidden" name="id" value={i.id} />
-                          <SubmitButton variant="secondary" pendingText="Saving…">Mark paid</SubmitButton>
+                          <ConfirmButton confirmText="Delete this invoice?" />
                         </form>
-                      )}
-                      <form action={sendReminder}>
-                        <input type="hidden" name="id" value={i.id} />
-                        <SubmitButton variant="secondary" pendingText="Sending…">Remind</SubmitButton>
-                      </form>
-                      <form action={deleteInvoice}>
-                        <input type="hidden" name="id" value={i.id} />
-                        <ConfirmButton confirmText="Delete this invoice?" />
-                      </form>
-                    </div>
-                  </Td>
-                </tr>
-              ))}
+                      </div>
+                    </Td>
+                  </tr>
+                );
+              })}
             </tbody>
           </Table>
         ) : (

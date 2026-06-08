@@ -179,3 +179,26 @@ export async function sendScorecard(formData: FormData) {
   }
   revalidatePath("/admin/scorecards");
 }
+
+// WhatsApp click-to-chat: the admin opened wa.me with the message; record it in
+// the log and mark the card sent. (No API/verification needed.)
+export async function logScorecardSend(formData: FormData) {
+  const scorecard_id = String(formData.get("scorecard_id"));
+  const recipient_phone = String(formData.get("recipient_phone") ?? "");
+  const recipient_profile_id = (formData.get("recipient_profile_id") as string) || null;
+  const body = String(formData.get("body") ?? "");
+
+  const supabase = await createClient();
+  await supabase.from("messages").insert({
+    type: "scorecard",
+    recipient_profile_id,
+    recipient_phone,
+    body,
+    scorecard_id,
+    provider: "wa_click",
+    status: "sent",
+    sent_at: new Date().toISOString(),
+  });
+  await supabase.from("scorecards").update({ status: "sent" }).eq("id", scorecard_id);
+  revalidatePath("/admin/scorecards");
+}

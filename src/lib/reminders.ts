@@ -7,11 +7,9 @@ import { formatCurrency, formatDate } from "@/lib/format";
 export const POLICY = {
   dailyCap: 10, // max auto-reminders per MYT day
   minGapMinutes: 10, // never two sends closer than this
-  // TEMP (forced test): window opened 24h + skip off to fire immediately.
-  // RESTORE to windowStartHour:9, windowEndHour:20, randomSkipChance:0.3.
-  windowStartHour: 0, // MYT, inclusive
-  windowEndHour: 24, // MYT, exclusive (so last send by 19:59)
-  randomSkipChance: 0, // chance a given poll is skipped even when eligible
+  windowStartHour: 9, // MYT, inclusive
+  windowEndHour: 20, // MYT, exclusive (so last send by 19:59)
+  randomSkipChance: 0.3, // chance a given poll is skipped even when eligible
 };
 
 const MYT_MS = 8 * 60 * 60 * 1000; // Malaysia = UTC+8, no DST

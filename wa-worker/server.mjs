@@ -11,6 +11,7 @@
 
 import express from "express";
 import qrcode from "qrcode-terminal";
+import QR from "qrcode";
 import pkg from "whatsapp-web.js";
 
 const { Client, LocalAuth } = pkg;
@@ -47,6 +48,9 @@ client.on("qr", (qr) => {
       "(WhatsApp → Settings → Linked Devices → Link a device)\n",
   );
   qrcode.generate(qr, { small: true });
+  // Also write a scannable PNG — easier than the terminal QR on a headless /
+  // SSH host (download qr.png and scan that). Contains a live link token.
+  QR.toFile("qr.png", qr, { width: 512 }).catch((e) => console.error("qr.png write failed:", e.message));
 });
 client.on("authenticated", () =>
   console.log("Authenticated — session persisted in ./.wwebjs_auth (keep this folder private)."),

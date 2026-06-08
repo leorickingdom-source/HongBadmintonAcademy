@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>HBA bot — link QR</title>
+  <style>
+    body { background:#0b0b0c; color:#e7e7ea; font-family:system-ui,sans-serif; text-align:center; margin:0; padding:24px; }
+    img  { width:360px; height:360px; background:#fff; padding:14px; border-radius:12px; }
+    p    { opacity:.7; font-size:14px; }
+    b    { color:#7dd3fc; }
+  </style>
+</head>
+<body>
+  <h3>Scan with <b>+601140702427</b></h3>
+  <p>WhatsApp → Settings → Linked Devices → <b>Link a device</b> → scan below</p>
+  <img id="q" src="qr.png" alt="QR loading… (worker must be running)" />
+  <p id="t">auto-refreshing every 3s — no need to reload</p>
+  <script>
+    let n = 0;
+    setInterval(() => {
+      document.getElementById('q').src = 'qr.png?' + Date.now();
+      document.getElementById('t').textContent = 'auto-refreshed ' + (++n) + '×  (' + new Date().toLocaleTimeString() + ')';
+    }, 3000);
+  </script>
+</body>
+</html>

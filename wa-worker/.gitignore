@@ -2,5 +2,7 @@ node_modules
 # WhatsApp session/auth — secret, never commit. Anyone with it controls the number.
 .wwebjs_auth
 .wwebjs_cache
+# QR image holds a live device-link token while valid — never commit.
+qr.png
 .env
 *.log

@@ -25,6 +25,13 @@ try {
   /* no .env file present — fall back to the real environment */
 }
 
+// Keep the worker alive through transient Puppeteer / WhatsApp-Web hiccups (e.g.
+// "Execution context was destroyed" during a page reload). Without this, Node
+// exits on an unhandled rejection and pm2 thrashes restarting it. Real drops
+// fire the client 'disconnected' event, which re-initializes.
+process.on("unhandledRejection", (r) => console.error("unhandledRejection:", r?.message ?? r));
+process.on("uncaughtException", (e) => console.error("uncaughtException:", e?.message ?? e));
+
 const PORT = process.env.PORT || 8787;
 const SECRET = process.env.WA_WORKER_SECRET || "";
 
@@ -42,8 +49,16 @@ const client = new Client({
   authStrategy: new LocalAuth({ dataPath: "./.wwebjs_auth" }),
   puppeteer: {
     headless: true,
-    // --no-sandbox is required when running as root / inside most Linux hosts.
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    // --no-sandbox: needed when running as root / on most Linux hosts.
+    // --disable-dev-shm-usage: small cloud VMs (e.g. GCP e2-micro) have a tiny
+    //   /dev/shm, which makes the WhatsApp Web tab crash with "Execution context
+    //   was destroyed". This routes Chromium shared memory to /tmp instead.
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
     // On ARM/Raspberry Pi the bundled Chromium won't run — point at system
     // chromium via CHROME_PATH (see .env.example).
     ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),

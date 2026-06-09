@@ -116,8 +116,15 @@ export function AppShell({
     </nav>
   );
 
+  // Logo is a one-tap shortcut back to the role's home (the main menu).
+  const home = ROOTS.includes(`/${role}`) ? `/${role}` : "/";
   const brand = (
-    <div className="flex items-center gap-2.5">
+    <Link
+      href={home}
+      onClick={() => setOpen(false)}
+      title="Back to home"
+      className="flex items-center gap-2.5 rounded-lg transition-opacity hover:opacity-70"
+    >
       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-600 text-white shadow-sm">
         🏸
       </span>
@@ -125,7 +132,7 @@ export function AppShell({
         <div className="text-sm font-bold text-slate-900">{APP_SHORT}</div>
         <div className="text-[11px] text-slate-400">{ROLE_LABEL[role] ?? role}</div>
       </div>
-    </div>
+    </Link>
   );
 
   return (

@@ -1,10 +1,16 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Section, EmptyState, Badge, LinkButton } from "@/components/ui";
+import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
 import { formatTime } from "@/lib/format";
 import { coachClassIds } from "./_data";
 
 export const dynamic = "force-dynamic";
+
+const COACH_ACTIONS = [
+  { href: "/coach/marking", icon: "📊", title: "Marking", sub: "Score students this month" },
+  { href: "/coach/attendance", icon: "📋", title: "Attendance", sub: "Today's tap-ins" },
+];
 
 export default async function CoachDashboard() {
   const me = await requireRole("coach");
@@ -37,13 +43,25 @@ export default async function CoachDashboard() {
       <PageHeader
         title={`Welcome, ${me.full_name ?? "Coach"}`}
         description="Your classes and today's sessions."
-        action={
-          <>
-            <LinkButton href="/coach/marking">Go to marking</LinkButton>
-            <LinkButton href="/coach/attendance" variant="secondary">View attendance</LinkButton>
-          </>
-        }
       />
+
+      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {COACH_ACTIONS.map((q) => (
+          <Link
+            key={q.href}
+            href={q.href}
+            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-50 text-2xl">
+              {q.icon}
+            </span>
+            <div className="min-w-0">
+              <div className="font-semibold leading-tight text-slate-900">{q.title}</div>
+              <div className="truncate text-xs text-slate-500">{q.sub}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Your classes" value={classIds.length} />

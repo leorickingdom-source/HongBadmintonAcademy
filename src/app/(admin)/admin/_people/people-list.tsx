@@ -3,6 +3,7 @@ import { PageHeader, Section, LinkButton, Table, Th, Td, EmptyState, Badge } fro
 import { ConfirmButton } from "@/components/confirm-button";
 import { formatDate } from "@/lib/format";
 import type { Role } from "@/lib/types";
+import type { ReactNode } from "react";
 
 function initials(name: string): string {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -14,9 +15,11 @@ function initials(name: string): string {
 export async function PeopleList({
   role,
   deleteAction,
+  extraAction,
 }: {
   role: Role;
   deleteAction: (formData: FormData) => void;
+  extraAction?: ReactNode;
 }) {
   const supabase = await createClient();
   const { data: people } = await supabase
@@ -37,7 +40,12 @@ export async function PeopleList({
       <PageHeader
         title={title}
         description={description}
-        action={<LinkButton href={`${base}/new`}>+ New {isCoach ? "coach" : "parent"}</LinkButton>}
+        action={
+          <>
+            {extraAction}
+            <LinkButton href={`${base}/new`}>+ New {isCoach ? "coach" : "parent"}</LinkButton>
+          </>
+        }
       />
 
       {people && people.length > 0 ? (

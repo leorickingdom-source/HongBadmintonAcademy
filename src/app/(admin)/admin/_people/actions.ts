@@ -65,3 +65,13 @@ export async function deletePerson(role: Role, formData: FormData) {
   await db.auth.admin.deleteUser(id); // cascades to profile
   revalidatePath(basePath(role));
 }
+
+// Set a coach's per-lesson pay rate (drives the auto-calculated payroll).
+export async function setCoachRate(formData: FormData) {
+  const id = String(formData.get("id"));
+  const rate = Number(formData.get("rate"));
+  if (!id || !Number.isFinite(rate) || rate < 0) return;
+  const db = createAdminClient();
+  await db.from("profiles").update({ pay_per_lesson: rate }).eq("id", id);
+  revalidatePath("/admin/coaches/summary");
+}

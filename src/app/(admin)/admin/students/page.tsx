@@ -25,7 +25,12 @@ export default async function StudentsPage() {
       <PageHeader
         title="Students"
         description="Student profiles, NFC tags and parent links."
-        action={<LinkButton href="/admin/students/new">+ New student</LinkButton>}
+        action={
+          <>
+            <LinkButton href="/admin/leaderboard" variant="secondary">🏆 Leaderboard</LinkButton>
+            <LinkButton href="/admin/students/new">+ New student</LinkButton>
+          </>
+        }
       />
 
       {students && students.length > 0 ? (

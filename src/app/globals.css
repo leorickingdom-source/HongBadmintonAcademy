@@ -23,3 +23,61 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* ── Responsive tables ──────────────────────────────────────────────────────
+   On phones (<640px) every <Table> stacks each row into a card so wide tables
+   never force horizontal scrolling. Desktop layout is unchanged. Cells with a
+   `label` (data-label) show "Label: value"; the first cell is the card title. */
+@media (max-width: 639px) {
+  .rtable-wrap {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .rtable,
+  .rtable tbody {
+    display: block;
+    width: 100%;
+  }
+  .rtable thead {
+    display: none;
+  }
+  .rtable tr {
+    display: block;
+    margin-bottom: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  }
+  .rtable td {
+    display: block;
+    width: 100%;
+    padding: 0.2rem 0;
+    border: 0 !important;
+    text-align: left;
+    white-space: normal;
+  }
+  .rtable td:first-child {
+    margin-bottom: 0.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  .rtable td[data-label]:not(:first-child)::before {
+    content: attr(data-label) ": ";
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  /* action button groups wrap and left-align inside the card */
+  .rtable td > div {
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+  }
+  .rtable td:empty {
+    display: none;
+  }
+}

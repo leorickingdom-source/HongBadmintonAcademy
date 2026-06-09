@@ -64,14 +64,14 @@ export async function PeopleList({
                       <span className="font-medium text-slate-900">{p.full_name ?? "—"}</span>
                     </div>
                   </Td>
-                  <Td className="text-slate-500">{p.email ?? "—"}</Td>
-                  <Td className="text-slate-500">{p.phone ?? "—"}</Td>
-                  <Td>
+                  <Td label="Email" className="text-slate-500">{p.email ?? "—"}</Td>
+                  <Td label="Phone" className="text-slate-500">{p.phone ?? "—"}</Td>
+                  <Td label="Status">
                     <Badge tone={p.is_active ? "green" : "slate"}>
                       {p.is_active ? "active" : "inactive"}
                     </Badge>
                   </Td>
-                  <Td className="text-slate-500">{formatDate(p.created_at)}</Td>
+                  <Td label="Joined" className="text-slate-500">{formatDate(p.created_at)}</Td>
                   <Td className="text-right">
                     <div className="flex justify-end gap-2">
                       <LinkButton href={`${base}/${p.id}`} variant="secondary">

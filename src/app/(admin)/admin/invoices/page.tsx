@@ -61,11 +61,11 @@ export default async function InvoicesPage() {
                   return (
                     <tr key={i.id} className="hover:bg-slate-50">
                       <Td className="font-mono text-xs text-slate-500">{i.invoice_no ?? "—"}</Td>
-                      <Td className="font-medium text-slate-900">{i.students?.full_name ?? "—"}</Td>
-                      <Td className="text-slate-500">{i.parent?.full_name ?? "—"}</Td>
-                      <Td className="font-medium text-slate-900">{formatCurrency(Number(i.amount), i.currency)}</Td>
-                      <Td className="text-slate-500">{formatDate(i.due_date)}</Td>
-                      <Td><Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge></Td>
+                      <Td label="Student" className="font-medium text-slate-900">{i.students?.full_name ?? "—"}</Td>
+                      <Td label="Parent" className="text-slate-500">{i.parent?.full_name ?? "—"}</Td>
+                      <Td label="Amount" className="font-medium text-slate-900">{formatCurrency(Number(i.amount), i.currency)}</Td>
+                      <Td label="Due" className="text-slate-500">{formatDate(i.due_date)}</Td>
+                      <Td label="Status"><Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge></Td>
                       <Td className="text-right">
                         <div className="flex justify-end gap-2">
                           {i.status !== "paid" && (

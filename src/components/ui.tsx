@@ -209,8 +209,8 @@ export function Badge({
 // ─── Table ────────────────────────────────────────────────────────────────
 export function Table({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="w-full text-sm">{children}</table>
+    <div className="rtable-wrap overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table className="rtable w-full text-sm">{children}</table>
     </div>
   );
 }
@@ -225,13 +225,16 @@ export function Td({
   children,
   className,
   title,
+  label,
 }: {
   children?: ReactNode;
   className?: string;
   title?: string;
+  /** Shown as a "label:" prefix when the row stacks into a card on mobile. */
+  label?: string;
 }) {
   return (
-    <td title={title} className={cn("border-b border-slate-100 px-4 py-3 text-slate-700", className)}>
+    <td data-label={label} title={title} className={cn("border-b border-slate-100 px-4 py-3 text-slate-700", className)}>
       {children}
     </td>
   );

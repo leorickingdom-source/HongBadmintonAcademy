@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, Table, Th, Td, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { PageHeader, Badge, EmptyState } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -26,40 +27,36 @@ export default async function AttendancePage() {
     <div>
       <PageHeader
         title="Attendance"
-        description="Live tap-in / tap-out per session. Open a session to view its roster."
+        description="Tap a session to open its roster and mark students."
       />
 
       {sessions && sessions.length > 0 ? (
-        <Section title="Sessions (last & next 7 days)" flush>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Date</Th><Th>Class</Th><Th>Time</Th><Th>Location</Th><Th>Status</Th><Th className="text-right">—</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((s: any) => (
-                <tr key={s.id} className={s.session_date === todayStr ? "bg-green-50/60" : "hover:bg-slate-50"}>
-                  <Td className="font-medium text-slate-900">
-                    <span className="inline-flex items-center gap-2">
-                      {formatDate(s.session_date)}
-                      {s.session_date === todayStr && <Badge tone="green">Today</Badge>}
-                    </span>
-                  </Td>
-                  <Td className="text-slate-500">{s.classes?.name ?? "—"}</Td>
-                  <Td>{formatTime(s.start_time)}–{formatTime(s.end_time)}</Td>
-                  <Td className="text-slate-500">{s.location ?? "—"}</Td>
-                  <Td><Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge></Td>
-                  <Td className="text-right">
-                    <LinkButton href={`/admin/attendance/${s.id}`} variant="secondary">
-                      Roster
-                    </LinkButton>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </Section>
+        <div className="space-y-2">
+          {sessions.map((s: any) => {
+            const isToday = s.session_date === todayStr;
+            return (
+              <Link
+                key={s.id}
+                href={`/admin/attendance/${s.id}`}
+                className={`flex items-center justify-between gap-3 rounded-xl border bg-white p-3.5 shadow-sm transition-all hover:border-green-300 hover:shadow ${isToday ? "border-green-300 ring-1 ring-green-200" : "border-slate-200"}`}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-900">{s.classes?.name ?? "Class"}</span>
+                    {isToday && <Badge tone="green">Today</Badge>}
+                  </div>
+                  <div className="mt-0.5 truncate text-xs text-slate-500">
+                    {formatDate(s.session_date)} · {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
+                  </div>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  <Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge>
+                  <span aria-hidden className="text-lg leading-none text-slate-300">›</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       ) : (
         <EmptyState message="No sessions in the last/next 7 days. Generate sessions from a class." />
       )}

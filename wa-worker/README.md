@@ -16,9 +16,9 @@ any time.** Mitigations:
 
 - Connect a **dedicated prepaid SIM**, never the academy's main number.
 - Don't blast: the existing send buttons are per-parent and human-triggered.
-- **Prefer community announcements for anything everyone should see** (schedule
-  changes, closures, events) — one post to the community Announcements group
-  instead of N direct messages. See "Community announcements" below.
+- **For anything everyone should see** (schedule changes, closures, events) use
+  the app's **Announcements** page — you post once, by hand, into a WhatsApp
+  Community. That needs no worker at all (see the app, not this service).
 - Keep `.wwebjs_auth/` private — it is the logged-in session.
 
 The official, ban-free path is Meta Cloud API (needs an SSM business + Meta
@@ -100,12 +100,10 @@ worker. Unset those two vars to fall back to the Meta stub / wa.me click flow.
 
 ## API
 
-| Method | Path        | Auth                       | Body                              | Returns                                            |
-|--------|-------------|----------------------------|-----------------------------------|----------------------------------------------------|
-| GET    | `/health`   | none                       | —                                 | `{ ready: boolean }`                               |
-| GET    | `/groups`   | `Authorization: Bearer …`  | —                                 | `{ groups: [{ id, name }] }`                       |
-| POST   | `/send`     | `Authorization: Bearer …`  | `{ to: "+60…", text: "…" }`       | `{ status: "sent", providerMessageId }` or `failed`|
-| POST   | `/announce` | `Authorization: Bearer …`  | `{ text: "…", groupId?: "…@g.us" }` | `{ status: "sent", providerMessageId }` or `failed`|
+| Method | Path      | Auth                       | Body                         | Returns                                            |
+|--------|-----------|----------------------------|------------------------------|----------------------------------------------------|
+| GET    | `/health` | none                       | —                            | `{ ready: boolean }`                               |
+| POST   | `/send`   | `Authorization: Bearer …`  | `{ to: "+60…", text: "…" }`  | `{ status: "sent", providerMessageId }` or `failed`|
 
 Quick test once READY:
 
@@ -116,39 +114,8 @@ curl -X POST http://localhost:8787/send \
   -d '{"to":"+60123456789","text":"HBA worker test"}'
 ```
 
-## Community announcements
-
-Instead of sending the same notice to every parent one-by-one (slow, and the
-per-message volume is what gets numbers banned), post **once** to a WhatsApp
-**Community Announcements group**. One send, every member reads it — and parents
-self-join, so you never store or scrape their numbers.
-
-**Private data still goes by DM.** Fees, scores and a child's name must never go
-in the shared group — everyone would see them. The app keeps those on the
-per-parent `/send` flow; `/announce` is for general notices only.
-
-One-time setup:
-
-1. On the **dedicated** phone, create a WhatsApp **Community** (or open an
-   existing one) and note its **Announcements** group. Make the dedicated number
-   an **admin** of that group — non-admins can't post there.
-2. Share the community invite link with parents so they join.
-3. Start the worker, scan the QR, wait for READY, then list the groups and copy
-   the Announcements group's id:
-
-   ```bash
-   curl http://localhost:8787/groups -H "Authorization: Bearer YOUR_SECRET"
-   ```
-
-4. Put that id (ends in `@g.us`) in `wa-worker/.env` as `WA_COMMUNITY_GROUP_ID`
-   (and optionally the same in the Vercel app env). Restart the worker.
-5. In the app: **Admin → Announcements** → type a notice → **Post to community**.
-
-Quick test once configured:
-
-```bash
-curl -X POST http://localhost:8787/announce \
-  -H "Authorization: Bearer YOUR_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"HBA community test 🏸"}'
-```
+> **Community announcements need no worker.** Posting one notice that every
+> parent sees is done by hand in a WhatsApp Community — the app's
+> **Admin → Announcements** page composes the text and you paste it into the
+> community's Announcements group yourself. This service is only for the
+> per-parent DM sends above.

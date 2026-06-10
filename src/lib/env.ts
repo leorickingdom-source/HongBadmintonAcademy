@@ -21,9 +21,10 @@ export const env = {
   // the worker instead of the Meta Cloud API.
   waWorkerUrl: process.env.WA_WORKER_URL ?? "",
   waWorkerSecret: process.env.WA_WORKER_SECRET ?? "",
-  // Community Announcements group id (...@g.us). Optional here — the worker can
-  // hold its own WA_COMMUNITY_GROUP_ID; when set, the app passes it per request.
-  waCommunityGroupId: process.env.WA_COMMUNITY_GROUP_ID ?? "",
+  // Invite link to the parent WhatsApp Community (https://chat.whatsapp.com/…).
+  // Optional — when set, the Announcements page shows a one-tap "Open" button so
+  // the admin can jump straight to the group to paste a notice. No worker.
+  waCommunityLink: process.env.WA_COMMUNITY_LINK ?? "",
 
   nfcApiKey: process.env.NFC_API_KEY ?? "",
   cronSecret: process.env.CRON_SECRET ?? "",

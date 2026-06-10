@@ -1,36 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { announceToCommunity } from "@/lib/whatsapp/community";
-import { env } from "@/lib/env";
 
-export async function postAnnouncement(formData: FormData) {
-  const text = String(formData.get("text") ?? "").trim();
-  if (!text) {
-    redirect("/admin/announce?error=" + encodeURIComponent("Write a message first."));
-  }
+// No worker, no bot: the admin posts the notice into the community Announcements
+// group in WhatsApp by hand (one post, every parent sees it). This just records
+// that a post was made so the history / WhatsApp Log stay accurate. Logged as a
+// 'custom' message (the message_type enum has no 'announcement'); recipient is
+// the community, not a phone number.
+export async function logAnnouncement(formData: FormData) {
+  const body = String(formData.get("text") ?? "").trim();
+  if (!body) return;
 
-  const result = await announceToCommunity(text);
-
-  // Logged as a 'custom' message (the message_type enum has no 'announcement');
-  // provider 'wwebjs' marks it as a community post in the WhatsApp Log.
   const supabase = await createClient();
   await supabase.from("messages").insert({
     type: "custom",
-    recipient_phone: env.waCommunityGroupId || "community",
-    body: text,
-    provider: "wwebjs",
-    status: result.status === "sent" ? "sent" : "failed",
-    provider_message_id: result.providerMessageId ?? null,
-    error: result.error ?? null,
-    sent_at: result.status === "sent" ? new Date().toISOString() : null,
+    recipient_phone: "community",
+    body,
+    provider: "wa_click",
+    status: "sent",
+    sent_at: new Date().toISOString(),
   });
 
   revalidatePath("/admin/announce");
-  if (result.status !== "sent") {
-    redirect("/admin/announce?error=" + encodeURIComponent(result.error ?? "Send failed."));
-  }
-  redirect("/admin/announce?sent=1");
 }

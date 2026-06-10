@@ -18,11 +18,14 @@ export async function PeopleList({
   deleteAction,
   deleteManyAction,
   extraAction,
+  embedded,
 }: {
   role: Role;
   deleteAction: (formData: FormData) => void;
   deleteManyAction: (formData: FormData) => void;
   extraAction?: ReactNode;
+  /** When embedded (e.g. under the People page) skip the page header. */
+  embedded?: boolean;
 }) {
   const supabase = await createClient();
   const { data: people } = await supabase
@@ -40,16 +43,18 @@ export async function PeopleList({
 
   return (
     <div>
-      <PageHeader
-        title={title}
-        description={description}
-        action={
-          <>
-            {extraAction}
-            <LinkButton href={`${base}/new`}>+ New {isCoach ? "coach" : "parent"}</LinkButton>
-          </>
-        }
-      />
+      {!embedded && (
+        <PageHeader
+          title={title}
+          description={description}
+          action={
+            <>
+              {extraAction}
+              <LinkButton href={`${base}/new`}>+ New {isCoach ? "coach" : "parent"}</LinkButton>
+            </>
+          }
+        />
+      )}
 
       {people && people.length > 0 ? (
         <Section title={`${title} (${people.length})`} flush>

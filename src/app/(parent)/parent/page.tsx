@@ -67,7 +67,7 @@ export default async function ParentDashboard() {
         .gte("session_date", today)
         .order("session_date")
         .order("start_time")
-        .limit(5)
+        .limit(3)
     : { data: [] as any[] };
 
   // class_id → child name(s)

@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Badge, EmptyState, LinkButton } from "@/components/ui";
-import { monthLabel } from "@/lib/format";
+import { monthLabel, currentWeekStartMYT } from "@/lib/format";
 import { coachClassIds } from "../_data";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +25,10 @@ export default async function MarkingListPage() {
   const classIds = await coachClassIds(supabase, me.id);
   const { start, end } = monthBounds();
 
+  const weekStart = currentWeekStartMYT();
   const groups: { className: string; students: { id: string; full_name: string }[] }[] = [];
   const assessed = new Set<string>();
+  const markedWeek = new Map<string, number>(); // student_id → this week's rating
 
   if (classIds.length) {
     const { data: enr } = await supabase
@@ -53,13 +55,21 @@ export default async function MarkingListPage() {
     groups.sort((a, b) => a.className.localeCompare(b.className));
 
     if (studentIds.size) {
-      const { data: asd } = await supabase
-        .from("assessments")
-        .select("student_id")
-        .in("student_id", [...studentIds])
-        .gte("assessed_on", start)
-        .lte("assessed_on", end);
+      const [{ data: asd }, { data: wk }] = await Promise.all([
+        supabase
+          .from("assessments")
+          .select("student_id")
+          .in("student_id", [...studentIds])
+          .gte("assessed_on", start)
+          .lte("assessed_on", end),
+        supabase
+          .from("weekly_marks")
+          .select("student_id, rating")
+          .in("student_id", [...studentIds])
+          .eq("week_start", weekStart),
+      ]);
       for (const a of asd ?? []) assessed.add(a.student_id);
+      for (const w of (wk ?? []) as any[]) markedWeek.set(w.student_id, w.rating);
     }
   }
 
@@ -67,7 +77,7 @@ export default async function MarkingListPage() {
     <div className="space-y-5">
       <PageHeader
         title="Marking"
-        description={`One skills assessment per student for ${monthLabel(start)}. Tap a student to mark.`}
+        description={`Monthly assessment for ${monthLabel(start)} + a quick weekly mark. Tap a student to mark.`}
       />
 
       {groups.length === 0 ? (
@@ -83,7 +93,8 @@ export default async function MarkingListPage() {
                       {initials(s.full_name)}
                     </span>
                     <span className="truncate font-medium text-slate-900">{s.full_name}</span>
-                    {assessed.has(s.id) ? <Badge tone="green">assessed</Badge> : <Badge tone="slate">pending</Badge>}
+                    {assessed.has(s.id) ? <Badge tone="green">month ✓</Badge> : <Badge tone="slate">month —</Badge>}
+                    {markedWeek.has(s.id) ? <Badge tone="blue">week {markedWeek.get(s.id)}/5</Badge> : <Badge tone="slate">week —</Badge>}
                   </div>
                   <LinkButton href={`/coach/marking/${s.id}`} variant="secondary" className="shrink-0 !px-3 !py-1.5 text-xs">
                     {assessed.has(s.id) ? "View / re-mark" : "Mark"}

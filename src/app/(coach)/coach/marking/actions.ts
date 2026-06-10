@@ -3,9 +3,35 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { currentWeekStartMYT } from "@/lib/format";
 
 function err(studentId: string, message: string): never {
   redirect(`/coach/marking/${studentId}?error=${encodeURIComponent(message)}`);
+}
+
+// Quick weekly check-in (1–5) — separate from the formal monthly assessment.
+// Upserts so re-marking the same week overwrites.
+export async function markWeek(formData: FormData) {
+  const student_id = String(formData.get("student_id"));
+  const rating = Number(formData.get("rating"));
+  const comment = (formData.get("comment") as string)?.trim() || null;
+  if (!rating || rating < 1 || rating > 5) err(student_id, "Pick a 1–5 rating");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) err(student_id, "Not signed in");
+
+  const { error } = await supabase.from("weekly_marks").upsert(
+    { student_id, coach_id: user.id, week_start: currentWeekStartMYT(), rating, comment },
+    { onConflict: "student_id,week_start" },
+  );
+  if (error) err(student_id, error.message);
+
+  revalidatePath(`/coach/marking/${student_id}`);
+  revalidatePath("/coach/marking");
+  redirect(`/coach/marking/${student_id}?saved=week`);
 }
 
 export async function createAssessment(formData: FormData) {

@@ -1,18 +1,6 @@
-import { PeopleList } from "../_people/people-list";
-import { deletePerson, deletePeople } from "../_people/actions";
-import { LinkButton } from "@/components/ui";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
+// Coaches now live under the unified People page.
 export default function CoachesPage() {
-  return (
-    <PeopleList
-      role="coach"
-      deleteAction={deletePerson.bind(null, "coach")}
-      deleteManyAction={deletePeople.bind(null, "coach")}
-      extraAction={
-        <LinkButton href="/admin/coaches/summary" variant="secondary">💰 Payroll</LinkButton>
-      }
-    />
-  );
+  redirect("/admin/people?tab=coaches");
 }

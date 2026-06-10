@@ -1,14 +1,6 @@
-import { PeopleList } from "../_people/people-list";
-import { deletePerson, deletePeople } from "../_people/actions";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
+// Parents now live under the unified People page.
 export default function ParentsPage() {
-  return (
-    <PeopleList
-      role="parent"
-      deleteAction={deletePerson.bind(null, "parent")}
-      deleteManyAction={deletePeople.bind(null, "parent")}
-    />
-  );
+  redirect("/admin/people?tab=parents");
 }

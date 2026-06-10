@@ -17,16 +17,9 @@ export interface NavItem {
 // not repeated here.
 export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   {
-    group: "People",
+    group: "Manage",
     items: [
-      { href: "/admin/students", label: "Students" },
-      { href: "/admin/parents", label: "Parents" },
-      { href: "/admin/coaches", label: "Coaches" },
-    ],
-  },
-  {
-    group: "Training",
-    items: [
+      { href: "/admin/people", label: "People" },
       { href: "/admin/classes", label: "Classes & Schedule" },
       { href: "/admin/attendance", label: "Attendance" },
       { href: "/admin/marking-schemes", label: "Marking Schemes" },

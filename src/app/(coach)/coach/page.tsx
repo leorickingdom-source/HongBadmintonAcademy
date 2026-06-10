@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
-import { formatTime } from "@/lib/format";
+import { formatDate, formatTime } from "@/lib/format";
 import { coachClassIds } from "./_data";
 
 export const dynamic = "force-dynamic";
@@ -20,22 +20,31 @@ export default async function CoachDashboard() {
 
   let sessions: any[] = [];
   let studentCount = 0;
+  let todayCount = 0;
   if (classIds.length) {
-    const [{ data: s }, { count }] = await Promise.all([
+    const [{ data: s }, { count }, { count: tCount }] = await Promise.all([
       supabase
         .from("sessions")
-        .select("id, start_time, end_time, location, status, classes(name)")
+        .select("id, session_date, start_time, end_time, location, status, classes(name)")
         .in("class_id", classIds)
-        .eq("session_date", today)
-        .order("start_time"),
+        .gte("session_date", today)
+        .order("session_date")
+        .order("start_time")
+        .limit(3),
       supabase
         .from("enrollments")
         .select("*", { count: "exact", head: true })
         .in("class_id", classIds)
         .eq("active", true),
+      supabase
+        .from("sessions")
+        .select("*", { count: "exact", head: true })
+        .in("class_id", classIds)
+        .eq("session_date", today),
     ]);
     sessions = s ?? [];
     studentCount = count ?? 0;
+    todayCount = tCount ?? 0;
   }
 
   return (
@@ -66,11 +75,11 @@ export default async function CoachDashboard() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Your classes" value={classIds.length} />
         <StatCard label="Students" value={studentCount} tone="green" />
-        <StatCard label="Sessions today" value={sessions.length} tone={sessions.length ? "blue" : "slate"} />
+        <StatCard label="Sessions today" value={todayCount} tone={todayCount ? "blue" : "slate"} />
       </div>
 
       <div className="mt-8">
-        <Section title="Today's sessions" flush>
+        <Section title="Upcoming sessions" flush>
           {sessions.length > 0 ? (
             <ul className="divide-y divide-slate-100">
               {sessions.map((s) => (
@@ -78,7 +87,7 @@ export default async function CoachDashboard() {
                   <div>
                     <div className="font-medium text-slate-900">{s.classes?.name ?? "Class"}</div>
                     <div className="text-sm text-slate-500">
-                      {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
+                      {formatDate(s.session_date)} · {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
                     </div>
                   </div>
                   <Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge>
@@ -86,7 +95,7 @@ export default async function CoachDashboard() {
               ))}
             </ul>
           ) : (
-            <div className="p-5"><EmptyState message="No sessions scheduled today." /></div>
+            <div className="p-5"><EmptyState message="No upcoming sessions scheduled." /></div>
           )}
         </Section>
       </div>

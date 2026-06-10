@@ -40,6 +40,28 @@ export function monthLabel(value: string | null | undefined): string {
   return d.toLocaleDateString("en-MY", { year: "numeric", month: "long" });
 }
 
+// Monday (start) of the current week in Malaysia time, as "YYYY-MM-DD".
+export function currentWeekStartMYT(): string {
+  const now = new Date(Date.now() + 8 * 3600 * 1000); // MYT
+  const dow = now.getUTCDay(); // 0=Sun … 6=Sat
+  const diff = dow === 0 ? -6 : 1 - dow; // days back to Monday
+  const monday = new Date(now);
+  monday.setUTCDate(now.getUTCDate() + diff);
+  return monday.toISOString().slice(0, 10);
+}
+
+// "02 Jun – 08 Jun" for a week starting on the given Monday.
+export function weekLabel(weekStart: string | null | undefined): string {
+  if (!weekStart) return "—";
+  const d = new Date(weekStart);
+  if (Number.isNaN(d.getTime())) return "—";
+  const end = new Date(d);
+  end.setUTCDate(d.getUTCDate() + 6);
+  const fmt = (x: Date) =>
+    x.toLocaleDateString("en-MY", { day: "2-digit", month: "short", timeZone: "UTC" });
+  return `${fmt(d)} – ${fmt(end)}`;
+}
+
 export const DAY_NAMES = [
   "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 ];

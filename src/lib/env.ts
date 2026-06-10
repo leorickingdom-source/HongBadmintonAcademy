@@ -21,6 +21,9 @@ export const env = {
   // the worker instead of the Meta Cloud API.
   waWorkerUrl: process.env.WA_WORKER_URL ?? "",
   waWorkerSecret: process.env.WA_WORKER_SECRET ?? "",
+  // Community Announcements group id (...@g.us). Optional here — the worker can
+  // hold its own WA_COMMUNITY_GROUP_ID; when set, the app passes it per request.
+  waCommunityGroupId: process.env.WA_COMMUNITY_GROUP_ID ?? "",
 
   nfcApiKey: process.env.NFC_API_KEY ?? "",
   cronSecret: process.env.CRON_SECRET ?? "",

@@ -39,6 +39,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/reports", label: "Reports & Export" },
       { href: "/admin/analytics", label: "Analytics" },
+      { href: "/admin/announce", label: "Announcements" },
       { href: "/admin/broadcast", label: "Broadcast" },
       { href: "/admin/messages", label: "WhatsApp Log" },
       { href: "/admin/settings", label: "Settings" },

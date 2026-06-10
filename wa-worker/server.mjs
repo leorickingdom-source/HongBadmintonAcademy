@@ -35,6 +35,10 @@ process.on("uncaughtException", (e) => console.error("uncaughtException:", e?.me
 const PORT = process.env.PORT || 8787;
 const SECRET = process.env.WA_WORKER_SECRET || "";
 const APP_URL = (process.env.APP_URL || "").replace(/\/$/, "");
+// The community Announcements group id (ends in @g.us). The app may also pass a
+// groupId per request; this is the fallback. Find it via GET /groups once the
+// dedicated number has joined the community and been made an admin.
+const COMMUNITY_GROUP_ID = process.env.WA_COMMUNITY_GROUP_ID || "";
 
 if (!SECRET) {
   console.error(
@@ -146,6 +150,27 @@ async function sendWithRetry(to, text) {
   throw lastErr;
 }
 
+// Send straight to a chat id (a group's ...@g.us, no number resolution). Same
+// transient-error retry as sendWithRetry. Used by /announce.
+async function sendToChat(chatId, text) {
+  const transient = /Execution context was destroyed|Protocol error|Target closed|Session closed/i;
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const msg = await client.sendMessage(String(chatId), String(text));
+      return { providerMessageId: msg?.id?._serialized };
+    } catch (e) {
+      lastErr = e;
+      if (transient.test(String(e?.message || e)) && attempt < 3) {
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
 // Send a free-form text message. Body: { to: "+60123456789", text: "hi" }.
 app.post("/send", async (req, res) => {
   if (!ready) {
@@ -161,6 +186,48 @@ app.post("/send", async (req, res) => {
     const r = await sendWithRetry(to, text);
     if (r.error) return res.status(400).json({ status: "failed", error: r.error });
     if (r.notOnWhatsapp) return res.status(422).json({ status: "failed", error: "number not on WhatsApp" });
+    return res.json({ status: "sent", providerMessageId: r.providerMessageId });
+  } catch (e) {
+    return res.status(500).json({ status: "failed", error: String(e?.message || e) });
+  }
+});
+
+// List the group chats this number belongs to, so you can find the community
+// Announcements group's id (...@g.us) to put in WA_COMMUNITY_GROUP_ID. The
+// dedicated number must already have joined the community.
+app.get("/groups", async (_req, res) => {
+  if (!ready) {
+    return res.status(503).json({ status: "failed", error: "client not ready (scan QR / still booting)" });
+  }
+  try {
+    const chats = await client.getChats();
+    const groups = chats
+      .filter((c) => c.isGroup)
+      .map((c) => ({ id: c.id?._serialized, name: c.name }));
+    return res.json({ groups });
+  } catch (e) {
+    return res.status(500).json({ status: "failed", error: String(e?.message || e) });
+  }
+});
+
+// Post ONE message to the community Announcements group. One send, every member
+// reads it — no per-parent blast, no number resolution, far below the ban
+// radar. Body: { text: "...", groupId?: "...@g.us" } (groupId overrides the env
+// default). Only works if the dedicated number is an ADMIN of that group.
+app.post("/announce", async (req, res) => {
+  if (!ready) {
+    return res.status(503).json({ status: "failed", error: "client not ready (scan QR / still booting)" });
+  }
+  const { text, groupId } = req.body || {};
+  const target = groupId || COMMUNITY_GROUP_ID;
+  if (!text) return res.status(400).json({ status: "failed", error: "missing 'text'" });
+  if (!target) {
+    return res
+      .status(400)
+      .json({ status: "failed", error: "no group id (set WA_COMMUNITY_GROUP_ID or pass groupId)" });
+  }
+  try {
+    const r = await sendToChat(target, text);
     return res.json({ status: "sent", providerMessageId: r.providerMessageId });
   } catch (e) {
     return res.status(500).json({ status: "failed", error: String(e?.message || e) });

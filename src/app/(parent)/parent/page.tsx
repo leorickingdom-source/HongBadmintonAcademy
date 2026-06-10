@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   PageHeader, StatCard, Card, EmptyState, Badge,
 } from "@/components/ui";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate, formatTime } from "@/lib/format";
 import type { FeeInterval } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function ParentDashboard() {
       childIds.length
         ? supabase
             .from("enrollments")
-            .select("student_id, classes(name, level)")
+            .select("student_id, class_id, classes(name)")
             .in("student_id", childIds)
             .eq("active", true)
         : Promise.resolve({ data: [] as any[] }),
@@ -49,11 +49,42 @@ export default async function ParentDashboard() {
       supabase.from("scorecards").select("*", { count: "exact", head: true }),
     ]);
 
-  const levelByChild = new Map<string, { name: string; level: string | null }>();
+  const classByChild = new Map<string, string>();
+  const classIds: string[] = [];
   for (const e of (enrollments ?? []) as any[]) {
-    if (e.classes && !levelByChild.has(e.student_id)) {
-      levelByChild.set(e.student_id, { name: e.classes.name, level: e.classes.level });
+    if (e.classes && !classByChild.has(e.student_id)) {
+      classByChild.set(e.student_id, e.classes.name);
     }
+    if (e.class_id && !classIds.includes(e.class_id)) classIds.push(e.class_id);
+  }
+
+  const today = new Date().toLocaleDateString("en-CA");
+  const { data: upcomingSessions } = classIds.length
+    ? await supabase
+        .from("sessions")
+        .select("id, session_date, start_time, end_time, location, class_id")
+        .in("class_id", classIds)
+        .gte("session_date", today)
+        .order("session_date")
+        .order("start_time")
+        .limit(5)
+    : { data: [] as any[] };
+
+  // class_id → child name(s)
+  const classToChild = new Map<string, string[]>();
+  for (const e of (enrollments ?? []) as any[]) {
+    if (!e.class_id) continue;
+    const child = (children ?? []).find((c) => c.id === e.student_id);
+    if (!child) continue;
+    const cur = classToChild.get(e.class_id) ?? [];
+    cur.push(child.full_name);
+    classToChild.set(e.class_id, cur);
+  }
+
+  // class_id → class name
+  const classNameMap = new Map<string, string>();
+  for (const e of (enrollments ?? []) as any[]) {
+    if (e.class_id && e.classes?.name) classNameMap.set(e.class_id, e.classes.name);
   }
 
   type Fees = {
@@ -106,12 +137,46 @@ export default async function ParentDashboard() {
         <StatCard label="Score cards" value={scorecards ?? 0} />
       </div>
 
+      {/* ─── Upcoming sessions ──────────────────────────────────────────── */}
+      <div className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">Upcoming sessions</h2>
+          <Link href="/parent/schedule" className="text-sm font-medium text-green-700 hover:underline">
+            View all →
+          </Link>
+        </div>
+        {upcomingSessions && upcomingSessions.length > 0 ? (
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            {(upcomingSessions as any[]).map((s) => {
+              const names = classToChild.get(s.class_id) ?? [];
+              const clsName = classNameMap.get(s.class_id) ?? "—";
+              return (
+                <div key={s.id} className="flex items-center justify-between px-5 py-4">
+                  <div>
+                    <div className="font-semibold text-slate-900">{clsName}</div>
+                    <div className="text-sm text-slate-500">
+                      {formatDate(s.session_date)} · {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                      {s.location ? ` · ${s.location}` : ""}
+                    </div>
+                    {names.length > 0 && (
+                      <div className="mt-0.5 text-xs text-slate-400">{names.join(", ")}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">No upcoming sessions.</p>
+        )}
+      </div>
+
       <h2 className="mb-4 mt-8 text-lg font-semibold text-slate-900">Your children</h2>
 
       {children && children.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
           {children.map((c) => {
-            const lvl = levelByChild.get(c.id);
+            const clsName = classByChild.get(c.id);
             const fees = feesByChild.get(c.id);
             const plan = fees?.plan;
             const outstanding = fees?.outstanding ?? 0;
@@ -124,7 +189,7 @@ export default async function ParentDashboard() {
                       <div className="text-base font-semibold text-slate-900 group-hover:text-green-700">
                         {c.full_name}
                       </div>
-                      <div className="mt-1 text-sm text-slate-500">{lvl?.name ?? "Not enrolled"}</div>
+                      <div className="mt-1 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
                     </div>
                     <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
                   </div>

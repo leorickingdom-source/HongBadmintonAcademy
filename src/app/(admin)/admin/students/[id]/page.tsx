@@ -87,11 +87,15 @@ export default async function StudentProfilePage({
     <div className="space-y-6">
       <PageHeader
         title={student.full_name}
-        description={[
-          student.status,
-          student.parent?.full_name ? `Parent: ${student.parent.full_name}` : null,
-          classNames || null,
-        ].filter(Boolean).join(" · ")}
+        description={
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge tone={student.status === "active" ? "green" : "slate"}>{student.status}</Badge>
+              {classNames && <span>{classNames}</span>}
+            </div>
+            {student.parent?.full_name && <div>Parent: {student.parent.full_name}</div>}
+          </div>
+        }
         action={
           <>
             <LinkButton href={`/admin/students/${id}/edit`} variant="secondary">Edit</LinkButton>
@@ -111,20 +115,44 @@ export default async function StudentProfilePage({
       {/* Attendance history */}
       <Section title="Attendance history" flush>
         {att.length ? (
-          <Table>
-            <thead><tr><Th>Date</Th><Th>Class</Th><Th>Status</Th><Th>Tap in</Th><Th>Tap out</Th></tr></thead>
-            <tbody>
-              {att.map((a: any, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <Td>{formatDate(a.sessions?.session_date)}</Td>
-                  <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
-                  <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
-                  <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
-                  <Td className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+          <>
+            <Table>
+              <thead><tr><Th>Date</Th><Th>Class</Th><Th>Status</Th><Th>Tap in</Th><Th>Tap out</Th></tr></thead>
+              <tbody>
+                {att.slice(0, 3).map((a: any, i) => (
+                  <tr key={i} className="hover:bg-slate-50">
+                    <Td>{formatDate(a.sessions?.session_date)}</Td>
+                    <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
+                    <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
+                    <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
+                    <Td className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+            {att.length > 3 && (
+              <details className="border-t border-slate-100">
+                <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-green-700 hover:bg-slate-50">
+                  Show {att.length - 3} earlier sessions
+                </summary>
+                <div className="overflow-x-auto border-t border-slate-100">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {att.slice(3).map((a: any, i) => (
+                        <tr key={i} className="hover:bg-slate-50">
+                          <Td>{formatDate(a.sessions?.session_date)}</Td>
+                          <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
+                          <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
+                          <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
+                          <Td className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+          </>
         ) : <div className="p-5"><EmptyState message="No attendance records yet." /></div>}
       </Section>
 

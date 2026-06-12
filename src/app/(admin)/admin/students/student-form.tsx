@@ -1,5 +1,6 @@
 import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
+import { NfcTagInput } from "@/components/nfc-tag-input";
 import type { Student } from "@/lib/types";
 
 export function StudentForm({
@@ -46,8 +47,8 @@ export function StudentForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="NFC tag UID" hint="Bind a physical tag for tap attendance.">
-            <Input name="nfc_tag_uid" defaultValue={student?.nfc_tag_uid ?? ""} placeholder="04A1B2C3" />
+          <Field label="NFC tag UID" hint="Tap Scan and hold the card to your phone, or type it.">
+            <NfcTagInput defaultValue={student?.nfc_tag_uid ?? ""} />
           </Field>
           <Field label="Status">
             <Select name="status" defaultValue={student?.status ?? "active"}>

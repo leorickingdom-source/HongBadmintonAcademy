@@ -1,5 +1,6 @@
 import { Card, Field, Input, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
+import { PasswordField } from "./password-field";
 import type { Profile, Role } from "@/lib/types";
 
 export function PersonForm({
@@ -48,9 +49,9 @@ export function PersonForm({
         <Field
           label={person ? "Reset password" : "Password"}
           required={!person}
-          hint={person ? "Leave blank to keep current password." : "Min 8 characters."}
+          hint={person ? "Leave blank to keep current password." : "Min 8 characters — tap Show to check it."}
         >
-          <Input type="password" name="password" autoComplete="new-password" />
+          <PasswordField required={!person} />
         </Field>
 
         <div className="flex gap-2 pt-2">

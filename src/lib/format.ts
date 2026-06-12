@@ -1,7 +1,12 @@
-export function formatCurrency(amount: number, currency = "MYR"): string {
+export function formatCurrency(
+  amount: number,
+  currency = "MYR",
+  opts?: { whole?: boolean },
+): string {
   return new Intl.NumberFormat("en-MY", {
     style: "currency",
     currency,
+    ...(opts?.whole ? { maximumFractionDigits: 0 } : {}),
   }).format(amount);
 }
 

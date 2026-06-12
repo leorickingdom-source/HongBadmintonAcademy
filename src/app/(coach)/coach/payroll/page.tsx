@@ -69,9 +69,9 @@ export default async function CoachPayrollPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Pay rate" value={formatCurrency(rate)} sub="per lesson" />
+        <StatCard label="Pay rate" value={formatCurrency(rate, undefined, { whole: true })} sub="per lesson" />
         <StatCard label="Lessons" value={thisSess.length} sub={tm.label} />
-        <StatCard label="This month's pay" value={formatCurrency(thisPay)} tone="green" sub="auto-calculated" />
+        <StatCard label="This month's pay" value={formatCurrency(thisPay, undefined, { whole: true })} tone="green" sub="auto-calculated" />
         <StatCard
           label="Attendance"
           value={attPct != null ? `${attPct}%` : "—"}
@@ -85,17 +85,17 @@ export default async function CoachPayrollPage() {
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">This month</div>
           <div className="mt-1 text-sm text-slate-700">{tm.label}</div>
           <div className="mt-2 text-sm text-slate-700">
-            {thisSess.length} lessons × {formatCurrency(rate)}
+            {thisSess.length} lessons × {formatCurrency(rate, undefined, { whole: true })}
           </div>
-          <div className="mt-1 text-2xl font-bold text-green-700">{formatCurrency(thisPay)}</div>
+          <div className="mt-1 text-2xl font-bold text-green-700">{formatCurrency(thisPay, undefined, { whole: true })}</div>
         </Card>
         <Card className="p-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Previous month</div>
           <div className="mt-1 text-sm text-slate-700">{lm.label}</div>
           <div className="mt-2 text-sm text-slate-700">
-            {lastSess.length} lessons × {formatCurrency(rate)}
+            {lastSess.length} lessons × {formatCurrency(rate, undefined, { whole: true })}
           </div>
-          <div className="mt-1 text-2xl font-bold text-slate-700">{formatCurrency(lastPay)}</div>
+          <div className="mt-1 text-2xl font-bold text-slate-700">{formatCurrency(lastPay, undefined, { whole: true })}</div>
         </Card>
       </div>
 

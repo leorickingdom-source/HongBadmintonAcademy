@@ -7,6 +7,7 @@ import {
 } from "@/components/ui";
 import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
+import { RatingButtons } from "@/components/rating-buttons";
 import { createAssessment, addNote } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -119,11 +120,15 @@ export default async function MarkStudentPage({
                       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                         {GROUP_LABEL[g]}
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="overflow-hidden rounded-lg border border-slate-200">
                         {groupCrit.map((c: any) => (
-                          <Field key={c.id} label={c.name} hint={`out of ${Number(c.max_score)}`}>
-                            <Input type="number" name={`score_${c.id}`} min="0" max={c.max_score} step="1" defaultValue={0} required />
-                          </Field>
+                          <div
+                            key={c.id}
+                            className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0"
+                          >
+                            <span className="min-w-0 truncate text-sm font-medium text-slate-800">{c.name}</span>
+                            <RatingButtons name={`score_${c.id}`} max={Number(c.max_score)} />
+                          </div>
                         ))}
                       </div>
                     </div>

@@ -2,16 +2,31 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, LinkButton, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
+import { WeeklyTimetable } from "@/components/weekly-timetable";
 import { createClass, deleteClass, deleteClasses } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClassesPage() {
   const supabase = await createClient();
-  const { data: classes } = await supabase
-    .from("classes")
-    .select("*, coach:profiles!classes_coach_id_fkey(full_name), enrollments(count)")
-    .order("name");
+  const [{ data: classes }, { data: slots }] = await Promise.all([
+    supabase
+      .from("classes")
+      .select("*, coach:profiles!classes_coach_id_fkey(full_name), enrollments(count)")
+      .order("name"),
+    supabase
+      .from("class_schedules")
+      .select("day_of_week, start_time, end_time, location, classes(name)")
+      .eq("is_active", true),
+  ]);
+  const timetableSlots = (slots ?? [])
+    .map((s: any) => ({
+      className: s.classes?.name ?? "Class",
+      day_of_week: s.day_of_week,
+      start_time: s.start_time,
+      end_time: s.end_time,
+      location: s.location,
+    }));
 
   return (
     <div>
@@ -25,6 +40,12 @@ export default async function ClassesPage() {
           </form>
         }
       />
+
+      {timetableSlots.length > 0 && (
+        <Section title="Weekly timetable" description="Every class's regular slots, Mon–Sun." className="mb-6">
+          <WeeklyTimetable slots={timetableSlots} />
+        </Section>
+      )}
 
       {classes && classes.length > 0 ? (
         <Section title={`Classes (${classes.length})`} flush>

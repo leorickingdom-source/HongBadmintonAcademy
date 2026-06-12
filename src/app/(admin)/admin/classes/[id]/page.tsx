@@ -9,8 +9,8 @@ import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components
 import { dayName, formatDate, formatTime, DAY_NAMES } from "@/lib/format";
 import { ClassForm } from "../class-form";
 import {
-  updateClass, addSchedule, deleteSchedule, addCoach, removeCoach,
-  enrollStudent, unenrollStudent, generateSessions,
+  updateClass, addSchedule, deleteSchedule, addCoaches, removeCoach,
+  enrollStudents, unenrollStudent, generateSessions,
   cancelSession, restoreSession, deleteSession, deleteSessions,
 } from "../actions";
 
@@ -136,20 +136,23 @@ export default async function ManageClassPage({
             <span className="text-sm text-slate-400">No coaches assigned.</span>
           )}
         </div>
-        <form action={addCoach} className="mt-4 flex max-w-md items-end gap-3 border-t border-slate-100 pt-4">
-          <input type="hidden" name="class_id" value={classRow.id} />
-          <div className="flex-1">
-            <Field label="Add coach">
-              <Select name="coach_id" defaultValue="">
-                <option value="">— select —</option>
-                {availableCoaches.map((c) => (
-                  <option key={c.id} value={c.id}>{c.full_name ?? c.id}</option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          <Button type="submit">Add</Button>
-        </form>
+        {availableCoaches.length > 0 ? (
+          <form action={addCoaches} className="mt-4 border-t border-slate-100 pt-4">
+            <input type="hidden" name="class_id" value={classRow.id} />
+            <div className="mb-2 text-sm font-medium text-slate-700">Add coaches — tick any number</div>
+            <div className="flex flex-wrap gap-2">
+              {availableCoaches.map((c) => (
+                <label key={c.id} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+                  <input type="checkbox" name="coach_ids" value={c.id} className="h-4 w-4 accent-green-600" />
+                  {c.full_name ?? c.id}
+                </label>
+              ))}
+            </div>
+            <div className="mt-3"><Button type="submit">Add selected</Button></div>
+          </form>
+        ) : (
+          <p className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-400">All coaches assigned.</p>
+        )}
       </Section>
 
       {/* Enrollment */}
@@ -175,20 +178,25 @@ export default async function ManageClassPage({
         ) : (
           <div className="px-5 pt-5"><EmptyState message="No students enrolled." /></div>
         )}
-        <form action={enrollStudent} className="flex max-w-md items-end gap-3 border-t border-slate-100 p-5">
-          <input type="hidden" name="class_id" value={classRow.id} />
-          <div className="flex-1">
-            <Field label="Enroll student">
-              <Select name="student_id" defaultValue="">
-                <option value="">— select —</option>
-                {availableStudents.map((s) => (
-                  <option key={s.id} value={s.id}>{s.full_name}</option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          <Button type="submit">Enroll</Button>
-        </form>
+        {availableStudents.length > 0 ? (
+          <form action={enrollStudents} className="border-t border-slate-100 p-5">
+            <input type="hidden" name="class_id" value={classRow.id} />
+            <div className="mb-2 text-sm font-medium text-slate-700">
+              Enroll students — tick any number ({availableStudents.length} available)
+            </div>
+            <div className="flex max-h-56 flex-wrap gap-2 overflow-y-auto">
+              {availableStudents.map((s) => (
+                <label key={s.id} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+                  <input type="checkbox" name="student_ids" value={s.id} className="h-4 w-4 accent-green-600" />
+                  {s.full_name}
+                </label>
+              ))}
+            </div>
+            <div className="mt-3"><Button type="submit">Enroll selected</Button></div>
+          </form>
+        ) : (
+          <p className="border-t border-slate-100 p-5 text-sm text-slate-400">All active students enrolled.</p>
+        )}
       </Section>
 
       {/* Sessions */}

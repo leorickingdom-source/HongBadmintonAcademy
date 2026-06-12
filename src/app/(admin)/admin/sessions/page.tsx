@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, Section, Table, Th, Td, Badge, EmptyState, LinkButton, Button,
+  PageHeader, Table, Th, Td, Badge, EmptyState, LinkButton, Button,
 } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
+import { SessionCalendar } from "@/components/session-calendar";
 import { formatDate, formatTime } from "@/lib/format";
 import { cancelSession, restoreSession, deleteSession, deleteSessions } from "./actions";
 
@@ -34,7 +35,24 @@ export default async function SessionsPage() {
       />
 
       {sessions && sessions.length > 0 ? (
-        <Section title={`Upcoming sessions (${sessions.length})`} flush>
+        <div className="space-y-6">
+          <SessionCalendar
+            sessions={(sessions as any[]).map((s) => ({
+              id: s.id,
+              session_date: s.session_date,
+              start_time: s.start_time,
+              end_time: s.end_time,
+              location: s.location,
+              status: s.status,
+              className: s.classes?.name ?? null,
+            }))}
+          />
+
+          <details className="group">
+            <summary className="cursor-pointer list-none text-sm font-medium text-slate-600 hover:text-slate-900">
+              <span className="select-none">▸ List &amp; bulk actions ({sessions.length})</span>
+            </summary>
+            <div className="mt-3">
           <BulkProvider>
             <Table>
               <thead>
@@ -92,7 +110,9 @@ export default async function SessionsPage() {
               />
             </div>
           </BulkProvider>
-        </Section>
+            </div>
+          </details>
+        </div>
       ) : (
         <EmptyState message="No upcoming sessions. Generate them from a class's weekly schedule." />
       )}

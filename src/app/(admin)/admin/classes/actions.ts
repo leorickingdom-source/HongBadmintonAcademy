@@ -87,6 +87,19 @@ export async function addCoach(formData: FormData) {
   revalidatePath(`/admin/classes/${class_id}`);
 }
 
+// Assign several coaches at once (the form only offers unassigned ones).
+export async function addCoaches(formData: FormData) {
+  const class_id = String(formData.get("class_id"));
+  const ids = formData.getAll("coach_ids").map(String).filter(Boolean);
+  if (!ids.length) return;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("class_coaches")
+    .insert(ids.map((coach_id) => ({ class_id, coach_id })));
+  if (error) err(`/admin/classes/${class_id}`, error.message);
+  revalidatePath(`/admin/classes/${class_id}`);
+}
+
 export async function removeCoach(formData: FormData) {
   const class_id = String(formData.get("class_id"));
   const coach_id = String(formData.get("coach_id"));
@@ -104,6 +117,19 @@ export async function enrollStudent(formData: FormData) {
   const { error } = await supabase
     .from("enrollments")
     .insert({ class_id, student_id });
+  if (error) err(`/admin/classes/${class_id}`, error.message);
+  revalidatePath(`/admin/classes/${class_id}`);
+}
+
+// Enroll several students at once (the form only offers not-yet-enrolled ones).
+export async function enrollStudents(formData: FormData) {
+  const class_id = String(formData.get("class_id"));
+  const ids = formData.getAll("student_ids").map(String).filter(Boolean);
+  if (!ids.length) return;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("enrollments")
+    .insert(ids.map((student_id) => ({ class_id, student_id })));
   if (error) err(`/admin/classes/${class_id}`, error.message);
   revalidatePath(`/admin/classes/${class_id}`);
 }

@@ -32,6 +32,17 @@ function mytDateStr(offsetDays: number): string {
 
 const PAYABLE = ["unpaid", "overdue"];
 
+// Re-nudge a still-unpaid invoice at these days-late milestones. Each becomes a
+// distinct queue `kind` (overdue_3, overdue_7, …) so the (invoice_id, kind)
+// dedup sends each milestone exactly once; after the last one the invoice is
+// left to the admin (no more auto-nudges).
+const OVERDUE_NUDGES = [3, 7, 14, 28] as const;
+
+// Whole days from one YYYY-MM-DD date to another (both parsed as UTC midnight).
+function daysBetween(fromDate: string, toDate: string): number {
+  return Math.floor((Date.parse(toDate) - Date.parse(fromDate)) / 86_400_000);
+}
+
 function buildBody(
   kind: string,
   parentName: string,
@@ -40,16 +51,21 @@ function buildBody(
   currency: string,
   dueDate: string,
   payUrl: string,
+  daysLate = 0,
 ): string {
   const fee = formatCurrency(Number(amount), currency);
   if (kind === "due_day") {
     return `Hi ${parentName}, a friendly reminder that the fee of ${fee} for ${studentName} is due today. Pay here: ${payUrl}`;
   }
+  if (kind.startsWith("overdue")) {
+    return `Hi ${parentName}, the fee of ${fee} for ${studentName} was due on ${formatDate(dueDate)} and is now ${daysLate} day${daysLate === 1 ? "" : "s"} overdue. Please settle it here: ${payUrl}`;
+  }
   return `Hi ${parentName}, a reminder that the fee of ${fee} for ${studentName} is due on ${formatDate(dueDate)}. Pay here: ${payUrl}`;
 }
 
-// Daily cron: enqueue reminders for invoices due in 3 days (before_due) or due
-// today (due_day) that are still unpaid. Deduped by the unique index.
+// Daily cron: enqueue reminders for invoices due in 3 days (before_due), due
+// today (due_day), or already overdue (overdue_<n> at the OVERDUE_NUDGES
+// day-late milestones), all still unpaid. Deduped by the (invoice_id, kind) index.
 export async function enqueueDueReminders(baseUrl: string) {
   const db = createAdminClient();
   const today = mytDateStr(0);
@@ -87,12 +103,54 @@ export async function enqueueDueReminders(baseUrl: string) {
     });
   }
 
-  if (rows.length === 0) return { scanned: invoices?.length ?? 0, enqueued: 0 };
+  // Overdue (still-unpaid, due_date in the past): nudge at the largest milestone
+  // reached. Scanning all past-due invoices (not a bounded window) makes this
+  // self-healing if the cron ever misses days — dedup skips milestones already
+  // sent, so it simply catches up to the current one.
+  const { data: overdue, error: odErr } = await db
+    .from("invoices")
+    .select(
+      "id, amount, currency, due_date, parent_id, status, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name, phone)",
+    )
+    .in("status", PAYABLE)
+    .lt("due_date", today);
+  if (odErr) throw new Error(odErr.message);
+
+  for (const inv of overdue ?? []) {
+    const parent = (inv as any).parent;
+    if (!parent?.phone) continue;
+    const daysLate = daysBetween(inv.due_date, today);
+    // Largest milestone reached so far — avoids firing every earlier milestone
+    // at once for an invoice that was already late when first scanned.
+    const milestone = [...OVERDUE_NUDGES].reverse().find((t) => daysLate >= t);
+    if (milestone == null) continue;
+    const kind = `overdue_${milestone}`;
+    const studentName = (inv as any).students?.full_name ?? "your child";
+    rows.push({
+      kind,
+      invoice_id: inv.id,
+      recipient_profile_id: inv.parent_id,
+      recipient_phone: parent.phone,
+      body: buildBody(
+        kind,
+        parent.full_name ?? "Parent",
+        studentName,
+        inv.amount,
+        inv.currency,
+        inv.due_date,
+        `${baseUrl}/parent/invoices`,
+        daysLate,
+      ),
+    });
+  }
+
+  const scanned = (invoices?.length ?? 0) + (overdue?.length ?? 0);
+  if (rows.length === 0) return { scanned, enqueued: 0 };
   const { error: upErr } = await db
     .from("message_queue")
     .upsert(rows, { onConflict: "invoice_id,kind", ignoreDuplicates: true });
   if (upErr) throw new Error(upErr.message);
-  return { scanned: invoices?.length ?? 0, enqueued: rows.length };
+  return { scanned, enqueued: rows.length };
 }
 
 type NextResult =

@@ -7,7 +7,7 @@ import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
 import type { InvoiceStatus } from "@/lib/types";
-import { markPaid, deleteInvoice, logReminderSend, sendReminder } from "./actions";
+import { markPaid, deleteInvoice, logReminderSend } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -86,12 +86,6 @@ export default async function InvoicesPage() {
                                 body: text,
                               }}
                             />
-                          )}
-                          {payable && i.parent?.phone && (
-                            <form action={sendReminder}>
-                              <input type="hidden" name="id" value={i.id} />
-                              <SubmitButton variant="secondary" pendingText="Sending…">Remind (bot)</SubmitButton>
-                            </form>
                           )}
                           <form action={deleteInvoice}>
                             <input type="hidden" name="id" value={i.id} />

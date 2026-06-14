@@ -4,11 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { invoiceSchema } from "@/lib/validation";
-import { getPaymentProvider } from "@/lib/payments";
-import { getWhatsappProvider } from "@/lib/whatsapp";
-import { isStripeConfigured } from "@/lib/env";
-import { getBaseUrl } from "@/lib/url";
-import { formatCurrency, formatDate } from "@/lib/format";
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -72,70 +67,6 @@ export async function deleteInvoice(formData: FormData) {
   const id = String(formData.get("id"));
   const supabase = await createClient();
   await supabase.from("invoices").delete().eq("id", id);
-  revalidatePath("/admin/invoices");
-}
-
-// Generate a payment link + send a WhatsApp reminder (logged either way).
-export async function sendReminder(formData: FormData) {
-  const id = String(formData.get("id"));
-  const supabase = await createClient();
-
-  const { data: inv } = await supabase
-    .from("invoices")
-    .select(
-      "id, amount, currency, due_date, parent_id, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name, phone, email)",
-    )
-    .eq("id", id)
-    .maybeSingle();
-
-  if (!inv) err("/admin/invoices", "Invoice not found");
-  const parent: any = (inv as any).parent;
-  const studentName = (inv as any).students?.full_name ?? "your child";
-  if (!parent?.phone) err("/admin/invoices", "Parent has no phone number on file");
-
-  // Build a payment link (Stripe Checkout when configured).
-  const baseUrl = await getBaseUrl();
-  let link = `${baseUrl}/parent/invoices`;
-  if (isStripeConfigured()) {
-    try {
-      const checkout = await getPaymentProvider().createCheckoutSession({
-        invoiceId: inv.id,
-        amount: Number(inv.amount),
-        currency: inv.currency,
-        description: `Academy fee — ${studentName}`,
-        customerEmail: parent.email,
-        successUrl: `${baseUrl}/parent/invoices?paid=1`,
-        cancelUrl: `${baseUrl}/parent/invoices`,
-      });
-      link = checkout.url;
-      await supabase
-        .from("invoices")
-        .update({ stripe_checkout_session_id: checkout.reference })
-        .eq("id", inv.id);
-    } catch {
-      /* fall back to portal link */
-    }
-  }
-
-  const text =
-    `Hi ${parent.full_name ?? "Parent"}, this is a reminder that the fee of ` +
-    `${formatCurrency(Number(inv.amount), inv.currency)} for ${studentName} ` +
-    `is due ${formatDate(inv.due_date)}. Pay here: ${link}`;
-
-  const result = await getWhatsappProvider().send({ to: parent.phone, text });
-
-  await supabase.from("messages").insert({
-    type: "payment_reminder",
-    recipient_profile_id: inv.parent_id,
-    recipient_phone: parent.phone,
-    body: text,
-    invoice_id: inv.id,
-    status: result.status === "sent" ? "sent" : "failed",
-    provider_message_id: result.providerMessageId ?? null,
-    error: result.error ?? null,
-    sent_at: result.status === "sent" ? new Date().toISOString() : null,
-  });
-
   revalidatePath("/admin/invoices");
 }
 

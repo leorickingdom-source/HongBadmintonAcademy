@@ -5,7 +5,11 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { monthLabel } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
-import { generateScorecards, logScorecardSend, sendScorecard } from "./actions";
+import { AnnounceComposer } from "@/components/announce-composer";
+import { APP_NAME } from "@/lib/constants";
+import { env } from "@/lib/env";
+import { generateScorecards, logScorecardSend } from "./actions";
+import { logAnnouncement } from "../announce/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +38,22 @@ export default async function ScorecardsPage() {
           <SubmitButton pendingText="Generating…">Generate this month</SubmitButton>
         </form>
       </Card>
+
+      <Section title="Notify parents — reports updated">
+        <p className="pb-3 text-sm text-slate-600">
+          One post to the parent WhatsApp Community tells every parent their child&apos;s growth
+          report is updated — no per-parent send, no private info (names/scores) in the message.
+        </p>
+        <AnnounceComposer
+          action={logAnnouncement}
+          communityLink={env.waCommunityLink || null}
+          defaultText={
+            `🏸 ${APP_NAME}\n` +
+            `${monthLabel(new Date().toISOString())} Growth Reports are now ready.\n` +
+            `Parents — log in to view your child's full report:\n${baseUrl}/parent/scorecards`
+          }
+        />
+      </Section>
 
       {cards && cards.length > 0 ? (
         <Section title={`Growth reports (${cards.length})`} flush>
@@ -86,12 +106,6 @@ export default async function ScorecardsPage() {
                             body: text,
                           }}
                         />
-                        {parent?.phone && (
-                          <form action={sendScorecard}>
-                            <input type="hidden" name="id" value={c.id} />
-                            <SubmitButton pendingText="Sending…">Send via bot</SubmitButton>
-                          </form>
-                        )}
                       </div>
                     </Td>
                   </tr>

@@ -695,12 +695,26 @@ insert into storage.buckets (id, name, public)
 values
   ('avatars',        'avatars',        true),
   ('student-photos', 'student-photos', true),
-  ('scorecards',     'scorecards',     false)
+  ('scorecards',     'scorecards',     false),
+  ('backups',        'backups',        false)
 on conflict (id) do nothing;
 
 -- Admins may manage objects in any HBA bucket through their session, too.
 create policy "hba admin objects"
   on storage.objects for all to authenticated
-  using (bucket_id in ('avatars','student-photos','scorecards') and public.is_admin())
-  with check (bucket_id in ('avatars','student-photos','scorecards') and public.is_admin());
+  using (bucket_id in ('avatars','student-photos','scorecards','backups') and public.is_admin())
+  with check (bucket_id in ('avatars','student-photos','scorecards','backups') and public.is_admin());
+
+-- Self-maintaining table list for the daily backup job (see /api/cron/backup).
+create or replace function public.list_backup_tables()
+returns setof text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select tablename from pg_tables where schemaname = 'public' order by tablename;
+$$;
+revoke all on function public.list_backup_tables() from public;
+grant execute on function public.list_backup_tables() to service_role;
 

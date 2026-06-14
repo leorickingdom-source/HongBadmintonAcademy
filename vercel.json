@@ -8,6 +8,14 @@
     {
       "path": "/api/cron/enqueue-reminders",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/generate-scorecards",
+      "schedule": "0 2 1 * *"
+    },
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 18 * * *"
     }
   ]
 }

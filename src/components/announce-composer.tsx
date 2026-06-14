@@ -9,11 +9,13 @@ import { buttonClass, Textarea, Field } from "@/components/ui";
 export function AnnounceComposer({
   action,
   communityLink,
+  defaultText = "",
 }: {
   action: (formData: FormData) => void;
   communityLink: string | null;
+  defaultText?: string;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(defaultText);
   const [copied, setCopied] = useState(false);
   const [logged, setLogged] = useState(false);
   const trimmed = text.trim();

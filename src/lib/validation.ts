@@ -1,6 +1,11 @@
 import { z } from "zod";
+import { normalizePhoneMY } from "@/lib/wa";
 
 const optionalStr = z.string().trim().optional().transform((v) => (v ? v : null));
+
+// Stored as E.164 (+60…) so wa.me links and the WhatsApp worker always get a
+// sendable number regardless of how the admin typed it.
+const phoneField = z.string().trim().optional().transform((v) => normalizePhoneMY(v));
 
 // IDs come from our own <select>/hidden fields and land in Postgres `uuid`
 // columns (which validate format themselves). We avoid z.uuid() because its
@@ -21,7 +26,7 @@ export const studentSchema = z.object({
 export const profileSchema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email required"),
-  phone: optionalStr,
+  phone: phoneField,
   password: z.string().min(8, "Min 8 characters").optional().or(z.literal("")),
 });
 

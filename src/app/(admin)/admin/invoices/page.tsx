@@ -6,6 +6,7 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
+import { feeReminderText } from "@/lib/reminder-text";
 import type { InvoiceStatus } from "@/lib/types";
 import { markPaid, deleteInvoice, logReminderSend } from "./actions";
 
@@ -53,10 +54,14 @@ export default async function InvoicesPage() {
               <tbody>
                 {invoices.map((i: any) => {
                   const payable = i.status !== "paid" && i.status !== "canceled" && i.status !== "refunded";
-                  const text =
-                    `Hi ${i.parent?.full_name ?? "Parent"}, the fee of ` +
-                    `${formatCurrency(Number(i.amount), i.currency)} for ${i.students?.full_name ?? "your child"} ` +
-                    `is due ${formatDate(i.due_date)}. Pay here: ${baseUrl}/parent/invoices`;
+                  const text = feeReminderText({
+                    parentName: i.parent?.full_name,
+                    studentName: i.students?.full_name,
+                    amount: i.amount,
+                    currency: i.currency,
+                    dueDate: i.due_date,
+                    payUrl: `${baseUrl}/parent/invoices`,
+                  });
                   const waUrl = waLink(i.parent?.phone, text);
                   return (
                     <tr key={i.id} className="hover:bg-slate-50">

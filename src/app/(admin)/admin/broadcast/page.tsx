@@ -3,7 +3,8 @@ import { PageHeader, LinkButton } from "@/components/ui";
 import { BroadcastQueue, type BroadcastItem } from "@/components/broadcast-queue";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
-import { monthLabel, formatCurrency, formatDate } from "@/lib/format";
+import { feeReminderText } from "@/lib/reminder-text";
+import { monthLabel } from "@/lib/format";
 import { logScorecardSend } from "../scorecards/actions";
 import { logReminderSend } from "../invoices/actions";
 
@@ -33,10 +34,14 @@ export default async function BroadcastPage({
       .order("created_at", { ascending: false });
     items = (data ?? []).map((i: any) => {
       const phone = i.parent?.phone ?? null;
-      const body =
-        `Hi ${i.parent?.full_name ?? "Parent"}, the fee of ` +
-        `${formatCurrency(Number(i.amount), i.currency)} for ${i.students?.full_name ?? "your child"} ` +
-        `is due ${formatDate(i.due_date)}. Pay here: ${baseUrl}/parent/invoices`;
+      const body = feeReminderText({
+        parentName: i.parent?.full_name,
+        studentName: i.students?.full_name,
+        amount: i.amount,
+        currency: i.currency,
+        dueDate: i.due_date,
+        payUrl: `${baseUrl}/parent/invoices`,
+      });
       return {
         id: i.id,
         name: i.students?.full_name ?? i.parent?.full_name ?? "—",

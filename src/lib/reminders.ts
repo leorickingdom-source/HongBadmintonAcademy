@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { normalizePhoneMY } from "@/lib/wa";
 
 // Very-cautious throttle policy (anti-ban). The app enforces all of this; the
 // worker just polls and obeys, so the cadence stays irregular + low-volume.
@@ -83,14 +84,15 @@ export async function enqueueDueReminders(baseUrl: string) {
   const rows: Array<Record<string, unknown>> = [];
   for (const inv of invoices ?? []) {
     const parent = (inv as any).parent;
-    if (!parent?.phone) continue;
+    const phone = normalizePhoneMY(parent?.phone);
+    if (!phone) continue;
     const kind = inv.due_date === today ? "due_day" : "before_due";
     const studentName = (inv as any).students?.full_name ?? "your child";
     rows.push({
       kind,
       invoice_id: inv.id,
       recipient_profile_id: inv.parent_id,
-      recipient_phone: parent.phone,
+      recipient_phone: phone,
       body: buildBody(
         kind,
         parent.full_name ?? "Parent",
@@ -118,7 +120,8 @@ export async function enqueueDueReminders(baseUrl: string) {
 
   for (const inv of overdue ?? []) {
     const parent = (inv as any).parent;
-    if (!parent?.phone) continue;
+    const phone = normalizePhoneMY(parent?.phone);
+    if (!phone) continue;
     const daysLate = daysBetween(inv.due_date, today);
     // Largest milestone reached so far — avoids firing every earlier milestone
     // at once for an invoice that was already late when first scanned.
@@ -130,7 +133,7 @@ export async function enqueueDueReminders(baseUrl: string) {
       kind,
       invoice_id: inv.id,
       recipient_profile_id: inv.parent_id,
-      recipient_phone: parent.phone,
+      recipient_phone: phone,
       body: buildBody(
         kind,
         parent.full_name ?? "Parent",

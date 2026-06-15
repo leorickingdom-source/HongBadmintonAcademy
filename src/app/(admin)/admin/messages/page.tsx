@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import type { MessageStatus } from "@/lib/types";
 
@@ -25,28 +25,34 @@ export default async function MessagesPage() {
       />
 
       {messages && messages.length > 0 ? (
-        <Section title={`Messages (${messages.length})`} flush>
-          <Table>
-            <thead>
-              <tr>
-                <Th>When</Th><Th>Type</Th><Th>To</Th><Th>Status</Th><Th>Detail</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {messages.map((m: any) => (
-                <tr key={m.id} className="hover:bg-slate-50">
-                  <Td className="text-slate-500">{formatDateTime(m.created_at)}</Td>
-                  <Td><Badge tone="slate">{m.type}</Badge></Td>
-                  <Td className="font-mono text-xs text-slate-500">{m.recipient_phone}</Td>
-                  <Td><Badge tone={TONE[m.status as MessageStatus]}>{m.status}</Badge></Td>
-                  <Td className="max-w-md truncate text-xs text-slate-500" title={m.error ?? m.body ?? ""}>
-                    {m.error ? <span className="text-red-600">{m.error}</span> : m.body}
-                  </Td>
+        <details open className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5">
+            <h2 className="text-sm font-semibold text-slate-900">Messages ({messages.length})</h2>
+            <span className="text-xs text-slate-400 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="border-t border-slate-100">
+            <Table>
+              <thead>
+                <tr>
+                  <Th>When</Th><Th>Type</Th><Th>To</Th><Th>Status</Th><Th>Detail</Th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
-        </Section>
+              </thead>
+              <tbody>
+                {messages.map((m: any) => (
+                  <tr key={m.id} className="hover:bg-slate-50">
+                    <Td className="text-slate-500">{formatDateTime(m.created_at)}</Td>
+                    <Td><Badge tone="slate">{m.type}</Badge></Td>
+                    <Td className="font-mono text-xs text-slate-500">{m.recipient_phone}</Td>
+                    <Td><Badge tone={TONE[m.status as MessageStatus]}>{m.status}</Badge></Td>
+                    <Td className="max-w-md truncate text-xs text-slate-500" title={m.error ?? m.body ?? ""}>
+                      {m.error ? <span className="text-red-600">{m.error}</span> : m.body}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        </details>
       ) : (
         <EmptyState message="No messages sent yet." />
       )}

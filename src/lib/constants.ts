@@ -24,7 +24,6 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/attendance", label: "Attendance" },
       { href: "/admin/coaches/summary", label: "Coaches" },
       { href: "/admin/marking-schemes", label: "Marking Schemes" },
-      { href: "/admin/rewards", label: "Reward Rules" },
     ],
   },
   {
@@ -42,6 +41,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/analytics", label: "Analytics" },
       { href: "/admin/announce", label: "Announcements" },
       { href: "/admin/messages", label: "WhatsApp Log" },
+      { href: "/admin/rewards", label: "Reward Rules" },
       { href: "/admin/settings", label: "Settings" },
     ],
   },

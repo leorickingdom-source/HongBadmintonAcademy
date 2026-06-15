@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency, formatDate, monthLabel } from "@/lib/format";
 import { normalizePhoneMY } from "@/lib/wa";
-import { isWorkerPaused } from "@/lib/settings";
+import { isWorkerPaused, isFeeRemindersPaused } from "@/lib/settings";
 import { APP_NAME } from "@/lib/constants";
 import { env } from "@/lib/env";
 
@@ -270,13 +270,13 @@ export async function claimNextQueued(): Promise<NextResult> {
   // Irregularity: sometimes do nothing even when eligible.
   if (Math.random() < POLICY.randomSkipChance) return { message: null, reason: "random-skip" };
 
-  // Pick a random queued row (shuffled order).
-  const { data: queued } = await db
-    .from("message_queue")
-    .select("id, invoice_id, recipient_phone, body")
-    .eq("status", "queued")
-    .limit(25);
-  if (!queued || queued.length === 0) return { message: null, reason: "empty" };
+  // Pick a random queued row (shuffled order). When fee reminders are parked,
+  // hold rows tied to an invoice — community posts / others still flow.
+  const feePaused = await isFeeRemindersPaused();
+  let q = db.from("message_queue").select("id, invoice_id, recipient_phone, body").eq("status", "queued");
+  if (feePaused) q = q.is("invoice_id", null);
+  const { data: queued } = await q.limit(25);
+  if (!queued || queued.length === 0) return { message: null, reason: feePaused ? "empty-fees-paused" : "empty" };
   const pick = queued[Math.floor(Math.random() * queued.length)];
 
   // Don't nudge an invoice that was paid since enqueue.

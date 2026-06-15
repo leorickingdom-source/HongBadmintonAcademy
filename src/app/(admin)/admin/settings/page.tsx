@@ -2,8 +2,8 @@ import { requireRole } from "@/lib/auth";
 import { PageHeader, Card, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ROLE_LABEL } from "@/lib/constants";
-import { isWorkerPaused } from "@/lib/settings";
-import { updateOwnProfile, toggleWorker } from "./actions";
+import { isWorkerPaused, isFeeRemindersPaused } from "@/lib/settings";
+import { updateOwnProfile, toggleWorker, toggleFeeReminders } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +15,7 @@ export default async function SettingsPage({
   const profile = await requireRole("admin");
   const { error, saved } = await searchParams;
   const paused = await isWorkerPaused();
+  const feePaused = await isFeeRemindersPaused();
 
   return (
     <div className="space-y-6">
@@ -35,6 +36,26 @@ export default async function SettingsPage({
             <input type="hidden" name="paused" value={paused ? "false" : "true"} />
             <SubmitButton variant={paused ? "primary" : "secondary"} pendingText="Saving…">
               {paused ? "Resume worker" : "Pause worker"}
+            </SubmitButton>
+          </form>
+        </div>
+      </Section>
+
+      <Section title="Auto fee reminders">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="text-sm text-slate-600">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="font-medium text-slate-800">Status:</span>
+              <Badge tone={feePaused ? "amber" : "green"}>{feePaused ? "Parked" : "On"}</Badge>
+            </div>
+            {feePaused
+              ? "No fee reminders are queued or sent. Growth reports & announcements still go out."
+              : "Due/overdue fee reminders auto-queue daily and drip-send to parents."}
+          </div>
+          <form action={toggleFeeReminders}>
+            <input type="hidden" name="paused" value={feePaused ? "false" : "true"} />
+            <SubmitButton variant={feePaused ? "primary" : "secondary"} pendingText="Saving…">
+              {feePaused ? "Resume reminders" : "Park reminders"}
             </SubmitButton>
           </form>
         </div>

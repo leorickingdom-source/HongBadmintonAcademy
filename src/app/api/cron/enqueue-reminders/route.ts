@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getBaseUrl } from "@/lib/url";
 import { enqueueDueReminders } from "@/lib/reminders";
+import { isFeeRemindersPaused } from "@/lib/settings";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    // Parked by admin (Settings → Fee reminders): don't queue new ones.
+    if (await isFeeRemindersPaused()) {
+      return NextResponse.json({ ok: true, skipped: "fee-reminders-paused" });
+    }
     const baseUrl = await getBaseUrl();
     const result = await enqueueDueReminders(baseUrl);
     return NextResponse.json({ ok: true, ...result });

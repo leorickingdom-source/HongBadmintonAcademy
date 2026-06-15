@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import { setWorkerPaused } from "@/lib/settings";
+import { setWorkerPaused, setFeeRemindersPaused } from "@/lib/settings";
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
@@ -37,5 +37,12 @@ export async function updateOwnProfile(formData: FormData) {
 export async function toggleWorker(formData: FormData) {
   await requireRole("admin");
   await setWorkerPaused(formData.get("paused") === "true");
+  revalidatePath("/admin/settings");
+}
+
+// Park/resume the auto fee reminders only (worker keeps sending everything else).
+export async function toggleFeeReminders(formData: FormData) {
+  await requireRole("admin");
+  await setFeeRemindersPaused(formData.get("paused") === "true");
   revalidatePath("/admin/settings");
 }

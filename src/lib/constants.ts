@@ -17,31 +17,38 @@ export interface NavItem {
 // not repeated here.
 export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   {
-    group: "Manage",
+    group: "Daily",
     items: [
+      { href: "/admin/attendance", label: "Attendance" },
+      { href: "/admin/sessions", label: "Sessions" },
       { href: "/admin/people", label: "People" },
       { href: "/admin/classes", label: "Classes & Schedule" },
-      { href: "/admin/attendance", label: "Attendance" },
-      { href: "/admin/coaches/summary", label: "Coaches" },
+    ],
+  },
+  {
+    group: "Teaching",
+    items: [
+      { href: "/admin/coaches/summary", label: "Coaches & Payroll" },
+      { href: "/admin/leaderboard", label: "Leaderboard" },
       { href: "/admin/marking-schemes", label: "Marking Schemes" },
+      { href: "/admin/rewards", label: "Reward Rules" },
     ],
   },
   {
     group: "Finance & Comms",
     items: [
-      { href: "/admin/fee-plans", label: "Fee Plans" },
       { href: "/admin/invoices", label: "Invoices & Payments" },
       { href: "/admin/scorecards", label: "Growth Reports" },
+      { href: "/admin/announce", label: "Announcements" },
+      { href: "/admin/messages", label: "WhatsApp Log" },
+      { href: "/admin/fee-plans", label: "Fee Plans" },
     ],
   },
   {
-    group: "More",
+    group: "Insights & Setup",
     items: [
-      { href: "/admin/reports", label: "Reports & Export" },
       { href: "/admin/analytics", label: "Analytics" },
-      { href: "/admin/announce", label: "Announcements" },
-      { href: "/admin/messages", label: "WhatsApp Log" },
-      { href: "/admin/rewards", label: "Reward Rules" },
+      { href: "/admin/reports", label: "Reports & Export" },
       { href: "/admin/settings", label: "Settings" },
     ],
   },

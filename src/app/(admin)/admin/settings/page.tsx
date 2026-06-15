@@ -2,8 +2,8 @@ import { requireRole } from "@/lib/auth";
 import { PageHeader, Card, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ROLE_LABEL } from "@/lib/constants";
-import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy, getMonthlySchedule } from "@/lib/settings";
-import { updateOwnProfile, toggleWorker, toggleFeeReminders, saveSendPolicy, saveMonthlySchedule } from "./actions";
+import { isWorkerPaused, isFeeRemindersPaused, getMonthlySchedule } from "@/lib/settings";
+import { updateOwnProfile, toggleWorker, toggleFeeReminders, saveMonthlySchedule } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,6 @@ export default async function SettingsPage({
   const { error, saved } = await searchParams;
   const paused = await isWorkerPaused();
   const feePaused = await isFeeRemindersPaused();
-  const policy = await getSendPolicy();
   const schedule = await getMonthlySchedule();
 
   return (
@@ -83,32 +82,6 @@ export default async function SettingsPage({
           <SubmitButton pendingText="Saving…">Save dates</SubmitButton>
         </form>
       </Section>
-
-      <Section title="Send schedule">
-        <form action={saveSendPolicy} className="space-y-4 p-5">
-          <p className="text-sm text-slate-600">
-            When the worker may send reminders &amp; reports (Malaysia time). A wider window, higher cap
-            or shorter gap sends more per day — but raises WhatsApp ban risk. Changes take effect on the
-            worker&apos;s next check.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Start hour (0–23, MYT)">
-              <Input type="number" name="windowStartHour" min={0} max={23} defaultValue={policy.windowStartHour} />
-            </Field>
-            <Field label="End hour (1–24, MYT)" hint="Exclusive — 20 means last send by 19:59.">
-              <Input type="number" name="windowEndHour" min={1} max={24} defaultValue={policy.windowEndHour} />
-            </Field>
-            <Field label="Max sends per day">
-              <Input type="number" name="dailyCap" min={1} max={50} defaultValue={policy.dailyCap} />
-            </Field>
-            <Field label="Min gap between sends (minutes)">
-              <Input type="number" name="minGapMinutes" min={0} max={240} defaultValue={policy.minGapMinutes} />
-            </Field>
-          </div>
-          <SubmitButton pendingText="Saving…">Save schedule</SubmitButton>
-        </form>
-      </Section>
-
 
       <Card className="max-w-xl p-6">
         {saved && <p className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">Saved.</p>}

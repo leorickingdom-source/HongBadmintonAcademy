@@ -5,11 +5,7 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { monthLabel } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
-import { AnnounceComposer } from "@/components/announce-composer";
-import { APP_NAME } from "@/lib/constants";
-import { env } from "@/lib/env";
 import { generateScorecards, logScorecardSend } from "./actions";
-import { logAnnouncement } from "../announce/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +22,7 @@ export default async function ScorecardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Growth Reports"
-        description="Monthly growth reports — character, skills & the HBA Growth Index. Send to parents via WhatsApp."
+        description="Monthly growth reports — character, skills & the HBA Growth Index. Generated reports auto-send to parents over WhatsApp (drip-throttled); per-card buttons below are a manual fallback."
       />
 
       <Card className="flex flex-wrap items-center justify-between gap-4 border-green-200 bg-green-50 p-5">
@@ -38,22 +34,6 @@ export default async function ScorecardsPage() {
           <SubmitButton pendingText="Generating…">Generate this month</SubmitButton>
         </form>
       </Card>
-
-      <Section title="Notify parents — reports updated">
-        <p className="pb-3 text-sm text-slate-600">
-          One post to the parent WhatsApp Community tells every parent their child&apos;s growth
-          report is updated — no per-parent send, no private info (names/scores) in the message.
-        </p>
-        <AnnounceComposer
-          action={logAnnouncement}
-          communityLink={env.waCommunityLink || null}
-          defaultText={
-            `🏸 ${APP_NAME}\n` +
-            `${monthLabel(new Date().toISOString())} Growth Reports are now ready.\n` +
-            `Parents — log in to view your child's full report:\n${baseUrl}/parent/scorecards`
-          }
-        />
-      </Section>
 
       {cards && cards.length > 0 ? (
         <Section title={`Growth reports (${cards.length})`} flush>

@@ -40,7 +40,7 @@ export default async function PeoplePage({
         action={
           <>
             {active === "coaches" && (
-              <LinkButton href="/admin/coaches/summary" variant="secondary">💰 Payroll</LinkButton>
+              <LinkButton href="/admin/coaches/summary" variant="secondary">💰 Payroll &amp; attendance</LinkButton>
             )}
             {active === "students" && (
               <LinkButton href="/admin/leaderboard" variant="secondary">🏆 Leaderboard</LinkButton>

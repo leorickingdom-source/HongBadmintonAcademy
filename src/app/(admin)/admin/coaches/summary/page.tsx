@@ -97,7 +97,7 @@ export default async function CoachSummaryPage() {
     <div className="space-y-6">
       <PageHeader
         title="Coaches Summary"
-        description={`Lessons & auto-calculated payroll · ${tm.label}`}
+        description={`Lessons, attendance % & auto-calculated payroll · ${tm.label}`}
         action={<LinkButton href="/admin/coaches" variant="ghost">Manage coaches →</LinkButton>}
       />
 

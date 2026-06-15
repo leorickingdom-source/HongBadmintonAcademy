@@ -22,6 +22,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/people", label: "People" },
       { href: "/admin/classes", label: "Classes & Schedule" },
       { href: "/admin/attendance", label: "Attendance" },
+      { href: "/admin/coaches/summary", label: "Coaches" },
       { href: "/admin/marking-schemes", label: "Marking Schemes" },
       { href: "/admin/rewards", label: "Reward Rules" },
     ],

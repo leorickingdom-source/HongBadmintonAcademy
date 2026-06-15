@@ -52,8 +52,12 @@ const client = new Client({
   // auth timeout, which fires before 'ready' (logs show "auth timeout").
   // 0 = wait as long as the load needs.
   authTimeoutMs: 0,
+  // Slow shared-CPU VMs make Chromium's CDP calls slow; the default protocol
+  // timeout fires during init/inject ("Runtime.callFunctionOn timed out") and
+  // the client never reaches ready. Give it generous headroom.
   puppeteer: {
     headless: true,
+    protocolTimeout: 240000,
     // --no-sandbox: needed when running as root / on most Linux hosts.
     // --disable-dev-shm-usage: small cloud VMs (e.g. GCP e2-micro) have a tiny
     //   /dev/shm, which makes the WhatsApp Web tab crash with "Execution context

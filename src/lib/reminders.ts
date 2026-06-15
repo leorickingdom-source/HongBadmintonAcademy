@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency, formatDate, monthLabel } from "@/lib/format";
 import { normalizePhoneMY } from "@/lib/wa";
 import { isWorkerPaused } from "@/lib/settings";
+import { APP_NAME } from "@/lib/constants";
+import { env } from "@/lib/env";
 
 // Very-cautious throttle policy (anti-ban). The app enforces all of this; the
 // worker just polls and obeys, so the cadence stays irregular + low-volume.
@@ -157,51 +159,40 @@ export async function enqueueDueReminders(baseUrl: string) {
   return { scanned, enqueued: rows.length };
 }
 
-// Enqueue still-unsent Monthly Growth Reports (status='generated') for drip
-// send. Scans ALL generated cards (not a window) so it self-heals: dedup by
-// (scorecard_id, 'scorecard') means already-queued/sent cards are skipped, and
-// cards whose parent had no phone earlier get picked up once a phone is added.
-export async function enqueueScorecards(baseUrl: string) {
+// Queue ONE WhatsApp notice to the parent Community announcing that the month's
+// Growth Reports are ready — instead of messaging each parent privately. The
+// worker posts it to the Community Announcements group (WA_COMMUNITY_GROUP_ID).
+// Privacy-safe: no child names or scores, just a "log in to view" prompt.
+//
+// Idempotent: the kind encodes the month (scorecard_community:YYYY-MM), so a
+// re-run (or the manual button) won't double-post. `month` = any date in the
+// reported month (defaults to current).
+export async function enqueueCommunityScorecardNotice(baseUrl: string, month: Date = new Date()) {
+  const groupId = env.waCommunityGroupId;
+  if (!groupId) return { enqueued: 0, reason: "no-group-id" as const };
+
   const db = createAdminClient();
-  const { data: cards, error } = await db
-    .from("scorecards")
-    .select(
-      "id, period_month, summary, students(full_name, parent:profiles!students_parent_id_fkey(id, full_name, phone))",
-    )
-    .eq("status", "generated");
-  if (error) throw new Error(error.message);
+  const period = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+  const kind = `scorecard_community:${period}`;
 
-  const rows: Array<Record<string, unknown>> = [];
-  for (const c of cards ?? []) {
-    const parent = (c as any).students?.parent;
-    const phone = normalizePhoneMY(parent?.phone);
-    if (!phone) continue;
-    const s = (c as any).summary ?? {};
-    const studentName = (c as any).students?.full_name ?? "your child";
-    const gi = s.growth_index != null ? `${s.growth_index}/100` : "—";
-    const att = s.attendance_pct != null ? `${s.attendance_pct}%` : "—";
-    const body =
-      `🏸 ${monthLabel(c.period_month)} Growth Report — ${studentName}\n` +
-      `• HBA Growth Index: ${gi}\n` +
-      (s.stage?.label ? `• Stage: ${s.stage.label}\n` : "") +
-      `• Attendance: ${att}\n` +
-      `View the full report here: ${baseUrl}/parent/scorecards`;
-    rows.push({
-      kind: "scorecard",
-      scorecard_id: c.id,
-      recipient_profile_id: parent.id ?? null,
-      recipient_phone: phone,
-      body,
-    });
-  }
-
-  const scanned = cards?.length ?? 0;
-  if (rows.length === 0) return { scanned, enqueued: 0 };
-  const { error: upErr } = await db
+  const { data: existing } = await db
     .from("message_queue")
-    .upsert(rows, { onConflict: "scorecard_id,kind", ignoreDuplicates: true });
-  if (upErr) throw new Error(upErr.message);
-  return { scanned, enqueued: rows.length };
+    .select("id")
+    .eq("kind", kind)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { enqueued: 0, reason: "exists" as const };
+
+  const body =
+    `🏸 ${APP_NAME}\n` +
+    `${monthLabel(`${period}-01`)} Growth Reports are ready!\n` +
+    `Parents — log in to view your child's full report:\n${baseUrl}/parent/scorecards`;
+
+  const { error } = await db
+    .from("message_queue")
+    .insert({ kind, recipient_phone: groupId, body });
+  if (error) throw new Error(error.message);
+  return { enqueued: 1, reason: "queued" as const };
 }
 
 type NextResult =
@@ -290,17 +281,22 @@ export async function recordQueueResult(
   const { data: row } = await db.from("message_queue").select("*").eq("id", id).maybeSingle();
   if (!row) return;
 
-  // Log shape depends on the queue row: scorecard rows log as 'scorecard' (with
-  // scorecard_id), everything else as a 'payment_reminder' (with invoice_id).
-  const isScorecard = !!row.scorecard_id;
-  const logBase = {
-    type: isScorecard ? "scorecard" : "payment_reminder",
-    recipient_profile_id: row.recipient_profile_id,
-    recipient_phone: row.recipient_phone,
-    body: row.body,
-    provider: "wwebjs",
-    ...(isScorecard ? { scorecard_id: row.scorecard_id } : { invoice_id: row.invoice_id }),
-  };
+  // Log shape depends on the queue row:
+  //  • community notice (kind scorecard_community:*) → 'custom', recipient 'community'
+  //  • scorecard row (scorecard_id)                 → 'scorecard'
+  //  • otherwise                                    → 'payment_reminder' (invoice_id)
+  const isCommunity = typeof row.kind === "string" && row.kind.startsWith("scorecard_community");
+  const isScorecard = !isCommunity && !!row.scorecard_id;
+  const logBase = isCommunity
+    ? { type: "custom", recipient_phone: "community", body: row.body, provider: "wwebjs" }
+    : {
+        type: isScorecard ? "scorecard" : "payment_reminder",
+        recipient_profile_id: row.recipient_profile_id,
+        recipient_phone: row.recipient_phone,
+        body: row.body,
+        provider: "wwebjs",
+        ...(isScorecard ? { scorecard_id: row.scorecard_id } : { invoice_id: row.invoice_id }),
+      };
 
   if (status === "sent") {
     const sentAt = new Date().toISOString();

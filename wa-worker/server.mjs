@@ -124,15 +124,23 @@ app.get("/health", (_req, res) => res.json({ ready }));
 // Web page can reload mid-call on low-RAM hosts -> "Execution context was
 // destroyed"). Shared by the /send route and the drip sender.
 async function sendWithRetry(to, text) {
-  const digits = String(to).replace(/[^\d]/g, "");
-  if (!digits) return { error: "invalid number" };
+  const raw = String(to);
+  // A serialized chat id (group "…@g.us" / contact "…@c.us") is sent as-is — no
+  // number lookup. Plain phone numbers are resolved to a WhatsApp contact first.
+  const isChatId = raw.includes("@");
+  const digits = raw.replace(/[^\d]/g, "");
+  if (!isChatId && !digits) return { error: "invalid number" };
   const transient = /Execution context was destroyed|Protocol error|Target closed|Session closed/i;
   let lastErr;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const numberId = await client.getNumberId(digits);
-      if (!numberId) return { notOnWhatsapp: true };
-      const msg = await client.sendMessage(numberId._serialized, String(text));
+      let chatId = raw;
+      if (!isChatId) {
+        const numberId = await client.getNumberId(digits);
+        if (!numberId) return { notOnWhatsapp: true };
+        chatId = numberId._serialized;
+      }
+      const msg = await client.sendMessage(chatId, String(text));
       return { providerMessageId: msg?.id?._serialized };
     } catch (e) {
       lastErr = e;
@@ -162,6 +170,24 @@ app.post("/send", async (req, res) => {
     if (r.error) return res.status(400).json({ status: "failed", error: r.error });
     if (r.notOnWhatsapp) return res.status(422).json({ status: "failed", error: "number not on WhatsApp" });
     return res.json({ status: "sent", providerMessageId: r.providerMessageId });
+  } catch (e) {
+    return res.status(500).json({ status: "failed", error: String(e?.message || e) });
+  }
+});
+
+// List the groups/communities this number belongs to, so you can grab the
+// Community Announcements group's chat id for WA_COMMUNITY_GROUP_ID. The number
+// must already be a member (and an admin, to post to an announcements group).
+app.get("/groups", async (_req, res) => {
+  if (!ready) {
+    return res.status(503).json({ status: "failed", error: "client not ready (scan QR / still booting)" });
+  }
+  try {
+    const chats = await client.getChats();
+    const groups = chats
+      .filter((c) => c.isGroup)
+      .map((c) => ({ id: c.id?._serialized, name: c.name }));
+    return res.json({ groups });
   } catch (e) {
     return res.status(500).json({ status: "failed", error: String(e?.message || e) });
   }

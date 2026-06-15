@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateScorecardsCore } from "@/lib/scorecards";
-import { enqueueScorecards } from "@/lib/reminders";
+import { enqueueCommunityScorecardNotice } from "@/lib/reminders";
 import { getBaseUrl } from "@/lib/url";
 import { env } from "@/lib/env";
 
@@ -30,10 +30,10 @@ export async function GET(req: NextRequest) {
   const db = createAdminClient();
   try {
     const result = await generateScorecardsCore(db, db, prevMonth);
-    // Auto-queue the fresh reports for throttled WhatsApp drip-send.
-    const queued = await enqueueScorecards(await getBaseUrl());
+    // Auto-post ONE Community notice that the reports are ready (not per-parent).
+    const notice = await enqueueCommunityScorecardNotice(await getBaseUrl(), prevMonth);
     const label = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}`;
-    return NextResponse.json({ ok: true, month: label, ...result, queued });
+    return NextResponse.json({ ok: true, month: label, ...result, notice });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

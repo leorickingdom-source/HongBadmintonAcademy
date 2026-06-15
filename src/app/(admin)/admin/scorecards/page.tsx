@@ -22,7 +22,7 @@ export default async function ScorecardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Growth Reports"
-        description="Monthly growth reports — character, skills & the HBA Growth Index. Generated reports auto-send to parents over WhatsApp (drip-throttled); per-card buttons below are a manual fallback."
+        description="Monthly growth reports — character, skills & the HBA Growth Index. When reports are generated, one privacy-safe notice is auto-posted to the parent WhatsApp Community (no names/scores). Per-card buttons below send an individual report to one parent."
       />
 
       <Card className="flex flex-wrap items-center justify-between gap-4 border-green-200 bg-green-50 p-5">

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { getBaseUrl } from "@/lib/url";
-import { enqueueDueReminders, enqueueScorecards } from "@/lib/reminders";
+import { enqueueDueReminders } from "@/lib/reminders";
 
 export const runtime = "nodejs";
 
@@ -18,9 +18,7 @@ export async function GET(req: NextRequest) {
   try {
     const baseUrl = await getBaseUrl();
     const result = await enqueueDueReminders(baseUrl);
-    // Self-healing sweep: queue any generated growth reports not yet sent.
-    const scorecards = await enqueueScorecards(baseUrl);
-    return NextResponse.json({ ok: true, ...result, scorecards });
+    return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

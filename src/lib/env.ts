@@ -25,6 +25,11 @@ export const env = {
   // Optional — when set, the Announcements page shows a one-tap "Open" button so
   // the admin can jump straight to the group to paste a notice. No worker.
   waCommunityLink: process.env.WA_COMMUNITY_LINK ?? "",
+  // Serialized chat id of the Community Announcements group (e.g. "12036…@g.us").
+  // When set, the worker auto-posts the monthly "Growth Reports ready" notice
+  // here (one post, all parents) instead of messaging each parent. Find it via
+  // the worker's GET /groups endpoint. The dedicated number must be a group admin.
+  waCommunityGroupId: process.env.WA_COMMUNITY_GROUP_ID ?? "",
 
   nfcApiKey: process.env.NFC_API_KEY ?? "",
   cronSecret: process.env.CRON_SECRET ?? "",

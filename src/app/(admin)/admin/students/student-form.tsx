@@ -1,17 +1,20 @@
 import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { NfcTagInput } from "@/components/nfc-tag-input";
+import { formatCurrency } from "@/lib/format";
 import type { Student } from "@/lib/types";
 
 export function StudentForm({
   action,
   student,
   parents,
+  plans,
   error,
 }: {
   action: (formData: FormData) => void;
   student?: Student;
   parents: { id: string; full_name: string | null }[];
+  plans: { id: string; name: string; amount: number; currency: string; interval: string }[];
   error?: string;
 }) {
   return (
@@ -41,6 +44,21 @@ export function StudentForm({
             {parents.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.full_name ?? p.id}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field
+          label="Monthly fee plan"
+          hint="Monthly plans auto-raise an invoice each month. Leave blank for ad-hoc billing only."
+        >
+          <Select name="fee_plan_id" defaultValue={student?.fee_plan_id ?? ""}>
+            <option value="">— none —</option>
+            {plans.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {formatCurrency(Number(p.amount), p.currency)}
+                {p.interval !== "monthly" ? ` (${p.interval})` : ""}
               </option>
             ))}
           </Select>

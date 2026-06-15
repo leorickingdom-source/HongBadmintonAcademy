@@ -14,6 +14,10 @@
       "schedule": "0 2 1 * *"
     },
     {
+      "path": "/api/cron/generate-invoices",
+      "schedule": "0 3 1 * *"
+    },
+    {
       "path": "/api/cron/backup",
       "schedule": "0 18 * * *"
     }

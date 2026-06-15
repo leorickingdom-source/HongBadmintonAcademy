@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { invoiceSchema } from "@/lib/validation";
+import { generateInvoicesCore } from "@/lib/billing";
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -33,6 +35,14 @@ export async function createInvoice(formData: FormData) {
 
   revalidatePath("/admin/invoices");
   redirect("/admin/invoices");
+}
+
+// Manual "Generate this month" button: raise the current month's fee invoices
+// for all students on a monthly plan now, instead of waiting for the cron. Same
+// idempotent core, so clicking twice won't double-bill.
+export async function generateMonthlyInvoices() {
+  await generateInvoicesCore(createAdminClient());
+  revalidatePath("/admin/invoices");
 }
 
 export async function markPaid(formData: FormData) {

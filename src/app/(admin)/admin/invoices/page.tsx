@@ -8,7 +8,7 @@ import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
 import { feeReminderText } from "@/lib/reminder-text";
 import type { InvoiceStatus } from "@/lib/types";
-import { markPaid, deleteInvoice, logReminderSend } from "./actions";
+import { markPaid, deleteInvoice, logReminderSend, generateMonthlyInvoices } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +38,15 @@ export default async function InvoicesPage() {
       <div>
         <PageHeader
           title="Invoices & Payments"
-          description="Raise fees, reconcile payments, send WhatsApp reminders (click-to-chat)."
-          action={<LinkButton href="/admin/invoices/new">+ New invoice</LinkButton>}
+          description="Monthly fees auto-raise for students on a fee plan (1st of month). Reconcile payments; reminders drip-send automatically."
+          action={
+            <>
+              <form action={generateMonthlyInvoices}>
+                <SubmitButton variant="secondary" pendingText="Generating…">Generate this month</SubmitButton>
+              </form>
+              <LinkButton href="/admin/invoices/new">+ New invoice</LinkButton>
+            </>
+          }
         />
 
         {invoices && invoices.length > 0 ? (

@@ -17,9 +17,10 @@ export default async function EditStudentPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: student }, { data: parents }] = await Promise.all([
+  const [{ data: student }, { data: parents }, { data: plans }] = await Promise.all([
     supabase.from("students").select("*").eq("id", id).maybeSingle(),
     supabase.from("profiles").select("id, full_name").eq("role", "parent").order("full_name"),
+    supabase.from("fee_plans").select("id, name, amount, currency, interval").eq("is_active", true).order("name"),
   ]);
 
   if (!student) notFound();
@@ -31,6 +32,7 @@ export default async function EditStudentPage({
         action={updateStudent}
         student={student}
         parents={parents ?? []}
+        plans={plans ?? []}
         error={error}
       />
     </div>

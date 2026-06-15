@@ -18,6 +18,7 @@ export const studentSchema = z.object({
   dob: optionalStr,
   gender: optionalStr,
   parent_id: optionalId,
+  fee_plan_id: optionalId,
   nfc_tag_uid: optionalStr,
   status: z.enum(["active", "inactive"]).default("active"),
   notes: optionalStr,

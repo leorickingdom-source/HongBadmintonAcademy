@@ -12,16 +12,15 @@ export default async function NewStudentPage({
 }) {
   const { error } = await searchParams;
   const supabase = await createClient();
-  const { data: parents } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .eq("role", "parent")
-    .order("full_name");
+  const [{ data: parents }, { data: plans }] = await Promise.all([
+    supabase.from("profiles").select("id, full_name").eq("role", "parent").order("full_name"),
+    supabase.from("fee_plans").select("id, name, amount, currency, interval").eq("is_active", true).order("name"),
+  ]);
 
   return (
     <div>
       <PageHeader title="New student" />
-      <StudentForm action={createStudent} parents={parents ?? []} error={error} />
+      <StudentForm action={createStudent} parents={parents ?? []} plans={plans ?? []} error={error} />
     </div>
   );
 }

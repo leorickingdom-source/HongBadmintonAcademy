@@ -31,6 +31,7 @@ export interface Student {
   dob: string | null;
   gender: string | null;
   parent_id: string | null;
+  fee_plan_id: string | null;
   nfc_tag_uid: string | null;
   status: StudentStatus;
   photo_url: string | null;

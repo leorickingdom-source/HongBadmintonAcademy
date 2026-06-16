@@ -1,22 +1,10 @@
 import Link from "next/link";
-import { formatTime } from "@/lib/format";
-import { rankBadgeClass, rankCardClass } from "@/lib/ranks";
+import { SessionTile, type CalendarSession } from "@/components/session-tile";
 
-export interface CalendarSession {
-  id: string;
-  session_date: string; // YYYY-MM-DD
-  start_time: string;
-  end_time: string;
-  location: string | null;
-  status: string;
-  className?: string | null;
-  classRank?: string | null;
-  coachName?: string | null;
-}
+export type { CalendarSession };
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Pad a month/day to 2 digits.
 function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
@@ -26,16 +14,8 @@ function todayMYT(): string {
   return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
-// Tiles are tinted by CLASS RANK (the academy's grouping). Status is conveyed
-// separately: canceled overrides to red + strikethrough; completed adds a ✓.
-function cardTone(rank: string | null | undefined, status: string): string {
-  if (status === "canceled") return "border-red-300 bg-red-50 text-red-700";
-  return rankCardClass(rank);
-}
-
 // Month grid (Mon-first) of dated sessions. Server component — month navigation
-// is plain links (?month=YYYY-MM), so it works for past + future months without
-// any client JS. Each session links to its attendance page.
+// is plain links (?month=YYYY-MM). Each session tile (client) opens a modal.
 export function MonthCalendar({
   sessions,
   monthStr, // "YYYY-MM" of the displayed month
@@ -49,7 +29,6 @@ export function MonthCalendar({
   const year = Number(yStr);
   const month = Number(mStr) - 1; // 0-based
 
-  // Sessions grouped by date.
   const byDate = new Map<string, CalendarSession[]>();
   for (const s of sessions) {
     const list = byDate.get(s.session_date) ?? [];
@@ -106,27 +85,7 @@ export function MonthCalendar({
                 <div key={i} className={"min-h-[92px] border-b border-r border-slate-100 p-1.5 last:border-r-0 " + (weekend ? "bg-slate-50/40" : "")}>
                   <div className={"mb-1 text-xs " + (isToday ? "font-bold text-green-700" : "text-slate-400")}>{day}</div>
                   <div className="space-y-1">
-                    {list.map((s) => {
-                      const canceled = s.status === "canceled";
-                      return (
-                        <Link
-                          key={s.id}
-                          href={`/admin/sessions/${s.id}`}
-                          title={`${s.className ?? "Class"} · ${formatTime(s.start_time)}–${formatTime(s.end_time)}${s.location ? " · " + s.location : ""} · ${s.status} · open session`}
-                          className={"block rounded-md border px-1.5 py-1 text-[11px] leading-tight transition-shadow hover:shadow-sm " + cardTone(s.classRank, s.status) + (canceled ? " line-through opacity-70" : "")}
-                        >
-                          <div className="font-medium">{s.status === "completed" ? "✓ " : ""}{formatTime(s.start_time)}</div>
-                          <div className="truncate">{s.className ?? "Class"}</div>
-                          {s.classRank && (
-                            <span className={"mt-0.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase leading-none " + rankBadgeClass(s.classRank)}>
-                              {s.classRank}
-                            </span>
-                          )}
-                          {s.coachName && <div className="mt-0.5 truncate text-[10px] text-slate-600">🎯 {s.coachName}</div>}
-                          {s.location && <div className="mt-px truncate text-[10px] text-slate-500">📍 {s.location}</div>}
-                        </Link>
-                      );
-                    })}
+                    {list.map((s) => <SessionTile key={s.id} s={s} />)}
                   </div>
                 </div>
               );

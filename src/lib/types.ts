@@ -107,6 +107,7 @@ export interface FeePlan {
   amount: number;
   currency: string;
   interval: FeeInterval;
+  rank: string | null;
   is_active: boolean;
   stripe_product_id: string | null;
   stripe_price_id: string | null;

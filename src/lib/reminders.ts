@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatCurrency, formatDate, monthLabel } from "@/lib/format";
+import { formatCurrency, formatDate, formatTime, monthLabel } from "@/lib/format";
 import { normalizePhoneMY } from "@/lib/wa";
 import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy } from "@/lib/settings";
 import { APP_NAME } from "@/lib/constants";
@@ -364,4 +364,49 @@ export async function recordQueueResult(
     await db.from("message_queue").update({ status: "failed", attempts, error: error ?? null }).eq("id", id);
     await db.from("messages").insert({ ...logBase, status: "failed", error: error ?? null });
   }
+}
+
+// When a session is canceled, queue a WhatsApp heads-up to every enrolled
+// student's parent. These rows have no invoice_id, so the worker sends them even
+// while fee reminders are parked. One message per parent (siblings deduped).
+// Returns how many were queued. Service-role client (RLS-bypassing).
+export async function enqueueSessionCancelNotice(sessionId: string): Promise<number> {
+  const db = createAdminClient();
+
+  const { data: s } = await db
+    .from("sessions")
+    .select("id, class_id, session_date, start_time, end_time, classes(name)")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (!s) return 0;
+
+  const { data: enr } = await db
+    .from("enrollments")
+    .select("students(full_name, parent:profiles!students_parent_id_fkey(id, full_name, phone))")
+    .eq("class_id", (s as any).class_id)
+    .eq("active", true);
+
+  const className = (s as any).classes?.name ?? "class";
+  const when = `${formatDate((s as any).session_date)} (${formatTime((s as any).start_time)}–${formatTime((s as any).end_time)})`;
+
+  const rows: Array<Record<string, unknown>> = [];
+  const seen = new Set<string>();
+  for (const e of (enr ?? []) as any[]) {
+    const parent = e.students?.parent;
+    const phone = normalizePhoneMY(parent?.phone);
+    if (!phone || seen.has(phone)) continue;
+    seen.add(phone);
+    rows.push({
+      kind: "session_canceled",
+      recipient_profile_id: parent?.id ?? null,
+      recipient_phone: phone,
+      body:
+        `🏸 ${APP_NAME}\n` +
+        `Hi ${parent?.full_name ?? "there"}, the ${className} session on ${when} has been CANCELLED. ` +
+        `Sorry for the inconvenience — we'll see you at the next session!`,
+    });
+  }
+
+  if (rows.length) await db.from("message_queue").insert(rows);
+  return rows.length;
 }

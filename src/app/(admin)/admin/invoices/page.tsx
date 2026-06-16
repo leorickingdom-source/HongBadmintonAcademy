@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Collapsible, LinkButton, Select, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { FilterSelect, FilterSearch } from "@/components/filter-controls";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
@@ -103,31 +104,30 @@ export default async function InvoicesPage({
           );
         })()}
 
-        {/* Filters */}
+        {/* Filters (auto-apply) */}
         <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-slate-600">Status</span>
-            <Select name="status" defaultValue={statusFilter} className="h-9 w-40">
+            <FilterSelect name="status" defaultValue={statusFilter} className="h-9 w-40">
               <option value="">All statuses</option>
               {STATUSES.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
-            </Select>
+            </FilterSelect>
           </label>
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-slate-600">Month</span>
-            <Select name="month" defaultValue={monthFilter} className="h-9 w-44">
+            <FilterSelect name="month" defaultValue={monthFilter} className="h-9 w-44">
               <option value="">All months</option>
               {monthOptions.map((mo) => (
                 <option key={mo} value={mo}>{monthLabel(mo)}</option>
               ))}
-            </Select>
+            </FilterSelect>
           </label>
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-slate-600">Student / parent</span>
-            <Input name="q" defaultValue={q ?? ""} placeholder="Search name…" className="h-9 w-52" />
+            <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Search name…" className="h-9 w-52" />
           </label>
-          <Button type="submit" variant="secondary">Filter</Button>
           {filtered && (
             <LinkButton href="/admin/invoices" variant="ghost">Clear</LinkButton>
           )}

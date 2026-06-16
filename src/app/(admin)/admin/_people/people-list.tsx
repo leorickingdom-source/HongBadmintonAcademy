@@ -20,20 +20,28 @@ export async function PeopleList({
   deleteManyAction,
   extraAction,
   embedded,
+  q,
 }: {
   role: Role;
   deleteAction: (formData: FormData) => void;
   deleteManyAction: (formData: FormData) => void;
   extraAction?: ReactNode;
-  /** When embedded (e.g. under the People page) skip the page header. */
+  /** When embedded (e.g. under the Directory page) skip the page header. */
   embedded?: boolean;
+  /** Optional name search (Directory filter). */
+  q?: string;
 }) {
   const supabase = await createClient();
-  const { data: people } = await supabase
+  const { data: allPeople } = await supabase
     .from("profiles")
     .select("*")
     .eq("role", role)
     .order("full_name");
+
+  const search = (q ?? "").trim().toLowerCase();
+  const people = search
+    ? (allPeople ?? []).filter((p: any) => (p.full_name ?? "").toLowerCase().includes(search))
+    : allPeople ?? [];
 
   const isCoach = role === "coach";
   const isParent = role === "parent";

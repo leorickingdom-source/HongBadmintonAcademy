@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Collapsible, Table, Th, Td, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { PageHeader, Card, Collapsible, Table, Th, Td, Badge, EmptyState, LinkButton, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { monthLabel } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
+import { bestRank, rankBadgeClass } from "@/lib/ranks";
 import { generateScorecards, logScorecardSend } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,19 @@ export default async function ScorecardsPage({
     .select("*, students(full_name, parent:profiles!students_parent_id_fkey(full_name, phone, id))")
     .order("period_month", { ascending: false })
     .order("created_at", { ascending: false });
+
+  // Class rank per student (highest tier among enrolled classes) for the report list.
+  const studentIds = [...new Set((cards ?? []).map((c: any) => c.student_id))];
+  const { data: enrollments } = studentIds.length
+    ? await supabase.from("enrollments").select("student_id, classes(level)").eq("active", true).in("student_id", studentIds)
+    : { data: [] as any[] };
+  const levelsByStudent = new Map<string, (string | null)[]>();
+  for (const e of (enrollments ?? []) as any[]) {
+    const arr = levelsByStudent.get(e.student_id) ?? [];
+    arr.push(e.classes?.level ?? null);
+    levelsByStudent.set(e.student_id, arr);
+  }
+  const rankOf = (id: string) => bestRank(levelsByStudent.get(id) ?? []);
 
   return (
     <div className="space-y-6">
@@ -65,7 +79,7 @@ export default async function ScorecardsPage({
           <Table>
             <thead>
               <tr>
-                <Th>Student</Th><Th>Period</Th><Th>Growth index</Th><Th>Stage</Th>
+                <Th>Student</Th><Th>Rank</Th><Th>Period</Th><Th>Growth index</Th><Th>Stage</Th>
                 <Th>Attendance</Th><Th>Status</Th><Th className="text-right">Actions</Th>
               </tr>
             </thead>
@@ -83,6 +97,13 @@ export default async function ScorecardsPage({
                 return (
                   <tr key={c.id} className="hover:bg-slate-50">
                     <Td className="font-medium text-slate-900">{c.students?.full_name ?? "—"}</Td>
+                    <Td label="Rank">
+                      {rankOf(c.student_id) ? (
+                        <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(rankOf(c.student_id)))}>{rankOf(c.student_id)}</span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </Td>
                     <Td>{monthLabel(c.period_month)}</Td>
                     <Td className="tabular-nums">
                       {s.growth_index != null ? <span className="font-semibold text-emerald-700">{s.growth_index}</span> : "—"}

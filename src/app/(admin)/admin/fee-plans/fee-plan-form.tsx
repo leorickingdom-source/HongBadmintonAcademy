@@ -1,6 +1,7 @@
 import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import type { FeePlan } from "@/lib/types";
+import { CLASS_RANKS } from "@/lib/ranks";
 
 export function FeePlanForm({
   action,
@@ -40,9 +41,19 @@ export function FeePlanForm({
           </Field>
         </div>
 
-        <Field label="Currency">
-          <Input name="currency" defaultValue={plan?.currency ?? "MYR"} />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Currency">
+            <Input name="currency" defaultValue={plan?.currency ?? "MYR"} />
+          </Field>
+          <Field label="Class rank" hint="Optional — tag this plan to a tier.">
+            <Select name="rank" defaultValue={plan?.rank ?? ""}>
+              <option value="">— none —</option>
+              {CLASS_RANKS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
 
         <Field label="Description">
           <Textarea name="description" defaultValue={plan?.description ?? ""} />

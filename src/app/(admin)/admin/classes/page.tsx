@@ -1,55 +1,74 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, LinkButton, Input, Button, Table, Th, Td, Badge, EmptyState, cn } from "@/components/ui";
+import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
-import { WeeklyTimetable } from "@/components/weekly-timetable";
-import { rankBadgeClass } from "@/lib/ranks";
-import { createClass, deleteClass, deleteClasses } from "./actions";
+import { FilterSelect, FilterSearch } from "@/components/filter-controls";
+import { CLASS_RANKS, rankBadgeClass } from "@/lib/ranks";
+import { deleteClass, deleteClasses } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClassesPage() {
+export default async function ClassesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; rank?: string; active?: string }>;
+}) {
+  const { q, rank, active } = await searchParams;
   const supabase = await createClient();
-  const [{ data: classes }, { data: slots }] = await Promise.all([
-    supabase
-      .from("classes")
-      .select("*, coach:profiles!classes_coach_id_fkey(full_name), enrollments(count)")
-      .order("name"),
-    supabase
-      .from("class_schedules")
-      .select("day_of_week, start_time, end_time, location, classes(name)")
-      .eq("is_active", true),
-  ]);
-  const timetableSlots = (slots ?? [])
-    .map((s: any) => ({
-      className: s.classes?.name ?? "Class",
-      day_of_week: s.day_of_week,
-      start_time: s.start_time,
-      end_time: s.end_time,
-      location: s.location,
-    }));
+  const { data: classes } = await supabase
+    .from("classes")
+    .select("*, coach:profiles!classes_coach_id_fkey(full_name), enrollments(count)")
+    .order("name");
+
+  const search = (q ?? "").trim().toLowerCase();
+  const rankFilter = rank && (CLASS_RANKS as readonly string[]).includes(rank) ? rank : "";
+  const activeFilter = active === "active" || active === "inactive" ? active : "";
+  const filtered = Boolean(search || rankFilter || activeFilter);
+
+  const rows = (classes ?? []).filter((c: any) => {
+    if (search && !c.name.toLowerCase().includes(search)) return false;
+    if (rankFilter && c.level !== rankFilter) return false;
+    if (activeFilter === "active" && !c.is_active) return false;
+    if (activeFilter === "inactive" && c.is_active) return false;
+    return true;
+  });
 
   return (
     <div>
       <PageHeader
         title="Classes & Schedule"
-        description="Training classes, weekly schedules, coaches and enrolment."
-        action={
-          <form action={createClass} className="flex items-center gap-2">
-            <Input name="name" placeholder="New class name" required className="h-9 w-48" />
-            <Button type="submit">+ Create</Button>
-          </form>
-        }
+        description="Training classes, coaches and enrolment. Open a class to set its weekly schedule and generate sessions."
+        action={<LinkButton href="/admin/classes/new">+ New class</LinkButton>}
       />
 
-      {timetableSlots.length > 0 && (
-        <Section title="Weekly timetable" description="Every class's regular slots, Mon–Sun." className="mb-6">
-          <WeeklyTimetable slots={timetableSlots} />
-        </Section>
-      )}
+      {/* Filters (auto-apply) */}
+      <form method="get" className="mb-5 flex flex-wrap items-end gap-3">
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-slate-600">Search</span>
+          <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Class name…" className="h-9 w-48" />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-slate-600">Rank</span>
+          <FilterSelect name="rank" defaultValue={rankFilter} className="h-9 w-40">
+            <option value="">All ranks</option>
+            {CLASS_RANKS.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </FilterSelect>
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-slate-600">Status</span>
+          <FilterSelect name="active" defaultValue={activeFilter} className="h-9 w-36">
+            <option value="">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </FilterSelect>
+        </label>
+        {filtered && <LinkButton href="/admin/classes" variant="ghost">Clear</LinkButton>}
+      </form>
 
-      {classes && classes.length > 0 ? (
-        <Section title={`Classes (${classes.length})`} flush>
+      {rows.length > 0 ? (
+        <Section title={`${filtered ? "Classes (filtered)" : "Classes"} (${rows.length})`} flush>
           <BulkProvider>
           <Table>
             <thead>
@@ -64,7 +83,7 @@ export default async function ClassesPage() {
               </tr>
             </thead>
             <tbody>
-              {classes.map((c: any) => (
+              {rows.map((c: any) => (
                 <tr key={c.id} className="hover:bg-slate-50">
                   <Td><BulkCheckbox id={c.id} /></Td>
                   <Td className="font-medium text-slate-900">{c.name}</Td>
@@ -109,7 +128,7 @@ export default async function ClassesPage() {
           </BulkProvider>
         </Section>
       ) : (
-        <EmptyState message="No classes yet." />
+        <EmptyState message={filtered ? "No classes match these filters." : "No classes yet."} />
       )}
     </div>
   );

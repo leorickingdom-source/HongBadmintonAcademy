@@ -6,6 +6,7 @@ import {
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { MonthCalendar } from "@/components/month-calendar";
+import { FilterSelect } from "@/components/filter-controls";
 import { formatDate, formatTime } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
 import type { SessionStatus } from "@/lib/types";
@@ -111,28 +112,27 @@ export default async function SessionsPage({
         )}
       </Section>
 
-      {/* Filters — narrow the month's calendar + list by class or status. */}
+      {/* Filters (auto-apply) — narrow the month's calendar + list by class or status. */}
       <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
         <input type="hidden" name="month" value={monthStr} />
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-slate-600">Class</span>
-          <Select name="class" defaultValue={classFilter} className="h-9 w-48">
+          <FilterSelect name="class" defaultValue={classFilter} className="h-9 w-48">
             <option value="">All classes</option>
             {(classes ?? []).map((c: any) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </Select>
+          </FilterSelect>
         </label>
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-slate-600">Status</span>
-          <Select name="status" defaultValue={statusFilter} className="h-9 w-40">
+          <FilterSelect name="status" defaultValue={statusFilter} className="h-9 w-40">
             <option value="">All statuses</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
-          </Select>
+          </FilterSelect>
         </label>
-        <Button type="submit" variant="secondary">Filter</Button>
         {filtered && (
           <LinkButton href={`/admin/sessions?month=${monthStr}`} variant="ghost">Clear</LinkButton>
         )}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { sessionSchema } from "@/lib/validation";
+import { enqueueSessionCancelNotice } from "@/lib/reminders";
 
 // Sessions show on this page, the dashboard, attendance, and both parent views.
 function revalidate() {
@@ -37,7 +38,16 @@ export async function createSession(formData: FormData) {
 export async function cancelSession(formData: FormData) {
   const id = String(formData.get("id"));
   const supabase = await createClient();
+  const { data: cur } = await supabase.from("sessions").select("status").eq("id", id).maybeSingle();
   await supabase.from("sessions").update({ status: "canceled" }).eq("id", id);
+  // Notify parents on WhatsApp, but only on a real scheduled -> canceled transition.
+  if (cur && cur.status !== "canceled") {
+    try {
+      await enqueueSessionCancelNotice(id);
+    } catch {
+      // A notification failure must not block the cancellation itself.
+    }
+  }
   revalidate();
 }
 

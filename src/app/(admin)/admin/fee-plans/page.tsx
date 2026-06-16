@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState, cn } from "@/components/ui";
+import { rankBadgeClass } from "@/lib/ranks";
 import { ConfirmButton } from "@/components/confirm-button";
 import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency } from "@/lib/format";
@@ -66,6 +67,7 @@ export default async function FeePlansPage({
             <thead>
               <tr>
                 <Th>Name</Th>
+                <Th>Rank</Th>
                 <Th>Amount</Th>
                 <Th>Billing</Th>
                 <Th>Stripe</Th>
@@ -76,6 +78,13 @@ export default async function FeePlansPage({
               {plans.map((p: any) => (
                 <tr key={p.id} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{p.name}</Td>
+                  <Td label="Rank">
+                    {p.rank ? (
+                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(p.rank))}>{p.rank}</span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </Td>
                   <Td className="font-medium text-slate-900">{formatCurrency(Number(p.amount), p.currency)}</Td>
                   <Td>
                     <Badge tone="blue">{p.interval === "one_time" ? "one-time" : p.interval}</Badge>

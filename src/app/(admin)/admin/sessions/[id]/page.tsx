@@ -64,9 +64,6 @@ export default async function SessionDetailPage({
 
       <Section title="Actions">
         <div className="flex flex-wrap gap-2">
-          <LinkButton href={`/admin/attendance/${s.id}`} variant="secondary">📋 Take / view attendance</LinkButton>
-          <LinkButton href={`/admin/attendance/matrix?class=${s.class_id}`} variant="secondary">▦ Attendance matrix</LinkButton>
-          <LinkButton href={`/admin/classes/${s.class_id}`} variant="ghost">Manage class →</LinkButton>
           {canceled ? (
             <form action={restoreSession}>
               <input type="hidden" name="id" value={s.id} />

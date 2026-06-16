@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, LinkButton, EmptyState, StatCard, Card, Input, Button } from "@/components/ui";
+import { PageHeader, LinkButton, EmptyState, StatCard, Card } from "@/components/ui";
+import { FilterSearch } from "@/components/filter-controls";
 import { formatCurrency } from "@/lib/format";
 import { setCoachRate } from "../../_people/actions";
 
@@ -132,8 +133,7 @@ export default async function CoachSummaryPage({
         </div>
         <form method="get" className="flex items-center gap-2">
           <input type="hidden" name="month" value={monthStr} />
-          <Input name="q" defaultValue={q ?? ""} placeholder="Search coach…" className="h-9 w-48" />
-          <Button type="submit" variant="secondary">Search</Button>
+          <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Search coach…" className="h-9 w-48" />
           {search && <LinkButton href={`/admin/coaches/summary?month=${monthStr}`} variant="ghost">Clear</LinkButton>}
         </form>
       </div>

@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, EmptyState, Badge } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
+import { MY_PUBLIC_HOLIDAYS } from "@/lib/holidays";
 
 export const dynamic = "force-dynamic";
 
@@ -74,9 +75,41 @@ export default async function ParentSchedulePage() {
   }
   const dates = [...byDate.keys()];
 
+  // Upcoming holidays (no class) — public + the academy's school holidays.
+  const { data: schoolHols } = await supabase
+    .from("school_holidays")
+    .select("name, start_date, end_date")
+    .gte("end_date", today)
+    .order("start_date")
+    .limit(20);
+  const upcomingHols = [
+    ...MY_PUBLIC_HOLIDAYS.filter((h) => h.date >= today).map((h) => ({ name: h.name, start: h.date, end: h.date, kind: "Public" })),
+    ...(schoolHols ?? []).map((h: any) => ({ name: h.name, start: h.start_date, end: h.end_date, kind: "School" })),
+  ]
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .slice(0, 6);
+
   return (
     <div className="space-y-6">
       <PageHeader title="Schedule" description="Upcoming sessions for your children." />
+
+      {upcomingHols.length > 0 && (
+        <Section title="Holidays — no class" flush>
+          <ul className="divide-y divide-slate-100">
+            {upcomingHols.map((h, i) => (
+              <li key={i} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div>
+                  <div className="font-medium text-slate-900">{h.name}</div>
+                  <div className="text-sm text-slate-500">
+                    {h.start === h.end ? formatDate(h.start) : `${formatDate(h.start)} – ${formatDate(h.end)}`}
+                  </div>
+                </div>
+                <Badge tone={h.kind === "School" ? "yellow" : "slate"}>{h.kind}</Badge>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       {dates.length ? (
         <div className="space-y-5">

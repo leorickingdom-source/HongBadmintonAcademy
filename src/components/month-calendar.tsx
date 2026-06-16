@@ -20,10 +20,12 @@ export function MonthCalendar({
   sessions,
   monthStr, // "YYYY-MM" of the displayed month
   basePath = "/admin/sessions",
+  holidays = {},
 }: {
   sessions: CalendarSession[];
   monthStr: string;
   basePath?: string;
+  holidays?: Record<string, string>; // ymd -> holiday name
 }) {
   const [yStr, mStr] = monthStr.split("-");
   const year = Number(yStr);
@@ -81,9 +83,13 @@ export function MonthCalendar({
               const ymd = `${year}-${pad(month + 1)}-${pad(day)}`;
               const list = (byDate.get(ymd) ?? []).sort((a, b) => a.start_time.localeCompare(b.start_time));
               const isToday = ymd === todayYmd;
+              const holiday = holidays[ymd];
               return (
-                <div key={i} className={"min-h-[92px] border-b border-r border-slate-100 p-1.5 last:border-r-0 " + (weekend ? "bg-slate-50/40" : "")}>
+                <div key={i} className={"min-h-[92px] border-b border-r border-slate-100 p-1.5 last:border-r-0 " + (holiday ? "bg-rose-50/60" : weekend ? "bg-slate-50/40" : "")}>
                   <div className={"mb-1 text-xs " + (isToday ? "font-bold text-green-700" : "text-slate-400")}>{day}</div>
+                  {holiday && (
+                    <div className="mb-1 truncate text-[9px] font-medium text-rose-600" title={holiday}>🎌 {holiday}</div>
+                  )}
                   <div className="space-y-1">
                     {list.map((s) => <SessionTile key={s.id} s={s} />)}
                   </div>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { classSchema, scheduleSchema } from "@/lib/validation";
+import { publicHolidayName, schoolHolidayMap } from "@/lib/holidays";
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -157,6 +158,11 @@ export async function generateSessions(formData: FormData) {
     err(`/admin/classes/${class_id}`, "Add a schedule first");
   }
 
+  // Holidays to skip: Malaysian public holidays + the academy's school holidays.
+  const { data: schoolRows } = await supabase.from("school_holidays").select("name, start_date, end_date");
+  const schoolMap = schoolHolidayMap(schoolRows ?? []);
+  const isHoliday = (ymd: string) => Boolean(publicHolidayName(ymd) || schoolMap.has(ymd));
+
   const rows: Record<string, unknown>[] = [];
   const start = new Date();
   for (let i = 0; i < 28; i++) {
@@ -164,6 +170,7 @@ export async function generateSessions(formData: FormData) {
     d.setDate(start.getDate() + i);
     const dow = d.getDay();
     const dateStr = d.toLocaleDateString("en-CA");
+    if (isHoliday(dateStr)) continue; // no classes on holidays
     for (const s of schedules!) {
       if (s.day_of_week === dow) {
         rows.push({

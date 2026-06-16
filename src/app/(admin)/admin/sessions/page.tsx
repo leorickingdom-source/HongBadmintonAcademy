@@ -9,6 +9,7 @@ import { MonthCalendar } from "@/components/month-calendar";
 import { FilterSelect } from "@/components/filter-controls";
 import { formatDate, formatTime } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
+import { MY_PUBLIC_HOLIDAYS, schoolHolidayMap } from "@/lib/holidays";
 import type { SessionStatus } from "@/lib/types";
 import { createSession, cancelSession, restoreSession, deleteSession, deleteSessions } from "./actions";
 
@@ -49,13 +50,20 @@ export default async function SessionsPage({
   if (classFilter) sessQuery = sessQuery.eq("class_id", classFilter);
   if (statusFilter) sessQuery = sessQuery.eq("status", statusFilter);
 
-  const [{ data: sessions }, { data: classes }] = await Promise.all([
+  const [{ data: sessions }, { data: classes }, { data: schoolRows }] = await Promise.all([
     sessQuery,
     supabase.from("classes").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("school_holidays").select("name, start_date, end_date").lte("start_date", end).gte("end_date", start),
   ]);
 
   const list = (sessions ?? []) as any[];
   const filtered = Boolean(classFilter || statusFilter);
+
+  // Holiday markers for this month: Malaysian public holidays + school holidays.
+  const schoolMap = schoolHolidayMap(schoolRows ?? []);
+  const holidays: Record<string, string> = {};
+  for (const h of MY_PUBLIC_HOLIDAYS) if (h.date >= start && h.date <= end) holidays[h.date] = h.name;
+  for (const [d, n] of schoolMap) if (d >= start && d <= end) holidays[d] = n;
 
   return (
     <div>
@@ -140,6 +148,7 @@ export default async function SessionsPage({
       <div className="space-y-6">
         <MonthCalendar
           monthStr={monthStr}
+          holidays={holidays}
           sessions={list.map((s) => ({
             id: s.id,
             session_date: s.session_date,

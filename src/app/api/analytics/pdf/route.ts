@@ -13,14 +13,20 @@ const INK = rgb(0.059, 0.09, 0.165);
 const MUTED = rgb(0.42, 0.45, 0.5);
 const WHITE = rgb(1, 1, 1);
 
-export async function GET() {
+export async function GET(req: Request) {
   const profile = await getProfile();
   if (!profile || profile.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const supabase = await createClient();
-  const a = await computeAnalytics(supabase);
+  const monthParam = new URL(req.url).searchParams.get("month");
+  const valid = monthParam && /^\d{4}-\d{2}$/.test(monthParam);
+  const monthDate = valid
+    ? new Date(Number(monthParam!.slice(0, 4)), Number(monthParam!.slice(5, 7)) - 1, 1)
+    : new Date();
+  const monthSlug = valid ? monthParam! : new Date().toISOString().slice(0, 7);
+  const a = await computeAnalytics(supabase, monthDate);
 
   const doc = await PDFDocument.create();
   const page = doc.addPage([595.28, 841.89]);
@@ -34,7 +40,7 @@ export async function GET() {
 
   page.drawRectangle({ x: 0, y: H - 100, width: W, height: 100, color: BRAND });
   t(APP_NAME, M, H - 50, 20, bold, WHITE);
-  t("Analytics Report", M, H - 74, 12, font, WHITE);
+  t(`Analytics — ${a.monthLabel}`, M, H - 74, 12, font, WHITE);
   const dateStr = new Date().toLocaleDateString("en-MY", { dateStyle: "long" });
   t(dateStr, W - M - font.widthOfTextAtSize(dateStr, 11), H - 74, 11, font, WHITE);
 
@@ -80,7 +86,7 @@ export async function GET() {
   return new NextResponse(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="hba-analytics-${new Date().toISOString().slice(0, 10)}.pdf"`,
+      "Content-Disposition": `attachment; filename="hba-analytics-${monthSlug}.pdf"`,
     },
   });
 }

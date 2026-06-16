@@ -24,8 +24,8 @@ export interface Analytics {
 
 // Computes the academy analytics. Pass an authed Supabase client (admin RLS
 // gives full reads). Shared by the analytics page and the PDF export.
-export async function computeAnalytics(supabase: any): Promise<Analytics> {
-  const now = new Date();
+export async function computeAnalytics(supabase: any, month: Date = new Date()): Promise<Analytics> {
+  const now = month;
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
 

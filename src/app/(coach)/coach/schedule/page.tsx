@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { MonthCalendar } from "@/components/month-calendar";
-import { MY_PUBLIC_HOLIDAYS, schoolHolidayMap } from "@/lib/holidays";
+import { loadHolidayMap } from "@/lib/holidays-server";
 import { coachClassIds } from "../_data";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export default async function CoachSchedulePage({
   const start = `${monthStr}-01`;
   const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 
-  const [{ data: sessions }, { data: schoolRows }] = await Promise.all([
+  const [{ data: sessions }, holidays] = await Promise.all([
     classIds.length
       ? supabase
           .from("sessions")
@@ -37,13 +37,8 @@ export default async function CoachSchedulePage({
           .order("start_time")
           .limit(400)
       : Promise.resolve({ data: [] as any[] }),
-    supabase.from("school_holidays").select("name, start_date, end_date").lte("start_date", end).gte("end_date", start),
+    loadHolidayMap(supabase, start, end),
   ]);
-
-  const schoolMap = schoolHolidayMap(schoolRows ?? []);
-  const holidays: Record<string, string> = {};
-  for (const h of MY_PUBLIC_HOLIDAYS) if (h.date >= start && h.date <= end) holidays[h.date] = h.name;
-  for (const [d, n] of schoolMap) if (d >= start && d <= end) holidays[d] = n;
 
   return (
     <div className="space-y-6">

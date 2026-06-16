@@ -27,19 +27,34 @@ function Bars({ data, tones }: { data: Record<string, number>; tones?: Record<st
   );
 }
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const supabase = await createClient();
-  const a = await computeAnalytics(supabase);
+  const { month } = await searchParams;
+  const nowD = new Date();
+  const monthStr = /^\d{4}-\d{2}$/.test(month ?? "") ? month! : `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
+  const [my, mm] = monthStr.split("-").map(Number);
+  const a = await computeAnalytics(supabase, new Date(my, mm - 1, 1));
+  const prevM = `${mm === 1 ? my - 1 : my}-${String(mm === 1 ? 12 : mm - 1).padStart(2, "0")}`;
+  const nextM = `${mm === 12 ? my + 1 : my}-${String(mm === 12 ? 1 : mm + 1).padStart(2, "0")}`;
+  const thisM = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Analytics"
-        description={`Academy metrics · revenue for ${a.monthLabel}`}
+        description={`Academy metrics · ${a.monthLabel}`}
         action={
-          <LinkButton href="/api/analytics/pdf" target="_blank" rel="noopener" variant="secondary">
-            Download PDF
-          </LinkButton>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LinkButton href={`/admin/analytics?month=${prevM}`} variant="secondary" aria-label="Previous month">←</LinkButton>
+            <LinkButton href={`/admin/analytics?month=${thisM}`} variant="secondary">This month</LinkButton>
+            <LinkButton href={`/admin/analytics?month=${nextM}`} variant="secondary" aria-label="Next month">→</LinkButton>
+            <LinkButton href={`/api/analytics/pdf?month=${monthStr}`} target="_blank" rel="noopener">PDF</LinkButton>
+            <LinkButton href={`/api/analytics/csv?month=${monthStr}`} target="_blank" rel="noopener" variant="secondary">CSV</LinkButton>
+          </div>
         }
       />
 

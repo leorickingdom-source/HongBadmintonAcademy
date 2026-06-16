@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { classSchema, scheduleSchema } from "@/lib/validation";
-import { publicHolidayName, schoolHolidayMap } from "@/lib/holidays";
+import { loadHolidayMap } from "@/lib/holidays-server";
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -158,13 +158,13 @@ export async function generateSessions(formData: FormData) {
     err(`/admin/classes/${class_id}`, "Add a schedule first");
   }
 
-  // Holidays to skip: Malaysian public holidays + the academy's school holidays.
-  const { data: schoolRows } = await supabase.from("school_holidays").select("name, start_date, end_date");
-  const schoolMap = schoolHolidayMap(schoolRows ?? []);
-  const isHoliday = (ymd: string) => Boolean(publicHolidayName(ymd) || schoolMap.has(ymd));
-
   const rows: Record<string, unknown>[] = [];
   const start = new Date();
+  // Skip public (built-in + imported) + school holidays across the 4-week window.
+  const lastDay = new Date(start);
+  lastDay.setDate(start.getDate() + 27);
+  const holidayMap = await loadHolidayMap(supabase, start.toLocaleDateString("en-CA"), lastDay.toLocaleDateString("en-CA"));
+  const isHoliday = (ymd: string) => Boolean(holidayMap[ymd]);
   for (let i = 0; i < 28; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);

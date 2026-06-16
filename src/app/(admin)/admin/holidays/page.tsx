@@ -3,21 +3,21 @@ import { PageHeader, Section, Field, Input, Button, Table, Th, Td, Badge, EmptyS
 import { ConfirmButton } from "@/components/confirm-button";
 import { formatDate } from "@/lib/format";
 import { MY_PUBLIC_HOLIDAYS } from "@/lib/holidays";
-import { addSchoolHoliday, deleteSchoolHoliday } from "./actions";
+import { addSchoolHoliday, deleteSchoolHoliday, importPublicHolidays, clearImportedHolidays } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function HolidaysPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; imported?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, imported } = await searchParams;
   const supabase = await createClient();
-  const { data: holidays } = await supabase
-    .from("school_holidays")
-    .select("*")
-    .order("start_date", { ascending: false });
+  const [{ data: holidays }, { data: importedRows }] = await Promise.all([
+    supabase.from("school_holidays").select("*").order("start_date", { ascending: false }),
+    supabase.from("public_holidays").select("*").order("holiday_date", { ascending: true }),
+  ]);
 
   const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
   const upcomingPublic = MY_PUBLIC_HOLIDAYS.filter((h) => h.date >= today).slice(0, 8);
@@ -30,6 +30,11 @@ export default async function HolidaysPage({
       />
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {imported && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          Imported {imported} public holiday{imported === "1" ? "" : "s"}.
+        </p>
+      )}
 
       <Section title="Add a school holiday">
         <form action={addSchoolHoliday} className="grid items-end gap-4 sm:grid-cols-4">
@@ -75,7 +80,43 @@ export default async function HolidaysPage({
         )}
       </Section>
 
-      <Section title="Malaysian public holidays" description="Built-in (national). Shown on the schedule; edit in src/lib/holidays.ts." flush>
+      <Section title="Import public holidays" description="Upload a CSV or Excel (.xlsx) with two columns: date (YYYY-MM-DD), name. Rows merge with the built-in list and override on matching dates.">
+        <div className="flex flex-wrap items-center gap-3">
+          <form action={importPublicHolidays} className="flex flex-wrap items-center gap-3">
+            <input
+              type="file"
+              name="file"
+              accept=".csv,.xlsx"
+              required
+              className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700"
+            />
+            <Button type="submit">Import</Button>
+          </form>
+          {importedRows && importedRows.length > 0 && (
+            <form action={clearImportedHolidays}>
+              <ConfirmButton label="Clear imported" confirmText={`Remove all ${importedRows.length} imported public holidays?`} />
+            </form>
+          )}
+        </div>
+      </Section>
+
+      {importedRows && importedRows.length > 0 && (
+        <Section title={`Imported public holidays (${importedRows.length})`} flush>
+          <Table>
+            <thead><tr><Th>Date</Th><Th>Holiday</Th></tr></thead>
+            <tbody>
+              {importedRows.map((h: any) => (
+                <tr key={h.holiday_date} className="hover:bg-slate-50">
+                  <Td className="text-slate-600">{formatDate(h.holiday_date)}</Td>
+                  <Td><Badge tone="green">{h.name}</Badge></Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Section>
+      )}
+
+      <Section title="Malaysian public holidays (built-in)" description="National defaults. Shown on the schedule; edit in src/lib/holidays.ts or override via import above." flush>
         <Table>
           <thead><tr><Th>Date</Th><Th>Holiday</Th></tr></thead>
           <tbody>

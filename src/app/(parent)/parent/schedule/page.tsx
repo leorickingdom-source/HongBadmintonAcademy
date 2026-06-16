@@ -76,14 +76,16 @@ export default async function ParentSchedulePage() {
   const dates = [...byDate.keys()];
 
   // Upcoming holidays (no class) — public + the academy's school holidays.
-  const { data: schoolHols } = await supabase
-    .from("school_holidays")
-    .select("name, start_date, end_date")
-    .gte("end_date", today)
-    .order("start_date")
-    .limit(20);
+  const [{ data: schoolHols }, { data: dbPub }] = await Promise.all([
+    supabase.from("school_holidays").select("name, start_date, end_date").gte("end_date", today).order("start_date").limit(20),
+    supabase.from("public_holidays").select("holiday_date, name").gte("holiday_date", today).order("holiday_date").limit(50),
+  ]);
+  // Public holidays = built-in merged with imported (imported wins on a date).
+  const pubByDate = new Map<string, string>();
+  for (const h of MY_PUBLIC_HOLIDAYS) if (h.date >= today) pubByDate.set(h.date, h.name);
+  for (const r of (dbPub ?? []) as any[]) pubByDate.set(r.holiday_date, r.name);
   const upcomingHols = [
-    ...MY_PUBLIC_HOLIDAYS.filter((h) => h.date >= today).map((h) => ({ name: h.name, start: h.date, end: h.date, kind: "Public" })),
+    ...[...pubByDate].map(([date, name]) => ({ name, start: date, end: date, kind: "Public" })),
     ...(schoolHols ?? []).map((h: any) => ({ name: h.name, start: h.start_date, end: h.end_date, kind: "School" })),
   ]
     .sort((a, b) => a.start.localeCompare(b.start))

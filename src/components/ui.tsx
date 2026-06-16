@@ -164,7 +164,7 @@ export function PageHeader({
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
         {description && <div className="mt-1 text-sm text-slate-500">{description}</div>}
       </div>
-      {action && <div className="flex items-center gap-2">{action}</div>}
+      {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
     </div>
   );
 }

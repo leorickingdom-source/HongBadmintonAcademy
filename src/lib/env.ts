@@ -30,6 +30,9 @@ export const env = {
   // here (one post, all parents) instead of messaging each parent. Find it via
   // the worker's GET /groups endpoint. The dedicated number must be a group admin.
   waCommunityGroupId: process.env.WA_COMMUNITY_GROUP_ID ?? "",
+  // Human WhatsApp number parents send cash/transfer receipts to (E.164, e.g.
+  // +60123456789). Shown on the parent fees page. Optional.
+  academyWhatsapp: process.env.ACADEMY_WHATSAPP ?? "",
 
   nfcApiKey: process.env.NFC_API_KEY ?? "",
   cronSecret: process.env.CRON_SECRET ?? "",

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { env } from "@/lib/env";
+import { waLink } from "@/lib/wa";
 import type { InvoiceStatus } from "@/lib/types";
 import { payInvoice } from "./actions";
 
@@ -29,7 +31,24 @@ export default async function ParentInvoicesPage({
 
   return (
     <div>
-      <PageHeader title="Fees & Payments" description="View and pay your academy package fees online." />
+      <PageHeader title="Fees & Payments" description="Pay online, or send your receipt on WhatsApp for cash/transfer." />
+
+      <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+        💵 Paid by cash or bank transfer?{" "}
+        {env.academyWhatsapp ? (
+          <a
+            href={waLink(env.academyWhatsapp, "Hi, here is my payment receipt for invoice ") ?? "#"}
+            target="_blank"
+            rel="noopener"
+            className="font-medium text-green-700 hover:underline"
+          >
+            Send your receipt on WhatsApp
+          </a>
+        ) : (
+          <span className="font-medium text-slate-700">Send your payment receipt to us on WhatsApp</span>
+        )}{" "}
+        and we&apos;ll mark it paid.
+      </div>
 
       {paid && (
         <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">

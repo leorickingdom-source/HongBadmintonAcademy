@@ -49,6 +49,39 @@ export default async function CoachDashboard() {
     todayCount = tCount ?? 0;
   }
 
+  // ─── Coach performance (this month) ──────────────────────────────────────
+  let lessonsThis = 0;
+  let lessonsLast = 0;
+  let attPct: number | null = null;
+  let avgGiven: number | null = null;
+  if (classIds.length) {
+    const myt = new Date(Date.now() + 8 * 3600 * 1000);
+    const yy = myt.getUTCFullYear();
+    const mm = myt.getUTCMonth();
+    const mStart = `${yy}-${String(mm + 1).padStart(2, "0")}-01`;
+    const mEnd = new Date(Date.UTC(yy, mm + 1, 0)).toISOString().slice(0, 10);
+    const lmStart = new Date(Date.UTC(yy, mm - 1, 1)).toISOString().slice(0, 10);
+    const lmEnd = new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10);
+
+    const [{ data: thisSess }, { count: lastCount }, { data: assess }] = await Promise.all([
+      supabase.from("sessions").select("id").in("class_id", classIds).gte("session_date", mStart).lte("session_date", mEnd),
+      supabase.from("sessions").select("*", { count: "exact", head: true }).in("class_id", classIds).gte("session_date", lmStart).lte("session_date", lmEnd),
+      supabase.from("assessments").select("overall_score").eq("coach_id", me.id).limit(10000),
+    ]);
+    lessonsThis = (thisSess ?? []).length;
+    lessonsLast = lastCount ?? 0;
+
+    const sIds = (thisSess ?? []).map((x: any) => x.id);
+    if (sIds.length) {
+      const { data: att } = await supabase.from("attendance").select("status").in("session_id", sIds);
+      const tot = (att ?? []).length;
+      const came = (att ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
+      attPct = tot ? Math.round((came / tot) * 100) : null;
+    }
+    const scores = (assess ?? []).map((a: any) => Number(a.overall_score)).filter((n: number) => !Number.isNaN(n));
+    avgGiven = scores.length ? Math.round((scores.reduce((x: number, y: number) => x + y, 0) / scores.length) * 10) / 10 : null;
+  }
+
   return (
     <div>
       <PageHeader
@@ -78,6 +111,13 @@ export default async function CoachDashboard() {
         <StatCard label="Your classes" value={classIds.length} />
         <StatCard label="Students" value={studentCount} tone="green" />
         <StatCard label="Sessions today" value={todayCount} tone={todayCount ? "blue" : "slate"} />
+      </div>
+
+      <h2 className="mb-3 mt-8 text-lg font-semibold text-slate-900">My performance</h2>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <StatCard label="Lessons this month" value={lessonsThis} sub={`${lessonsLast} last month`} tone="blue" />
+        <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="your classes, this month" />
+        <StatCard label="Avg score given" value={avgGiven != null ? `${avgGiven}%` : "—"} sub="your assessments" />
       </div>
 
       <div className="mt-8">

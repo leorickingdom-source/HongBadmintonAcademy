@@ -12,20 +12,11 @@ export type LbRow = {
   sessions: number;
   rate: number;
   streak: number;
-  rank: string;
   classRank: string | null;
 };
 
-type Col = "rank" | "classRank" | "name" | "age" | "attended" | "rate" | "streak";
+type Col = "classRank" | "name" | "age" | "attended" | "rate" | "streak";
 
-const RANK_STYLE: Record<string, string> = {
-  LEGEND: "bg-green-100 text-green-700",
-  GOLD: "bg-amber-100 text-amber-700",
-  SILVER: "bg-blue-100 text-blue-700",
-  BRONZE: "bg-orange-100 text-orange-700",
-  NONE: "bg-slate-100 text-slate-500",
-};
-const RANK_ORDER: Record<string, number> = { LEGEND: 5, GOLD: 4, SILVER: 3, BRONZE: 2, NONE: 1 };
 const MEDAL = ["🥇", "🥈", "🥉"];
 
 export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
@@ -36,11 +27,9 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
     const val = (r: LbRow): number | string =>
       col === "name"
         ? r.name.toLowerCase()
-        : col === "rank"
-          ? RANK_ORDER[r.rank]
-          : col === "classRank"
-            ? CLASS_RANK_ORDER[r.classRank ?? ""] ?? 0
-            : (r[col] as number);
+        : col === "classRank"
+          ? CLASS_RANK_ORDER[r.classRank ?? ""] ?? 0
+          : (r[col] as number);
     return [...rows].sort((a, b) => {
       const x = val(a);
       const y = val(b);
@@ -85,7 +74,6 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
             <Header c="attended" label="Attended" />
             <Header c="rate" label="Rate" />
             <Header c="streak" label="Max streak" />
-            <Header c="rank" label="Attendance tier" />
           </tr>
         </thead>
         <tbody>
@@ -109,9 +97,6 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
                 {r.rate}%
               </td>
               <td className="border-b border-slate-100 px-3 py-2.5 text-center font-semibold text-green-700">{r.streak}</td>
-              <td className="border-b border-slate-100 px-3 py-2.5 text-center">
-                <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", RANK_STYLE[r.rank] ?? RANK_STYLE.NONE)}>{r.rank}</span>
-              </td>
             </tr>
           ))}
         </tbody>

@@ -9,7 +9,6 @@ const QUICK_ACTIONS = [
   { href: "/admin/sessions", icon: "📅", title: "Sessions", sub: "Schedule" },
   { href: "/admin/scorecards", icon: "📊", title: "Growth reports", sub: "Generate & send" },
   { href: "/admin/invoices", icon: "💳", title: "Fees & invoices", sub: "Bill & track" },
-  { href: "/admin/coaches/summary", icon: "💰", title: "Coaches & Payroll", sub: "Lessons & pay" },
   { href: "/admin/people", icon: "👥", title: "Directory", sub: "Students & staff" },
   { href: "/admin/announce", icon: "📢", title: "Announce", sub: "Community" },
 ];
@@ -64,12 +63,18 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <StatCard label="Active students" value={students} tone="green" />
-        <StatCard label="Coaches" value={coaches} />
+        <Link href="/admin/people?tab=students" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+          <StatCard label="Active students" value={students} tone="green" />
+        </Link>
+        <Link href="/admin/coaches/summary" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+          <StatCard label="Coaches & payroll" value={coaches} tone="slate" />
+        </Link>
         <Link href="/admin/classes" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
           <StatCard label="Active / total classes" value={`${activeClasses} / ${totalClasses}`} tone="blue" />
         </Link>
-        <StatCard label="Unpaid invoices" value={unpaid} tone={unpaid ? "red" : "slate"} />
+        <Link href="/admin/invoices" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+          <StatCard label="Unpaid invoices" value={unpaid} tone={unpaid ? "red" : "slate"} />
+        </Link>
         <Link href="/admin/messages" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
           <StatCard label="Queued messages" value={queued} tone={queued ? "amber" : "slate"} />
         </Link>

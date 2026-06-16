@@ -13,6 +13,17 @@ function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
+// Detach a student from a parent (Directory → edit parent). Leaves the student
+// in place, just clears their parent_id. Service-role (admin-gated route).
+export async function unlinkChild(formData: FormData) {
+  const studentId = String(formData.get("student_id"));
+  const parentId = String(formData.get("parent_id"));
+  const db = createAdminClient();
+  await db.from("students").update({ parent_id: null }).eq("id", studentId);
+  revalidatePath(`/admin/parents/${parentId}`);
+  revalidatePath("/admin/people");
+}
+
 // Create a coach/parent = create the auth user (service role). The
 // on_auth_user_created trigger then inserts the matching profile row.
 export async function createPerson(role: Role, formData: FormData) {

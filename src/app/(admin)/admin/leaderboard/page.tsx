@@ -16,15 +16,6 @@ function ageFrom(dob: string | null): number | null {
   return a;
 }
 
-// Tiers by attendance rate (the academy's reward logic — tweak freely).
-function rankOf(rate: number, attended: number): string {
-  if (attended === 0) return "NONE";
-  if (rate >= 85) return "LEGEND";
-  if (rate >= 70) return "GOLD";
-  if (rate >= 55) return "SILVER";
-  return "BRONZE";
-}
-
 export default async function LeaderboardPage() {
   const supabase = await createClient();
 
@@ -66,14 +57,14 @@ export default async function LeaderboardPage() {
         streak = 0;
       }
     }
-    return { id: s.id, name: s.full_name, age: ageFrom(s.dob), attended, sessions: marked, rate, streak: max, rank: rankOf(rate, attended), classRank: studentRank(s.rank, levelsByStudent.get(s.id) ?? []) };
+    return { id: s.id, name: s.full_name, age: ageFrom(s.dob), attended, sessions: marked, rate, streak: max, classRank: studentRank(s.rank, levelsByStudent.get(s.id) ?? []) };
   });
 
   return (
     <div>
       <PageHeader
         title="Students Leaderboard"
-        description="Tap any column to sort. Attendance tier = attendance band: Legend ≥85%, Gold ≥70%, Silver ≥55%, else Bronze. (Class rank is the skill tier — separate.)"
+        description="Ranked by attendance — tap any column to sort. Class rank is the student's skill tier."
         action={<LinkButton href="/admin/students" variant="ghost">Manage students →</LinkButton>}
       />
       {rows.length > 0 ? <LeaderboardTable rows={rows} /> : <EmptyState message="No active students yet." />}

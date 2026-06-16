@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency, formatDate, formatTime, monthLabel } from "@/lib/format";
 import { normalizePhoneMY } from "@/lib/wa";
 import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy } from "@/lib/settings";
+import { getWhatsappProvider } from "@/lib/whatsapp";
 import { APP_NAME } from "@/lib/constants";
 import { env } from "@/lib/env";
 
@@ -167,7 +168,7 @@ export async function enqueueDueReminders(baseUrl: string) {
 // queued it's UPDATED in place (so the scorecard run can seed it and the later
 // invoice run can upgrade it to combined); once the worker has sent it, it's
 // left alone. Returns the outcome for UI feedback.
-export async function upsertCommunityMonthlyNotice(baseUrl: string) {
+export async function upsertCommunityMonthlyNotice(baseUrl: string, immediate = false) {
   const groupId = env.waCommunityGroupId;
   if (!groupId) return { posted: "no-group-id" as const };
 
@@ -215,6 +216,8 @@ export async function upsertCommunityMonthlyNotice(baseUrl: string) {
     .limit(1)
     .maybeSingle();
 
+  let rowId: string;
+  let outcome: "queued" | "updated";
   if (existing) {
     if (existing.status === "sent") return { posted: "already-sent" as const, variant };
     const { error } = await db
@@ -222,12 +225,34 @@ export async function upsertCommunityMonthlyNotice(baseUrl: string) {
       .update({ body, recipient_phone: groupId, status: "queued", error: null })
       .eq("id", existing.id);
     if (error) throw new Error(error.message);
-    return { posted: "updated" as const, variant };
+    rowId = existing.id;
+    outcome = "updated";
+  } else {
+    const { data: ins, error } = await db
+      .from("message_queue")
+      .insert({ kind, recipient_phone: groupId, body })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    rowId = ins!.id;
+    outcome = "queued";
   }
 
-  const { error } = await db.from("message_queue").insert({ kind, recipient_phone: groupId, body });
-  if (error) throw new Error(error.message);
-  return { posted: "queued" as const, variant };
+  // Manual "Generate this month" path: post the blast NOW (one group message,
+  // low ban risk) instead of waiting on the cautious per-parent drip. Crons keep
+  // it queued so the reports + fees runs can combine into one notice.
+  if (immediate) {
+    const result = await getWhatsappProvider().send({ to: groupId, text: body });
+    if (result.status === "sent") {
+      const sentAt = new Date().toISOString();
+      await db.from("message_queue").update({ status: "sent", sent_at: sentAt, provider_message_id: result.providerMessageId ?? null }).eq("id", rowId);
+      await db.from("messages").insert({ type: "custom", recipient_phone: "community", body, provider: "wwebjs", status: "sent", sent_at: sentAt, provider_message_id: result.providerMessageId ?? null });
+      return { posted: "sent" as const, variant };
+    }
+    // Worker offline → leave it queued; the drip delivers when it reconnects.
+  }
+
+  return { posted: outcome, variant };
 }
 
 type NextResult =

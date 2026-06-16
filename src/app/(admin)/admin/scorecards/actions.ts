@@ -16,8 +16,8 @@ export async function generateScorecards() {
   const supabase = await createClient();
   const admin = createAdminClient();
   const { generated } = await generateScorecardsCore(supabase, admin);
-  // Seed/refresh the monthly Community post (reports-only until invoices exist).
-  const notice = await upsertCommunityMonthlyNotice(await getBaseUrl());
+  // Seed/refresh the monthly Community post (reports-only until invoices exist) — send now.
+  const notice = await upsertCommunityMonthlyNotice(await getBaseUrl(), true);
   revalidatePath("/admin/scorecards");
   redirect(`/admin/scorecards?generated=${generated}&notice=${notice.posted}`);
 }

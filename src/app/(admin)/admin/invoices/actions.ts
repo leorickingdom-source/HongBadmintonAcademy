@@ -48,8 +48,8 @@ export async function generateMonthlyInvoices() {
   // button and the daily cron raise identical due dates.
   const schedule = await getMonthlySchedule();
   const { generated } = await generateInvoicesCore(createAdminClient(), new Date(), schedule.dueDay);
-  // Post/refresh the combined monthly Community notice (reports + fees).
-  const notice = await upsertCommunityMonthlyNotice(await getBaseUrl());
+  // Post/refresh the combined monthly Community notice (reports + fees) — send now.
+  const notice = await upsertCommunityMonthlyNotice(await getBaseUrl(), true);
   revalidatePath("/admin/invoices");
   redirect(`/admin/invoices?generated=${generated}&notice=${notice.posted}`);
 }

@@ -91,6 +91,7 @@ export default async function InvoicesPage({
         {generated !== undefined && (() => {
           const n = Number(generated);
           const map: Record<string, { tone: string; msg: string }> = {
+            sent: { tone: "border-green-200 bg-green-50 text-green-800", msg: "✅ Community notice posted now — all parents notified (reports + fees)." },
             queued: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Community notice queued — worker will post the combined update to parents shortly." },
             updated: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Combined Community notice (reports + fees) refreshed and queued." },
             "already-sent": { tone: "border-blue-200 bg-blue-50 text-blue-800", msg: "This month's Community notice was already posted — not duplicated." },

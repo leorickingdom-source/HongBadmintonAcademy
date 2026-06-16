@@ -48,6 +48,7 @@ export default async function ScorecardsPage({
         (() => {
           const n = Number(generated);
           const map: Record<string, { tone: string; msg: string }> = {
+            sent: { tone: "border-green-200 bg-green-50 text-green-800", msg: "✅ Community notice posted now — all parents notified that reports are ready." },
             queued: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Community notice queued — the worker will post it to the parent WhatsApp Community shortly." },
             updated: { tone: "border-green-200 bg-green-50 text-green-800", msg: "This month's Community notice was refreshed (it will include fees too once invoices are raised)." },
             "already-sent": { tone: "border-blue-200 bg-blue-50 text-blue-800", msg: "This month's Community notice was already posted — not duplicated." },

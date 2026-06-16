@@ -4,9 +4,36 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { parseHolidayFile } from "@/lib/holiday-import";
+import { loadHolidayMap } from "@/lib/holidays-server";
 
 function err(message: string): never {
   redirect(`/admin/holidays?error=${encodeURIComponent(message)}`);
+}
+
+// Retroactive cleanup: delete future *scheduled* sessions that now fall on a
+// holiday (public/imported/school). Generation only skips going forward; this
+// clears ones already created. Deletes (no WhatsApp spam); past/completed/
+// canceled sessions are left untouched.
+export async function removeHolidaySessions() {
+  const supabase = await createClient();
+  const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+  const { data: future } = await supabase
+    .from("sessions")
+    .select("id, session_date")
+    .gte("session_date", today)
+    .eq("status", "scheduled");
+  if (!future || future.length === 0) redirect("/admin/holidays?removed=0");
+
+  const maxDate = future.reduce((m, s) => (s.session_date > m ? s.session_date : m), today);
+  const map = await loadHolidayMap(supabase, today, maxDate);
+  const ids = future.filter((s) => map[s.session_date]).map((s) => s.id);
+  if (ids.length) await supabase.from("sessions").delete().in("id", ids);
+
+  revalidatePath("/admin/sessions");
+  revalidatePath("/admin");
+  revalidatePath("/parent/schedule");
+  revalidatePath("/coach/schedule");
+  redirect(`/admin/holidays?removed=${ids.length}`);
 }
 
 // Import public holidays from an uploaded CSV or XLSX (columns: date, name).

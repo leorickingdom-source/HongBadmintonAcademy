@@ -3,16 +3,16 @@ import { PageHeader, Section, Field, Input, Button, Table, Th, Td, Badge, EmptyS
 import { ConfirmButton } from "@/components/confirm-button";
 import { formatDate } from "@/lib/format";
 import { MY_PUBLIC_HOLIDAYS } from "@/lib/holidays";
-import { addSchoolHoliday, deleteSchoolHoliday, importPublicHolidays, clearImportedHolidays } from "./actions";
+import { addSchoolHoliday, deleteSchoolHoliday, importPublicHolidays, clearImportedHolidays, removeHolidaySessions } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function HolidaysPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; imported?: string }>;
+  searchParams: Promise<{ error?: string; imported?: string; removed?: string }>;
 }) {
-  const { error, imported } = await searchParams;
+  const { error, imported, removed } = await searchParams;
   const supabase = await createClient();
   const [{ data: holidays }, { data: importedRows }] = await Promise.all([
     supabase.from("school_holidays").select("*").order("start_date", { ascending: false }),
@@ -33,6 +33,11 @@ export default async function HolidaysPage({
       {imported && (
         <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
           Imported {imported} public holiday{imported === "1" ? "" : "s"}.
+        </p>
+      )}
+      {removed && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          Removed {removed} session{removed === "1" ? "" : "s"} that fell on a holiday.
         </p>
       )}
 
@@ -78,6 +83,12 @@ export default async function HolidaysPage({
         ) : (
           <div className="px-5 pt-5"><EmptyState message="No school holidays added yet." /></div>
         )}
+      </Section>
+
+      <Section title="Clean up sessions" description="Delete upcoming scheduled sessions that fall on a holiday (public, imported or school). Past, completed and cancelled sessions are kept.">
+        <form action={removeHolidaySessions}>
+          <ConfirmButton label="Remove holiday sessions" confirmText="Delete all upcoming scheduled sessions that fall on a holiday? This cannot be undone." />
+        </form>
       </Section>
 
       <Section title="Import public holidays" description="Upload a CSV or Excel (.xlsx) with two columns: date (YYYY-MM-DD), name. Rows merge with the built-in list and override on matching dates.">

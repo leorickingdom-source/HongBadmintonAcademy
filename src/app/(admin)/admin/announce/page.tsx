@@ -28,12 +28,17 @@ export default async function AnnouncePage({
     <div className="space-y-6">
       <PageHeader
         title="Announcements"
-        description="Send a one-off notice to the whole parent WhatsApp Community — the worker posts it for you. Great for holiday greetings, schedule changes, reminders."
+        description="Blast one message to the whole parent WhatsApp Community at once — sent immediately. Great for holiday greetings, schedule changes, reminders."
       />
 
-      {posted && (
+      {posted === "1" && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-          Posted to the Community — the worker will deliver it shortly (queued, throttled).
+          ✅ Sent to the whole parent Community now.
+        </div>
+      )}
+      {posted === "queued" && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Worker offline — your message is queued and will post to the Community the moment the worker reconnects.
         </div>
       )}
       {error && (

@@ -1,0 +1,99 @@
+
+====================================================================
+CLASS RANK SYSTEM (NEW)
+====================================================================
+- Introduced class ranks: Beginner, Intermediate, Advanced, Elite (colour-coded).
+- Each class can be tagged with a rank.
+- Per-student rank: coaches assign a student's rank after assessment; admins can
+  "Promote" a student up a tier. A student's own rank takes priority; if unset,
+  they inherit their class's rank.
+- Rank now appears across the system: classes list, student directory, student
+  details, growth reports, attendance grid, leaderboard, the sessions calendar,
+  the parent's children list, and as an optional tag on fee plans.
+
+====================================================================
+SESSIONS & SCHEDULING
+====================================================================
+- New monthly calendar view (with previous / today / next navigation), replacing
+  the old week list.
+- Each session shows the class, rank, coach and court, colour-coded by rank.
+- Clicking a session opens a detail pop-up (cancel / restore / delete) instead of
+  jumping straight to attendance.
+- "Add a session" one-off creator (pick class, date, time, court) via a pop-up —
+  no need to set up a weekly schedule for a makeup class.
+- Filter sessions by class and status (applies automatically, no page reload).
+- Cancelling a session now sends an automatic WhatsApp notice to affected parents.
+
+====================================================================
+HOLIDAYS (NEW)
+====================================================================
+- Malaysian public holidays are built in and shown on the schedules.
+- Admins can add school/academy holiday date ranges.
+- Public holidays can be imported from a CSV or Excel (.xlsx) file.
+- Session generation automatically skips holidays.
+- One-click "clean up" to remove upcoming sessions that fall on a holiday.
+- Holidays are shown on the admin, coach and parent schedules.
+
+====================================================================
+COACHES
+====================================================================
+- New monthly schedule view for coaches (read-only).
+- "My performance" panel on the coach home: lessons this/last month, attendance
+  rate, and average score given.
+- Check-in and the old "Register" are now one screen: tap NFC cards AND mark
+  students by hand (including Excused). Marking can be done any time on the day.
+- Coach payroll: added a month picker and coach search.
+
+====================================================================
+PARENTS
+====================================================================
+- Schedule is now shown as a clear table, with a Schedule button added.
+- "Send your receipt on WhatsApp" note for cash / bank-transfer payments.
+- Each child is shown with their rank.
+- Removed redundant cards (children count, score-card count).
+
+====================================================================
+FEES & INVOICES
+====================================================================
+- Filter invoices by status, month, name, or invoice number (applies instantly).
+- Due dates are now consistent — the manual "Generate this month" button uses the
+  same due day as the automatic monthly run.
+- Students who join mid-month are billed pro-rata by sessions (e.g. joining
+  halfway = about half the fee), and the invoice notes the proration.
+- Fee plans can carry an optional rank tag.
+
+====================================================================
+DASHBOARD & NAVIGATION
+====================================================================
+- Removed the Parents count and the "Take attendance" tile from the dashboard.
+- Dashboard stat cards are now clickable (students, coaches & payroll, classes,
+  invoices, queued messages).
+- Clarified the "active classes" figure.
+- Renamed the "People" section to "Directory".
+- Added filters to the Directory and Classes lists (rank / status / search).
+- Admin attendance simplified to the Matrix view; the matrix shows class and
+  student rank.
+
+====================================================================
+COMMUNICATIONS (WHATSAPP)
+====================================================================
+- The WhatsApp page now shows what is queued (waiting to send) as well as the
+  delivery log.
+- The dashboard "Queued messages" card links straight to it.
+
+====================================================================
+ANALYTICS
+====================================================================
+- Added a Collection rate (collected vs billed this month) and a
+  Students-by-rank chart.
+- Added a month picker, and export of a chosen month as PDF or CSV.
+
+====================================================================
+OTHER IMPROVEMENTS
+====================================================================
+- Removed the attendance "tier" from the leaderboard (kept attendance rate,
+  streak and class rank).
+- Ability to unlink a student from a parent.
+- Trimmed wordy page text and removed redundant legends.
+- Mobile-friendly layout improvements (headers, tables, pop-ups).
+- Fixed an incorrect "Back to Sessions" link.

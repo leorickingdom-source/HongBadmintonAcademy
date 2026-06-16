@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
+import { getWhatsappProvider } from "@/lib/whatsapp";
 import { env } from "@/lib/env";
 
 // No worker, no bot: the admin posts the notice into the community Announcements
@@ -29,10 +30,11 @@ export async function logAnnouncement(formData: FormData) {
   revalidatePath("/admin/announce");
 }
 
-// Worker-sent announcement: queue a free-text notice for the worker to post to
-// the Community Announcements group (e.g. holiday greetings). No manual paste.
-// recordQueueResult logs it ('custom', recipient 'community') and the history
-// table below picks it up on send. Admin-only.
+// Community blast: post a free-text notice to the parent Community Announcements
+// group. One message reaches every parent at once, so it's sent IMMEDIATELY (via
+// the worker's /send) rather than parked in the throttled per-parent drip — a
+// single group post carries little ban risk. If the worker is offline we fall
+// back to the queue so it goes out when the worker reconnects. Admin-only.
 export async function postCommunityMessage(formData: FormData) {
   await requireRole("admin");
   const body = String(formData.get("text") ?? "").trim();
@@ -42,11 +44,24 @@ export async function postCommunityMessage(formData: FormData) {
   }
 
   const db = createAdminClient();
-  const { error } = await db
-    .from("message_queue")
-    .insert({ kind: "community_custom", recipient_phone: env.waCommunityGroupId, body });
-  if (error) redirect(`/admin/announce?error=${encodeURIComponent(error.message)}`);
+  const result = await getWhatsappProvider().send({ to: env.waCommunityGroupId, text: body });
 
+  if (result.status === "sent") {
+    await db.from("messages").insert({
+      type: "custom",
+      recipient_phone: "community",
+      body,
+      provider: "wwebjs",
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      provider_message_id: result.providerMessageId ?? null,
+    });
+    revalidatePath("/admin/announce");
+    redirect("/admin/announce?posted=1");
+  }
+
+  // Worker offline / not ready → queue it; the drip delivers when it reconnects.
+  await db.from("message_queue").insert({ kind: "community_custom", recipient_phone: env.waCommunityGroupId, body });
   revalidatePath("/admin/announce");
-  redirect("/admin/announce?posted=1");
+  redirect("/admin/announce?posted=queued");
 }

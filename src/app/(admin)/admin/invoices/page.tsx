@@ -62,10 +62,11 @@ export default async function InvoicesPage({
   // Distinct billing months for the dropdown (newest first).
   const monthOptions = [...new Set((monthRows ?? []).map((r: any) => r.period_month as string))].sort().reverse();
 
-  // Name search is applied in-memory (Supabase can't ILIKE across embedded relations).
+  // Search by invoice number OR student/parent name (in-memory — Supabase can't
+  // ILIKE across embedded relations).
   const invoices = search
     ? (rawInvoices ?? []).filter((i: any) =>
-        `${i.students?.full_name ?? ""} ${i.parent?.full_name ?? ""}`.toLowerCase().includes(search),
+        `${i.invoice_no ?? ""} ${i.students?.full_name ?? ""} ${i.parent?.full_name ?? ""}`.toLowerCase().includes(search),
       )
     : rawInvoices ?? [];
 
@@ -125,8 +126,8 @@ export default async function InvoicesPage({
             </FilterSelect>
           </label>
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-slate-600">Student / parent</span>
-            <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Search name…" className="h-9 w-52" />
+            <span className="text-xs font-medium text-slate-600">Search</span>
+            <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Invoice # or name…" className="h-9 w-52" />
           </label>
           {filtered && (
             <LinkButton href="/admin/invoices" variant="ghost">Clear</LinkButton>

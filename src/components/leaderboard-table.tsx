@@ -85,7 +85,7 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
             <Header c="attended" label="Attended" />
             <Header c="rate" label="Rate" />
             <Header c="streak" label="Max streak" />
-            <Header c="rank" label="Tier" />
+            <Header c="rank" label="Attendance tier" />
           </tr>
         </thead>
         <tbody>

@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { monthLabel } from "@/lib/format";
+import { studentRank } from "@/lib/ranks";
 
 export interface Analytics {
   monthLabel: string;
@@ -17,6 +18,8 @@ export interface Analytics {
   newStudentsThisMonth: number;
   revenueTrend: { label: string; amount: number }[];
   studentsPerClass: { name: string; count: number }[];
+  rankDistribution: Record<string, number>;
+  collection: { billed: number; collected: number; rate: number | null };
 }
 
 // Computes the academy analytics. Pass an authed Supabase client (admin RLS
@@ -42,6 +45,7 @@ export async function computeAnalytics(supabase: any): Promise<Analytics> {
     { data: ledger },
     { data: messages },
     { data: activeEnrollments },
+    { data: activeStudents },
   ] = await Promise.all([
     head("students", (q: any) => q.eq("status", "active")),
     head("profiles", (q: any) => q.eq("role", "coach")),
@@ -50,12 +54,13 @@ export async function computeAnalytics(supabase: any): Promise<Analytics> {
     head("students", (q: any) => q.gte("created_at", monthStart)),
     supabase.from("payments").select("amount, status, created_at").gte("created_at", monthStart).eq("status", "succeeded"),
     supabase.from("payments").select("amount, created_at").gte("created_at", trendStart).eq("status", "succeeded").limit(10000),
-    supabase.from("invoices").select("amount, status"),
+    supabase.from("invoices").select("amount, status, period_month"),
     supabase.from("attendance").select("status").limit(10000),
     supabase.from("assessments").select("overall_score").limit(10000),
     supabase.from("reward_ledger").select("points, students(full_name)").limit(10000),
     supabase.from("messages").select("status").limit(10000),
-    supabase.from("enrollments").select("classes(name)").eq("active", true).limit(10000),
+    supabase.from("enrollments").select("student_id, classes(name, level)").eq("active", true).limit(10000),
+    supabase.from("students").select("id, rank").eq("status", "active").limit(10000),
   ]);
 
   const revenueThisMonth = (payments ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0);
@@ -116,6 +121,35 @@ export async function computeAnalytics(supabase: any): Promise<Analytics> {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
 
+  // Class-rank distribution across active students (effective rank).
+  const levelsByStudent = new Map<string, (string | null)[]>();
+  for (const e of (activeEnrollments ?? []) as any[]) {
+    const arr = levelsByStudent.get(e.student_id) ?? [];
+    arr.push(e.classes?.level ?? null);
+    levelsByStudent.set(e.student_id, arr);
+  }
+  const rankDistribution: Record<string, number> = { Beginner: 0, Intermediate: 0, Advanced: 0, Elite: 0, Unranked: 0 };
+  for (const s of (activeStudents ?? []) as any[]) {
+    const r = studentRank(s.rank, levelsByStudent.get(s.id) ?? []);
+    rankDistribution[r ?? "Unranked"] = (rankDistribution[r ?? "Unranked"] ?? 0) + 1;
+  }
+
+  // Collection rate for the current month: collected ÷ billed (excl. canceled/refunded).
+  const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  let billed = 0;
+  let collected = 0;
+  for (const i of (invoices ?? []) as any[]) {
+    if (!i.period_month || !String(i.period_month).startsWith(mk)) continue;
+    if (i.status === "canceled" || i.status === "refunded") continue;
+    billed += Number(i.amount);
+    if (i.status === "paid") collected += Number(i.amount);
+  }
+  const collection = {
+    billed: Math.round(billed),
+    collected: Math.round(collected),
+    rate: billed ? Math.round((collected / billed) * 100) : null,
+  };
+
   return {
     monthLabel: monthLabel(monthStart),
     currency: env.paymentCurrency,
@@ -137,5 +171,7 @@ export async function computeAnalytics(supabase: any): Promise<Analytics> {
     newStudentsThisMonth: newStudents.count ?? 0,
     revenueTrend,
     studentsPerClass,
+    rankDistribution,
+    collection,
   };
 }

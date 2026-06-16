@@ -43,8 +43,14 @@ export default async function AnalyticsPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Revenue (this month)" value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />
+        <StatCard
+          label="Collection rate"
+          value={a.collection.rate != null ? `${a.collection.rate}%` : "—"}
+          sub={`${formatCurrency(a.collection.collected, a.currency)} / ${formatCurrency(a.collection.billed, a.currency)}`}
+          tone={a.collection.rate == null ? "slate" : a.collection.rate >= 80 ? "green" : a.collection.rate >= 50 ? "amber" : "red"}
+        />
         <StatCard label="Outstanding fees" value={formatCurrency(a.outstanding, a.currency)} tone={a.outstanding > 0 ? "red" : "slate"} />
         <StatCard label="Attendance rate" value={a.attendanceRate != null ? `${a.attendanceRate}%` : "—"} tone="blue" />
         <StatCard label="Avg skill score" value={a.avgScore != null ? `${a.avgScore}%` : "—"} sub={`${a.assessmentCount} assessments`} />
@@ -100,6 +106,13 @@ export default async function AnalyticsPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Section title="Students by rank" description="Effective class rank across active students">
+          <Bars
+            data={a.rankDistribution}
+            tones={{ Beginner: "bg-green-500", Intermediate: "bg-blue-500", Advanced: "bg-amber-500", Elite: "bg-purple-500", Unranked: "bg-slate-400" }}
+          />
+        </Section>
+
         <Section title="Attendance breakdown">
           <Bars
             data={a.attendanceBreakdown}

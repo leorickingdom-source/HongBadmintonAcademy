@@ -73,7 +73,7 @@ export default async function LeaderboardPage() {
     <div>
       <PageHeader
         title="Students Leaderboard"
-        description="Ranked by attendance — tap any column to sort."
+        description="Tap any column to sort. Attendance tier = attendance band: Legend ≥85%, Gold ≥70%, Silver ≥55%, else Bronze. (Class rank is the skill tier — separate.)"
         action={<LinkButton href="/admin/students" variant="ghost">Manage students →</LinkButton>}
       />
       {rows.length > 0 ? <LeaderboardTable rows={rows} /> : <EmptyState message="No active students yet." />}

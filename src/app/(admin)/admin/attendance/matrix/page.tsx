@@ -26,7 +26,7 @@ export default async function MatrixPage({
 
   const { data: classes } = await supabase
     .from("classes")
-    .select("id, name")
+    .select("id, name, level")
     .eq("is_active", true)
     .order("name");
   const classId = qClass ?? classes?.[0]?.id ?? null;
@@ -101,6 +101,9 @@ export default async function MatrixPage({
               className="!px-3 !py-1.5 text-xs"
             >
               {c.name}
+              {c.level && (
+                <span className={cn("ml-1.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase", rankBadgeClass(c.level))}>{c.level}</span>
+              )}
             </LinkButton>
           ))}
         </div>

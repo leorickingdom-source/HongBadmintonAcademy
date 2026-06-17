@@ -1,10 +1,9 @@
 import { requireRole } from "@/lib/auth";
-import { PageHeader, Card, Section, Field, Input, Badge } from "@/components/ui";
+import { PageHeader, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { ROLE_LABEL } from "@/lib/constants";
 import { isWorkerPaused, isFeeRemindersPaused, getMonthlySchedule } from "@/lib/settings";
 import { WaLinkPanel } from "@/components/wa-link-panel";
-import { updateOwnProfile, toggleWorker, toggleFeeReminders, saveMonthlySchedule } from "./actions";
+import { toggleWorker, toggleFeeReminders, saveMonthlySchedule } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +12,7 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
-  const profile = await requireRole("admin");
+  await requireRole("admin");
   const { error, saved } = await searchParams;
   const paused = await isWorkerPaused();
   const feePaused = await isFeeRemindersPaused();
@@ -21,7 +20,10 @@ export default async function SettingsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Account details and WhatsApp automation controls." />
+      <PageHeader title="Settings" description="WhatsApp automation and the monthly run schedule." />
+
+      {saved && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
+      {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <Section title="WhatsApp worker">
         <div className="flex flex-wrap items-center justify-between gap-4 p-5">
@@ -70,52 +72,21 @@ export default async function SettingsPage({
       <Section title="Monthly schedule">
         <form action={saveMonthlySchedule} className="space-y-4 p-5">
           <p className="text-sm text-slate-600">
-            Which day of the month invoices &amp; growth reports go out (1–28). The crons check daily and
-            act only on these days. The manual &quot;Generate this month&quot; buttons work any day.
+            The <strong>run day</strong> is when invoices and growth reports are generated each month (they go out as
+            one combined Community post). The <strong>due day</strong> is when each fee falls due. Days 1–28; the crons
+            check daily. The manual &quot;Generate this month&quot; buttons work any day.
           </p>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Invoice day" hint="Raise fees + post the Community notice.">
-              <Input type="number" name="invoiceDay" min={1} max={28} defaultValue={schedule.invoiceDay} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Monthly run day" hint="Raise fees + build reports + post the notice.">
+              <Input type="number" name="runDay" min={1} max={28} defaultValue={schedule.runDay} />
             </Field>
             <Field label="Invoice due day">
               <Input type="number" name="dueDay" min={1} max={28} defaultValue={schedule.dueDay} />
             </Field>
-            <Field label="Growth report day">
-              <Input type="number" name="reportDay" min={1} max={28} defaultValue={schedule.reportDay} />
-            </Field>
           </div>
-          <SubmitButton pendingText="Saving…">Save dates</SubmitButton>
+          <SubmitButton pendingText="Saving…">Save schedule</SubmitButton>
         </form>
       </Section>
-
-      <Card className="max-w-xl p-6">
-        {saved && <p className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
-        {error && <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-
-        <form action={updateOwnProfile} className="space-y-4">
-          <Field label="Full name" required>
-            <Input name="full_name" defaultValue={profile.full_name ?? ""} required />
-          </Field>
-
-          <Field label="Email" hint="Email can't be changed here.">
-            <Input
-              defaultValue={profile.email ?? ""}
-              readOnly
-              className="bg-slate-50 text-slate-500"
-            />
-          </Field>
-
-          <Field label="Role">
-            <Input defaultValue={ROLE_LABEL[profile.role] ?? profile.role} readOnly className="bg-slate-50 text-slate-500" />
-          </Field>
-
-          <Field label="Phone (WhatsApp)" hint="E.164 format, e.g. +60123456789">
-            <Input name="phone" defaultValue={profile.phone ?? ""} placeholder="+60…" />
-          </Field>
-
-          <SubmitButton pendingText="Saving…">Save changes</SubmitButton>
-        </form>
-      </Card>
     </div>
   );
 }

@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
   try {
     const schedule = await getMonthlySchedule();
     const today = mytDayOfMonth();
-    if (today !== schedule.invoiceDay) {
-      return NextResponse.json({ ok: true, skipped: "not-billing-day", today, invoiceDay: schedule.invoiceDay });
+    if (today !== schedule.runDay) {
+      return NextResponse.json({ ok: true, skipped: "not-run-day", today, runDay: schedule.runDay });
     }
     const result = await generateInvoicesCore(createAdminClient(), new Date(), schedule.dueDay);
     // Combined "reports + fees" Community notice (or one-sided fallback).

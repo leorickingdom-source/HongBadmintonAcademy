@@ -2,35 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { setWorkerPaused, setFeeRemindersPaused, setSendPolicy, setMonthlySchedule } from "@/lib/settings";
-
-const schema = z.object({
-  full_name: z.string().trim().min(1, "Name is required"),
-  phone: z.string().trim().optional().transform((v) => (v ? v : null)),
-});
-
-// Update the currently signed-in user's own profile (RLS allows id = auth.uid()).
-export async function updateOwnProfile(formData: FormData) {
-  const parsed = schema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) {
-    redirect(`/admin/settings?error=${encodeURIComponent(parsed.error.issues[0].message)}`);
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { error } = await supabase.from("profiles").update(parsed.data).eq("id", user.id);
-  if (error) redirect(`/admin/settings?error=${encodeURIComponent(error.message)}`);
-
-  revalidatePath("/admin/settings");
-  redirect("/admin/settings?saved=1");
-}
 
 // Pause/resume the WhatsApp drip worker. The desired new state arrives as a
 // hidden "paused" field ("true"/"false"). Admin-only.
@@ -77,9 +50,8 @@ export async function saveMonthlySchedule(formData: FormData) {
     return Number.isFinite(n) ? Math.min(28, Math.max(1, n)) : d;
   };
   await setMonthlySchedule({
-    invoiceDay: day("invoiceDay", 1),
+    runDay: day("runDay", 1),
     dueDay: day("dueDay", 7),
-    reportDay: day("reportDay", 1),
   });
   revalidatePath("/admin/settings");
   redirect("/admin/settings?saved=1");

@@ -54,24 +54,26 @@ export async function getSendPolicy(): Promise<SendPolicy> {
 
 export const setSendPolicy = (p: SendPolicy) => setValue(SEND_POLICY, p);
 
-// Which day of the month each monthly run fires (1–28, kept ≤28 so it always
-// exists). invoiceDay = raise fees + post Community notice; reportDay = build
-// growth reports; dueDay = the invoice due date.
+// Day of the month each monthly run fires (1–28, kept ≤28 so it always exists).
+// `runDay` = the one day invoices AND growth reports are generated (they produce
+// a single combined Community post). `dueDay` = when the fee falls due.
 export type MonthlySchedule = {
-  invoiceDay: number;
+  runDay: number;
   dueDay: number;
-  reportDay: number;
 };
 
 export const DEFAULT_MONTHLY_SCHEDULE: MonthlySchedule = {
-  invoiceDay: 1,
+  runDay: 1,
   dueDay: 7,
-  reportDay: 1,
 };
 
 export async function getMonthlySchedule(): Promise<MonthlySchedule> {
-  const v = await getValue<Partial<MonthlySchedule>>(MONTHLY_SCHEDULE, {});
-  return { ...DEFAULT_MONTHLY_SCHEDULE, ...v };
+  // Back-compat: older stored values used invoiceDay/reportDay.
+  const v = await getValue<Partial<MonthlySchedule> & { invoiceDay?: number; reportDay?: number }>(MONTHLY_SCHEDULE, {});
+  return {
+    runDay: v.runDay ?? v.invoiceDay ?? DEFAULT_MONTHLY_SCHEDULE.runDay,
+    dueDay: v.dueDay ?? DEFAULT_MONTHLY_SCHEDULE.dueDay,
+  };
 }
 
 export const setMonthlySchedule = (s: MonthlySchedule) => setValue(MONTHLY_SCHEDULE, s);

@@ -26,8 +26,8 @@ export async function GET(req: NextRequest) {
 
   const schedule = await getMonthlySchedule();
   const today = mytDayOfMonth();
-  if (today !== schedule.reportDay) {
-    return NextResponse.json({ ok: true, skipped: "not-report-day", today, reportDay: schedule.reportDay });
+  if (today !== schedule.runDay) {
+    return NextResponse.json({ ok: true, skipped: "not-run-day", today, runDay: schedule.runDay });
   }
 
   // Report on the month that just ended.

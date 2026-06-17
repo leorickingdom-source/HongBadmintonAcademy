@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, Badge, Table, Th, Td, EmptyState, Textarea } from "@/components/ui";
-import { SubmitButton } from "@/components/submit-button";
+import { PageHeader, Section, Badge, Table, Th, Td, EmptyState, Textarea, buttonClass } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import { env } from "@/lib/env";
 import { AnnounceComposer } from "@/components/announce-composer";
@@ -49,44 +48,38 @@ export default async function AnnouncePage({
       {introSaved === "saved" && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">Monthly note saved.</div>
       )}
-
-      <Section
-        title="Monthly notice intro"
-        description="Prepended to the automatic monthly Growth-Reports/fees Community post, so it goes out as one personalised message. Leave blank for just the summary."
-      >
-        <form action={saveCommunityIntro} className="space-y-3">
-          <Textarea
-            name="intro"
-            rows={3}
-            defaultValue={intro}
-            placeholder="e.g. Salam & happy holidays! 🎉 No class 25 Dec–1 Jan. New term starts 2 Jan — see you then!"
-          />
-          <SubmitButton pendingText="Saving…">Save note</SubmitButton>
-        </form>
-      </Section>
+      {introSaved === "cleared" && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">Monthly note cleared.</div>
+      )}
 
       {botReady ? (
-        <Section title="New announcement">
-          <form action={postCommunityMessage} className="space-y-3">
-            <Textarea
-              name="text"
-              rows={4}
-              required
-              placeholder="e.g. 🎉 Happy holidays from HBA! No classes 25 Dec–1 Jan. See you in the new year!"
-            />
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs text-slate-500">
-                Goes to the whole parent Community — no private info (fees, scores, a child&apos;s name).
-              </p>
-              <SubmitButton pendingText="Posting…">Post to Community</SubmitButton>
+        <Section
+          title="Message the parent Community"
+          description="One WhatsApp message to all parents. No private info (fees, scores, a child's name)."
+        >
+          <form className="space-y-3">
+            <Textarea name="text" rows={4} placeholder="Type a message…" />
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="submit" formAction={postCommunityMessage} className={buttonClass("primary")}>Send now</button>
+              <button type="submit" formAction={saveCommunityIntro} className={buttonClass("secondary")}>Save as monthly note</button>
             </div>
+            <p className="text-xs text-slate-500">
+              <b>Send now</b> — posts immediately to everyone. <b>Save as monthly note</b> — added automatically to next
+              month&apos;s Growth-Reports &amp; fees post (not sent now); save with the box empty to clear it.
+            </p>
           </form>
+          <div className="mt-4 border-t border-slate-100 pt-3 text-sm">
+            {intro ? (
+              <span className="text-slate-600">📌 Monthly note: <span className="text-slate-900">&ldquo;{intro}&rdquo;</span></span>
+            ) : (
+              <span className="text-slate-400">No monthly note set — the auto post sends the summary only.</span>
+            )}
+          </div>
         </Section>
       ) : (
-        <Section title="New announcement">
+        <Section title="Message the parent Community">
           <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            Auto-posting isn&apos;t configured (set <code>WA_COMMUNITY_GROUP_ID</code>). Until then, post by
-            hand:
+            Auto-posting isn&apos;t configured (set <code>WA_COMMUNITY_GROUP_ID</code>). Until then, post by hand:
           </p>
           <AnnounceComposer action={logAnnouncement} communityLink={env.waCommunityLink || null} />
         </Section>

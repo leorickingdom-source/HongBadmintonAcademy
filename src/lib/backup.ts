@@ -56,3 +56,22 @@ export async function runDatabaseBackup(
 
   return { tables: tables.length, rows, path };
 }
+
+// Trim old history AFTER the daily backup has captured it (so nothing is lost —
+// it lives in that day's JSON snapshot). Deletes WhatsApp Log rows + finished
+// queue rows older than `days`; pending (queued) rows are kept. Service-role.
+export async function pruneHistory(
+  db: SupabaseClient,
+  days = 90,
+  now: Date = new Date(),
+): Promise<{ messages: number; queue: number }> {
+  const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { data: m } = await db.from("messages").delete().lt("created_at", cutoff).select("id");
+  const { data: q } = await db
+    .from("message_queue")
+    .delete()
+    .lt("created_at", cutoff)
+    .in("status", ["sent", "failed", "canceled"])
+    .select("id");
+  return { messages: m?.length ?? 0, queue: q?.length ?? 0 };
+}

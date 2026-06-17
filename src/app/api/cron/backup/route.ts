@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { runDatabaseBackup } from "@/lib/backup";
+import { runDatabaseBackup, pruneHistory } from "@/lib/backup";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -21,8 +21,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await runDatabaseBackup(createAdminClient());
-    return NextResponse.json({ ok: true, ...result });
+    const db = createAdminClient();
+    const result = await runDatabaseBackup(db);
+    // Snapshot first, THEN trim old history (it's preserved in today's backup).
+    const pruned = await pruneHistory(db);
+    return NextResponse.json({ ok: true, ...result, pruned });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

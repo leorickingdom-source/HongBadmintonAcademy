@@ -70,7 +70,8 @@ export async function postCommunityMessage(formData: FormData) {
 // Save the free-text note prepended to the monthly Community notice (reports/fees).
 export async function saveCommunityIntro(formData: FormData) {
   await requireRole("admin");
-  await setCommunityIntro(String(formData.get("intro") ?? "").trim());
+  const text = String(formData.get("text") ?? "").trim();
+  await setCommunityIntro(text);
   revalidatePath("/admin/announce");
-  redirect("/admin/announce?intro=saved");
+  redirect(`/admin/announce?intro=${text ? "saved" : "cleared"}`);
 }

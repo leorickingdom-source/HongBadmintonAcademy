@@ -45,6 +45,7 @@ if (!SECRET) {
 }
 
 let ready = false;
+let lastQr = null; // most recent unscanned QR string, served at /qr
 
 const client = new Client({
   authStrategy: new LocalAuth({ dataPath: "./.wwebjs_auth" }),
@@ -81,6 +82,7 @@ const client = new Client({
 
 client.on("qr", (qr) => {
   ready = false;
+  lastQr = qr; // expose to GET /qr so you can scan from a browser, no SSH
   console.log(
     "\n=== Scan this QR with the DEDICATED WhatsApp number ===\n" +
       "(WhatsApp → Settings → Linked Devices → Link a device)\n",
@@ -96,6 +98,7 @@ client.on("authenticated", () =>
 client.on("auth_failure", (m) => console.error("Auth failure:", m));
 client.on("ready", () => {
   ready = true;
+  lastQr = null; // linked — nothing to scan
   console.log("WhatsApp client READY. Worker can send messages.");
 });
 client.on("disconnected", (reason) => {
@@ -111,9 +114,11 @@ client.initialize().catch((e) => console.error("Initialization failed:", e?.mess
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-// Bearer-secret auth on everything except the health probe.
+// Bearer-secret auth on everything except the health probe. /qr is opened in a
+// browser (can't set a Bearer header), so it accepts the secret as ?secret=… .
 app.use((req, res, next) => {
   if (req.path === "/health") return next();
+  if (req.path === "/qr" && req.query.secret === SECRET) return next();
   if (req.get("authorization") !== `Bearer ${SECRET}`) {
     return res.status(401).json({ status: "failed", error: "unauthorized" });
   }
@@ -123,6 +128,36 @@ app.use((req, res, next) => {
 // Liveness + readiness. Returns { ready: true } only after the QR is scanned
 // and the session is live.
 app.get("/health", (_req, res) => res.json({ ready }));
+
+// Browser QR for (re)linking the number — NO SSH. Open
+//   http://<host>:<PORT>/qr?secret=YOUR_WA_WORKER_SECRET
+// on a laptop/second screen, then scan with the dedicated phone
+// (WhatsApp → Settings → Linked devices → Link a device). Page self-refreshes.
+app.get("/qr", async (_req, res) => {
+  res.set("content-type", "text/html; charset=utf-8");
+  res.set("cache-control", "no-store");
+  const shell = (inner, refresh) =>
+    `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">` +
+    (refresh ? `<meta http-equiv=refresh content="${refresh}">` : "") +
+    `<body style="font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:28px;color:#0f172a">${inner}</body>`;
+
+  if (ready) return res.send(shell(`<h2>✅ Already linked</h2><p>The worker is connected — no QR needed.</p>`));
+  if (!lastQr) return res.send(shell(`<h2>Booting…</h2><p>Waiting for a QR. This page refreshes every 5s.</p>`, 5));
+  try {
+    const dataUrl = await QR.toDataURL(lastQr, { width: 320, margin: 2 });
+    return res.send(
+      shell(
+        `<h2>Scan to link WhatsApp</h2>` +
+          `<p>Phone → WhatsApp → Settings → Linked devices → <b>Link a device</b></p>` +
+          `<img src="${dataUrl}" width="320" height="320" alt="WhatsApp QR code"/>` +
+          `<p style="color:#64748b;font-size:13px">QR rotates often — this page auto-refreshes every 20s.</p>`,
+        20,
+      ),
+    );
+  } catch (e) {
+    return res.status(500).send(shell(`<h2>QR render failed</h2><p>${String(e?.message || e)}</p>`));
+  }
+});
 
 // Resolve a number + send, retrying transient Puppeteer errors (the WhatsApp
 // Web page can reload mid-call on low-RAM hosts -> "Execution context was

@@ -210,6 +210,92 @@ export function EmptyState({ message }: { message: string }) {
   );
 }
 
+// ─── Avatar ───────────────────────────────────────────────────────────────
+export function initials(name: string): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+
+// Deterministic tint per name so the same person keeps the same colour. Photo
+// support is built in (pass `src`) for when we add student/parent photos.
+const AVATAR_TINTS = [
+  "bg-green-100 text-green-700", "bg-blue-100 text-blue-700", "bg-amber-100 text-amber-700",
+  "bg-purple-100 text-purple-700", "bg-pink-100 text-pink-700", "bg-teal-100 text-teal-700",
+  "bg-rose-100 text-rose-700", "bg-indigo-100 text-indigo-700",
+];
+function tintFor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < (name ?? "").length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_TINTS[h % AVATAR_TINTS.length];
+}
+
+export function Avatar({
+  name,
+  src,
+  size = 40,
+  className,
+}: {
+  name: string;
+  src?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const style = { width: size, height: size };
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={name} style={style} className={cn("shrink-0 rounded-full object-cover", className)} />;
+  }
+  return (
+    <span
+      style={{ ...style, fontSize: Math.round(size * 0.4) }}
+      className={cn("inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none", tintFor(name), className)}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+// ─── ProgressRing ───────────────────────────────────────────────────────────
+// Real SVG ring (replaces the old number-only / flat-bar score displays).
+export function ProgressRing({
+  value,
+  size = 96,
+  stroke = 10,
+  caption,
+  className,
+}: {
+  value: number;
+  size?: number;
+  stroke?: number;
+  caption?: string;
+  className?: string;
+}) {
+  const pct = Math.max(0, Math.min(100, value));
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - pct / 100);
+  const mid = size / 2;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={cn("shrink-0", className)} role="img" aria-label={`${Math.round(pct)}${caption ? " " + caption : ""}`}>
+      <circle cx={mid} cy={mid} r={r} fill="none" strokeWidth={stroke} className="stroke-slate-200" />
+      <circle
+        cx={mid} cy={mid} r={r} fill="none" strokeWidth={stroke} strokeLinecap="round"
+        className="stroke-green-600" strokeDasharray={c} strokeDashoffset={offset}
+        transform={`rotate(-90 ${mid} ${mid})`}
+      />
+      <text x={mid} y={caption ? mid - size * 0.04 : mid} textAnchor="middle" dominantBaseline="central" className="fill-slate-900 font-bold" style={{ fontSize: Math.round(size * 0.28) }}>
+        {Math.round(pct)}
+      </text>
+      {caption && (
+        <text x={mid} y={mid + size * 0.18} textAnchor="middle" dominantBaseline="central" className="fill-slate-400" style={{ fontSize: Math.round(size * 0.12) }}>
+          {caption}
+        </text>
+      )}
+    </svg>
+  );
+}
+
 // ─── Badge ────────────────────────────────────────────────────────────────
 const TONE: Record<string, string> = {
   green: "bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20",

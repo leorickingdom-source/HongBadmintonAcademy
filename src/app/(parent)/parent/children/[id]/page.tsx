@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  PageHeader, StatCard, Section, Table, Th, Td, Badge, EmptyState, LinkButton,
+  PageHeader, StatCard, Section, Table, Th, Td, Badge, EmptyState, LinkButton, Avatar, cn,
 } from "@/components/ui";
+import { RankLadder, RankHistory, type RankEvent } from "@/components/rank-ladder";
+import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatDateTime, formatCurrency, monthLabel, formatTime } from "@/lib/format";
 import type { AttendanceStatus, InvoiceStatus, FeeInterval } from "@/lib/types";
@@ -39,7 +41,7 @@ export default async function ChildDetailPage({
   // Service-role bypasses RLS; restrict to this parent's child explicitly.
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, status, dob, parent_id")
+    .select("id, full_name, status, dob, parent_id, rank")
     .eq("id", id)
     .eq("parent_id", me.id)
     .maybeSingle();
@@ -51,10 +53,11 @@ export default async function ChildDetailPage({
     { data: assessments },
     { data: ledger },
     { data: invoices },
+    { data: rankEvents },
   ] = await Promise.all([
     supabase
       .from("enrollments")
-      .select("class_id, classes(name)")
+      .select("class_id, classes(name, level)")
       .eq("student_id", id)
       .eq("active", true)
       .limit(1)
@@ -82,6 +85,12 @@ export default async function ChildDetailPage({
       .eq("student_id", id)
       .order("period_month", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("rank_events")
+      .select("from_rank, to_rank, created_at")
+      .eq("student_id", id)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   const classId = (enrollment as any)?.class_id ?? null;
@@ -99,6 +108,8 @@ export default async function ChildDetailPage({
 
   const cls = (enrollment as any)?.classes ?? null;
   const age = ageFromDob(student.dob);
+  const currentRank = studentRank((student as any).rank, [cls?.level ?? null]);
+  const events = (rankEvents ?? []) as RankEvent[];
 
   const att = attendance ?? [];
   const total = att.length;
@@ -142,6 +153,28 @@ export default async function ChildDetailPage({
           tone={outstanding > 0 ? "red" : "green"}
         />
       </div>
+
+      {/* ─── Rank & progress ────────────────────────────────────────────── */}
+      <Section title="Rank & progress">
+        <div className="mb-6 flex items-center gap-3">
+          <Avatar name={student.full_name} size={48} />
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Current rank</div>
+            <span className={cn("mt-0.5 inline-block rounded-md px-2 py-0.5 text-sm font-semibold", rankBadgeClass(currentRank))}>
+              {currentRank ?? "Unranked"}
+            </span>
+          </div>
+        </div>
+        <RankLadder current={currentRank} />
+        <div className="mt-6 border-t border-slate-100 pt-4">
+          <div className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">Rank history</div>
+          {events.length ? (
+            <RankHistory events={events} />
+          ) : (
+            <p className="text-sm text-slate-400">No rank changes recorded yet — {currentRank ?? "unranked"} since joining.</p>
+          )}
+        </div>
+      </Section>
 
       {/* ─── Package & fees ─────────────────────────────────────────────── */}
       <Section title="Package & Fees" flush>

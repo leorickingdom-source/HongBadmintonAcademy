@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { CLASS_RANKS, RANK_ORDER, studentRank } from "@/lib/ranks";
 import { sendRankUpNotice } from "@/lib/reminders";
+import { recordRankChange } from "@/lib/rank-history";
 
 function err(studentId: string, message: string): never {
   redirect(`/coach/marking/${studentId}?error=${encodeURIComponent(message)}`);
@@ -15,7 +16,7 @@ function err(studentId: string, message: string): never {
 // Coach assigns a student's rank (typically after an assessment). Coaches don't
 // have RLS write on students, so this gated action uses the service-role client.
 export async function setStudentRank(formData: FormData) {
-  await requireRole("coach");
+  const me = await requireRole("coach");
   const student_id = String(formData.get("student_id"));
   const raw = String(formData.get("rank") ?? "").trim();
   const rank = (CLASS_RANKS as readonly string[]).includes(raw) ? raw : null;
@@ -33,6 +34,7 @@ export async function setStudentRank(formData: FormData) {
   if (error) err(student_id, error.message);
 
   const next = studentRank(rank, levels);
+  await recordRankChange(db, { student_id, from: prev, to: next, changed_by: me.id });
   const ord = (r: string | null) => (r ? RANK_ORDER[r] ?? 0 : 0);
   if (ord(next) > ord(prev)) {
     try { await sendRankUpNotice(student_id, next); } catch { /* never block the rank change */ }

@@ -45,6 +45,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     group: "Finance & Comms",
     items: [
       { href: "/admin/invoices", label: "Invoices & Payments" },
+      { href: "/admin/collections", label: "Collections" },
       { href: "/admin/scorecards", label: "Growth Reports" },
       { href: "/admin/announce", label: "Announcements" },
       { href: "/admin/messages", label: "WhatsApp Log" },
@@ -65,6 +66,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
 // "Dashboard" is pinned by AppShell, so it is omitted from these lists.
 export const COACH_NAV: NavItem[] = [
   { href: "/coach/checkin", label: "Check-in & mark" },
+  { href: "/coach/kiosk", label: "Kiosk check-in" },
   { href: "/coach/schedule", label: "Schedule" },
   { href: "/coach/marking", label: "Marking" },
   { href: "/coach/payroll", label: "My Payroll" },

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { cn } from "@/components/ui";
+import { Home, Feather } from "lucide-react";
+import { Avatar, cn } from "@/components/ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { APP_SHORT, ROLE_LABEL, type NavItem } from "@/lib/constants";
 
@@ -17,12 +18,6 @@ export interface NavGroup {
 function isActive(pathname: string, href: string): boolean {
   if (ROOTS.includes(href)) return pathname === href;
   return pathname === href || pathname.startsWith(href + "/");
-}
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "?";
-  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
 
 export function AppShell({
@@ -133,7 +128,7 @@ export function AppShell({
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
       )}
     >
-      <span className="text-base leading-none">🏠</span>
+      <Home className="h-4 w-4 shrink-0" />
       Dashboard
     </Link>
   );
@@ -145,7 +140,7 @@ export function AppShell({
       className="flex items-center gap-2.5 rounded-lg transition-opacity hover:opacity-70"
     >
       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-600 text-white shadow-sm">
-        🏸
+        <Feather className="h-5 w-5" />
       </span>
       <div>
         <div className="text-sm font-bold text-slate-900">{APP_SHORT}</div>
@@ -186,9 +181,7 @@ export function AppShell({
 
           <div className="mt-6 border-t border-slate-200 pt-4">
             <div className="flex items-center gap-2.5 px-2 pb-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
-                {initials(name)}
-              </span>
+              <Avatar name={name} size={36} />
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-slate-800">{name}</div>
                 <div className="text-[11px] text-slate-400">{ROLE_LABEL[role] ?? role}</div>

@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { studentSchema } from "@/lib/validation";
 import { CLASS_RANKS, RANK_ORDER, studentRank, nextRank } from "@/lib/ranks";
 import { sendRankUpNotice } from "@/lib/reminders";
+import { recordRankChange } from "@/lib/rank-history";
 
 const order = (r: string | null) => (r ? RANK_ORDER[r] ?? 0 : 0);
 
@@ -38,6 +40,7 @@ export async function setStudentRank(formData: FormData) {
   if (error) err(`/admin/students/${id}`, error.message);
 
   const next = studentRank(rank, levels);
+  await recordRankChange(createAdminClient(), { student_id: id, from: prev, to: next });
   if (order(next) > order(prev)) {
     try { await sendRankUpNotice(id, next); } catch { /* never block the rank change */ }
   }
@@ -53,10 +56,12 @@ export async function promoteStudent(formData: FormData) {
     supabase.from("enrollments").select("classes(level)").eq("student_id", id).eq("active", true),
   ]);
   const levels = (enr ?? []).map((e: any) => e.classes?.level ?? null);
-  const promoted = nextRank(studentRank(s?.rank, levels));
+  const prev = studentRank(s?.rank, levels);
+  const promoted = nextRank(prev);
   if (!promoted) err(`/admin/students/${id}`, "Already at the top rank (Elite).");
   const { error } = await supabase.from("students").update({ rank: promoted }).eq("id", id);
   if (error) err(`/admin/students/${id}`, error.message);
+  await recordRankChange(createAdminClient(), { student_id: id, from: prev, to: promoted });
   try { await sendRankUpNotice(id, promoted); } catch { /* never block the promotion */ }
   revalidateRank(id);
 }

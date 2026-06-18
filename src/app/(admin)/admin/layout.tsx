@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { AppShell } from "@/components/app-shell";
+import { CommandPalette } from "@/components/command-palette";
 import { ADMIN_NAV } from "@/lib/constants";
 
 export default async function AdminLayout({
@@ -14,6 +15,7 @@ export default async function AdminLayout({
       role={profile.role}
       name={profile.full_name ?? profile.email ?? "Admin"}
     >
+      <CommandPalette />
       {children}
     </AppShell>
   );

@@ -20,14 +20,24 @@ type Tab = (typeof TABS)[number]["key"];
 export default async function DirectoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; q?: string; status?: string; rank?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    q?: string;
+    status?: string;
+    rank?: string;
+    sort?: string;
+    dir?: string;
+    page?: string;
+  }>;
 }) {
-  const { tab, q, status, rank } = await searchParams;
+  const { tab, q, status, rank, sort, dir, page } = await searchParams;
   const active: Tab = TABS.some((t) => t.key === tab) ? (tab as Tab) : "students";
 
   const statusFilter = status === "active" || status === "inactive" ? status : "";
   const rankFilter = rank && (CLASS_RANKS as readonly string[]).includes(rank) ? rank : "";
   const filtered = Boolean((q ?? "").trim() || statusFilter || rankFilter);
+  const dirParam: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
+  const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
   const newButton =
     active === "students" ? (
@@ -106,12 +116,24 @@ export default async function DirectoryPage({
         {filtered && <LinkButton href={`/admin/people?tab=${active}`} variant="ghost">Clear</LinkButton>}
       </div>
 
-      {active === "students" && <StudentsList q={q} status={statusFilter} rank={rankFilter} />}
+      {active === "students" && (
+        <StudentsList
+          q={q}
+          status={statusFilter}
+          rank={rankFilter}
+          sort={(sort as any) ?? undefined}
+          dir={dirParam}
+          page={pageNum}
+        />
+      )}
       {active === "parents" && (
         <PeopleList
           role="parent"
           embedded
           q={q}
+          sort={(sort as any) ?? undefined}
+          dir={dirParam}
+          page={pageNum}
           deleteAction={deletePerson.bind(null, "parent")}
           deleteManyAction={deletePeople.bind(null, "parent")}
         />
@@ -121,6 +143,9 @@ export default async function DirectoryPage({
           role="coach"
           embedded
           q={q}
+          sort={(sort as any) ?? undefined}
+          dir={dirParam}
+          page={pageNum}
           deleteAction={deletePerson.bind(null, "coach")}
           deleteManyAction={deletePeople.bind(null, "coach")}
         />

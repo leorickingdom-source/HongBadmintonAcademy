@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Collapsible, LinkButton, Table, Th, Td, EmptyState, Badge, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
+import { Paginator, PAGE_SIZE } from "@/components/paginator";
+import { SortHeader } from "@/components/sort-header";
 import { formatDate } from "@/lib/format";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import type { Role } from "@/lib/types";
@@ -14,6 +16,15 @@ function initials(name: string): string {
   return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
 }
 
+type SortKey = "name" | "email" | "joined" | "status";
+
+const SORT_COLUMN: Record<SortKey, string> = {
+  name: "full_name",
+  email: "email",
+  joined: "created_at",
+  status: "is_active",
+};
+
 // Shared list view for the parents and coaches admin pages.
 export async function PeopleList({
   role,
@@ -22,6 +33,9 @@ export async function PeopleList({
   extraAction,
   embedded,
   q,
+  sort,
+  dir,
+  page = 1,
 }: {
   role: Role;
   deleteAction: (formData: FormData) => void;
@@ -31,25 +45,36 @@ export async function PeopleList({
   embedded?: boolean;
   /** Optional name search (Directory filter). */
   q?: string;
+  sort?: SortKey;
+  dir?: "asc" | "desc";
+  page?: number;
 }) {
   const supabase = await createClient();
-  const { data: allPeople } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", role)
-    .order("full_name");
 
-  const search = (q ?? "").trim().toLowerCase();
-  const people = search
-    ? (allPeople ?? []).filter((p: any) => (p.full_name ?? "").toLowerCase().includes(search))
-    : allPeople ?? [];
+  const sortKey: SortKey = sort && SORT_COLUMN[sort] ? sort : "name";
+  const ascending = dir !== "desc";
+  const search = (q ?? "").trim();
+  const currentPage = Math.max(1, page);
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  let qBuilder = supabase
+    .from("profiles")
+    .select("*", { count: "exact" })
+    .eq("role", role);
+  if (search) qBuilder = qBuilder.ilike("full_name", `%${search}%`);
+  qBuilder = qBuilder.order(SORT_COLUMN[sortKey], { ascending });
+  qBuilder = qBuilder.range(from, to);
+
+  const { data: people, count } = await qBuilder;
+  const total = count ?? 0;
 
   const isCoach = role === "coach";
   const isParent = role === "parent";
   const base = isCoach ? "/admin/coaches" : "/admin/parents";
 
   // For the parents tab, show each parent's children inline (the #1 thing admins
-  // want to see). One query, grouped by parent_id.
+  // want to see). One query, grouped by parent_id. Scoped to the visible page.
   const childrenByParent = new Map<string, { name: string; rank: string | null }[]>();
   if (isParent && people && people.length) {
     const { data: kids } = await supabase
@@ -57,7 +82,6 @@ export async function PeopleList({
       .select("id, full_name, parent_id, rank")
       .in("parent_id", people.map((p: any) => p.id))
       .order("full_name");
-    // Effective rank per child = own rank, else highest enrolled-class rank.
     const kidIds = (kids ?? []).map((k: any) => k.id);
     const { data: enr } = kidIds.length
       ? await supabase.from("enrollments").select("student_id, classes(level)").eq("active", true).in("student_id", kidIds)
@@ -94,24 +118,24 @@ export async function PeopleList({
         />
       )}
 
-      {people && people.length > 0 ? (
-        <Collapsible title={title} count={people.length}>
+      {total > 0 ? (
+        <Collapsible title={title} count={total}>
           <BulkProvider>
           <Table>
             <thead>
               <tr>
                 <Th className="w-10"><BulkSelectAll /></Th>
-                <Th>Name</Th>
+                <Th><SortHeader label="Name" sortKey="name" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
                 {isParent && <Th>Children</Th>}
-                <Th>Email</Th>
+                <Th><SortHeader label="Email" sortKey="email" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
                 <Th>Phone</Th>
-                <Th>Status</Th>
-                <Th>Joined</Th>
+                <Th><SortHeader label="Status" sortKey="status" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
+                <Th><SortHeader label="Joined" sortKey="joined" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
                 <Th className="text-right">Actions</Th>
               </tr>
             </thead>
             <tbody>
-              {people.map((p: any) => (
+              {(people ?? []).map((p: any) => (
                 <tr key={p.id} className="hover:bg-slate-50">
                   <Td><BulkCheckbox id={p.id} /></Td>
                   <Td>
@@ -169,6 +193,7 @@ export async function PeopleList({
               ))}
             </tbody>
           </Table>
+          <Paginator page={currentPage} total={total} />
           <div className="px-5 pb-5">
             <BulkBar
               action={deleteManyAction}
@@ -179,7 +204,7 @@ export async function PeopleList({
           </BulkProvider>
         </Collapsible>
       ) : (
-        <EmptyState message={`No ${title.toLowerCase()} yet.`} />
+        <EmptyState message={search ? `No ${title.toLowerCase()} match "${search}".` : `No ${title.toLowerCase()} yet.`} />
       )}
     </div>
   );

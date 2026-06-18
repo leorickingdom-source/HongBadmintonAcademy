@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
+import { Paginator, PAGE_SIZE } from "@/components/paginator";
+import { SortHeader } from "@/components/sort-header";
 import { formatDate } from "@/lib/format";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { deleteStudent, deleteStudents } from "./actions";
@@ -18,20 +20,48 @@ function RankPill({ rank }: { rank: string | null }) {
   return <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(rank))}>{rank}</span>;
 }
 
+type SortKey = "name" | "rank" | "dob" | "status" | "joined";
+
+const SORT_COLUMN: Record<SortKey, string> = {
+  name: "full_name",
+  rank: "rank",
+  dob: "dob",
+  status: "status",
+  joined: "created_at",
+};
+
 // Roster list (mobile cards + desktop table) with bulk delete — no page header,
 // so it can be embedded under the unified Directory page or a standalone route.
 export async function StudentsList({
   q,
   status,
   rank,
+  sort,
+  dir,
+  page = 1,
 }: {
   q?: string;
   status?: string;
   rank?: string;
+  sort?: SortKey;
+  dir?: "asc" | "desc";
+  page?: number;
 } = {}) {
   const supabase = await createClient();
+
+  const sortKey: SortKey = sort && SORT_COLUMN[sort] ? sort : "name";
+  const ascending = dir !== "desc";
+
+  let base = supabase
+    .from("students")
+    .select("*, parent:profiles!students_parent_id_fkey(full_name)");
+  const search = (q ?? "").trim();
+  if (search) base = base.ilike("full_name", `%${search}%`);
+  if (status === "active" || status === "inactive") base = base.eq("status", status);
+  base = base.order(SORT_COLUMN[sortKey], { ascending });
+
   const [{ data: students }, { data: enrollments }] = await Promise.all([
-    supabase.from("students").select("*, parent:profiles!students_parent_id_fkey(full_name)").order("full_name"),
+    base,
     supabase.from("enrollments").select("student_id, classes(level)").eq("active", true),
   ]);
 
@@ -44,16 +74,20 @@ export async function StudentsList({
   }
   const rankOf = (s: any) => studentRank(s.rank, levelsByStudent.get(s.id) ?? []);
 
-  const search = (q ?? "").trim().toLowerCase();
-  const rows = (students ?? []).filter((s: any) => {
-    if (search && !s.full_name.toLowerCase().includes(search)) return false;
-    if (status && s.status !== status) return false;
+  // Rank is a computed value (own rank ∪ highest enrolled-class rank) so it has
+  // to be filtered in JS after the DB pull.
+  const filteredAll = (students ?? []).filter((s: any) => {
     if (rank && rankOf(s) !== rank) return false;
     return true;
   });
 
+  const total = filteredAll.length;
+  const currentPage = Math.max(1, page);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const rows = filteredAll.slice(start, start + PAGE_SIZE);
+
   const filtered = Boolean(search || status || rank);
-  if (rows.length === 0) {
+  if (total === 0) {
     return <EmptyState message={filtered ? "No students match these filters." : "No students yet. Add your first student."} />;
   }
 
@@ -103,22 +137,23 @@ export async function StudentsList({
             </div>
           </div>
         ))}
+        <Paginator page={currentPage} total={total} />
       </div>
 
       {/* Desktop: dense table */}
       <div className="hidden sm:block">
-        <Collapsible title={filtered ? "Students (filtered)" : "Students"} count={rows.length}>
+        <Collapsible title={filtered ? "Students (filtered)" : "Students"} count={total}>
           <BulkProvider>
           <Table>
             <thead>
               <tr>
                 <Th className="w-10"><BulkSelectAll /></Th>
-                <Th>Name</Th>
-                <Th>Rank</Th>
+                <Th><SortHeader label="Name" sortKey="name" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
+                <Th><SortHeader label="Rank" sortKey="rank" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
                 <Th>Parent</Th>
                 <Th>NFC tag</Th>
-                <Th>DOB</Th>
-                <Th>Status</Th>
+                <Th><SortHeader label="DOB" sortKey="dob" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
+                <Th><SortHeader label="Status" sortKey="status" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
                 <Th className="text-right">Actions</Th>
               </tr>
             </thead>
@@ -159,6 +194,7 @@ export async function StudentsList({
               ))}
             </tbody>
           </Table>
+          <Paginator page={currentPage} total={total} />
           <div className="px-5 pb-5">
             <BulkBar
               action={deleteStudents}

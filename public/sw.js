@@ -28,6 +28,42 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+// Web Push receiver — payload is a JSON {title, body, url, tag}.
+self.addEventListener("push", (e) => {
+  let data = {};
+  try {
+    data = e.data ? e.data.json() : {};
+  } catch {
+    data = { title: "HBA", body: e.data ? e.data.text() : "" };
+  }
+  const title = data.title || "Hong Badminton Academy";
+  const opts = {
+    body: data.body || "",
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    tag: data.tag || "hba",
+    data: { url: data.url || "/" },
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(
+    (async () => {
+      const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const c of all) {
+        if (c.url.includes(target)) {
+          await c.focus();
+          return;
+        }
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
+});
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;

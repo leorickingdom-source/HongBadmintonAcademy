@@ -3,6 +3,8 @@ import { PageHeader, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { isWorkerPaused, isFeeRemindersPaused, getMonthlySchedule } from "@/lib/settings";
 import { WaLinkPanel } from "@/components/wa-link-panel";
+import { PushPanel } from "@/components/push-panel";
+import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
 import { toggleWorker, toggleFeeReminders, saveMonthlySchedule } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -67,6 +69,19 @@ export default async function SettingsPage({
             </SubmitButton>
           </form>
         </div>
+      </Section>
+
+      <Section title="Push notifications (test)" description="Web Push via PWA. Subscribe this device, then fire a test push to your own subscriptions." flush>
+        {isPushConfigured() ? (
+          <PushPanel vapidPublicKey={getVapidPublicKey()} />
+        ) : (
+          <div className="p-5 text-sm text-amber-700">
+            Set <code className="rounded bg-amber-50 px-1.5 py-0.5">VAPID_PUBLIC_KEY</code>,{" "}
+            <code className="rounded bg-amber-50 px-1.5 py-0.5">VAPID_PRIVATE_KEY</code> and{" "}
+            <code className="rounded bg-amber-50 px-1.5 py-0.5">NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> in
+            Vercel env, redeploy, then this panel goes live.
+          </div>
+        )}
       </Section>
 
       <Section title="Monthly schedule">

@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Card, EmptyState } from "@/components/ui";
+import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
 import { coachClassIds } from "../_data";
 
@@ -37,15 +37,21 @@ export default async function CoachPayrollPage() {
     .maybeSingle();
   const rate = Number(payRow?.pay_per_lesson ?? 0);
 
-  // Lessons across this + last month for the coach's classes.
-  const { data: sess } = classIds.length
-    ? await supabase
-        .from("sessions")
-        .select("id, session_date")
-        .in("class_id", classIds)
-        .gte("session_date", lm.start)
-        .lte("session_date", tm.end)
-    : { data: [] as any[] };
+  // Lessons (this + last month) and class names for the coach's classes.
+  const [{ data: sess }, { data: classes }] = await Promise.all([
+    classIds.length
+      ? supabase
+          .from("sessions")
+          .select("id, session_date, class_id")
+          .in("class_id", classIds)
+          .gte("session_date", lm.start)
+          .lte("session_date", tm.end)
+      : Promise.resolve({ data: [] as any[] }),
+    classIds.length
+      ? supabase.from("classes").select("id, name").in("id", classIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const classNameById = new Map((classes ?? []).map((c: any) => [c.id, c.name as string]));
 
   const thisSess = (sess ?? []).filter((s: any) => s.session_date >= tm.start);
   const lastSess = (sess ?? []).filter((s: any) => s.session_date < tm.start);
@@ -61,46 +67,60 @@ export default async function CoachPayrollPage() {
   const thisPay = thisSess.length * rate;
   const lastPay = lastSess.length * rate;
 
+  // Per-class breakdown for this month.
+  const perClass = new Map<string, number>();
+  for (const s of thisSess as any[]) perClass.set(s.class_id, (perClass.get(s.class_id) ?? 0) + 1);
+  const classRows = [...perClass.entries()]
+    .map(([cid, lessons]) => ({ name: classNameById.get(cid) ?? "Class", lessons, pay: lessons * rate }))
+    .sort((a, b) => b.pay - a.pay);
+
+  const money = (n: number) => formatCurrency(n, undefined, { whole: true });
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="My Payroll"
-        description={`Auto-calculated from lessons taught · rate set by the academy · ${tm.label}`}
-      />
+      <PageHeader title="My Payroll" description={`Auto-calculated from lessons taught · ${tm.label}`} />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Pay rate" value={formatCurrency(rate, undefined, { whole: true })} sub="per lesson" />
-        <StatCard label="Lessons" value={thisSess.length} sub={tm.label} />
-        <StatCard label="This month's pay" value={formatCurrency(thisPay, undefined, { whole: true })} tone="green" sub="auto-calculated" />
-        <StatCard
-          label="Attendance"
-          value={attPct != null ? `${attPct}%` : "—"}
-          tone={attPct != null && attPct >= 70 ? "green" : "amber"}
-          sub="your classes"
+      {/* Headline — what you earned this month */}
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+        <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Earned this month · {tm.label}</div>
+        <div className="mt-1 text-4xl font-bold text-emerald-900">{money(thisPay)}</div>
+        <div className="mt-1 text-sm text-emerald-800">
+          {thisSess.length} lesson{thisSess.length === 1 ? "" : "s"} × {money(rate)} per lesson
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard label="Pay rate" value={money(rate)} sub="per lesson" />
+        <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="your classes" />
+        <StatCard label="Last month" value={money(lastPay)} sub={`${lastSess.length} lessons · ${lm.label}`} />
+      </div>
+
+      {classRows.length > 0 ? (
+        <Section title="By class · this month" flush>
+          <Table>
+            <thead>
+              <tr><Th>Class</Th><Th className="text-right">Lessons</Th><Th className="text-right">Pay</Th></tr>
+            </thead>
+            <tbody>
+              {classRows.map((c) => (
+                <tr key={c.name} className="hover:bg-slate-50">
+                  <Td className="font-medium text-slate-900">{c.name}</Td>
+                  <Td className="text-right tabular-nums">{c.lessons}</Td>
+                  <Td className="text-right font-semibold tabular-nums text-slate-900">{money(c.pay)}</Td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-slate-200 bg-slate-50">
+                <Td className="font-semibold text-slate-900">Total</Td>
+                <Td className="text-right font-semibold tabular-nums">{thisSess.length}</Td>
+                <Td className="text-right font-bold tabular-nums text-emerald-700">{money(thisPay)}</Td>
+              </tr>
+            </tbody>
+          </Table>
+        </Section>
+      ) : (
+        <EmptyState
+          message={classIds.length === 0 ? "You're not assigned to any classes yet." : "No lessons recorded this month yet."}
         />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Card className="p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">This month</div>
-          <div className="mt-1 text-sm text-slate-700">{tm.label}</div>
-          <div className="mt-2 text-sm text-slate-700">
-            {thisSess.length} lessons × {formatCurrency(rate, undefined, { whole: true })}
-          </div>
-          <div className="mt-1 text-2xl font-bold text-green-700">{formatCurrency(thisPay, undefined, { whole: true })}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Previous month</div>
-          <div className="mt-1 text-sm text-slate-700">{lm.label}</div>
-          <div className="mt-2 text-sm text-slate-700">
-            {lastSess.length} lessons × {formatCurrency(rate, undefined, { whole: true })}
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-700">{formatCurrency(lastPay, undefined, { whole: true })}</div>
-        </Card>
-      </div>
-
-      {classIds.length === 0 && (
-        <EmptyState message="You're not assigned to any classes yet, so there's nothing to calculate." />
       )}
 
       <p className="text-xs text-slate-400">

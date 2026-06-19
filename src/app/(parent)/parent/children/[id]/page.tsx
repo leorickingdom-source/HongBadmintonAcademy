@@ -130,8 +130,8 @@ export default async function ChildDetailPage({
           <div className="mt-1 text-xs text-slate-500">Attendance</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">{growthIndex != null ? growthIndex : avgScore != null ? `${avgScore}%` : "—"}</div>
-          <div className="mt-1 text-xs text-slate-500">{growthIndex != null ? "Growth index" : "Avg skill"}</div>
+          <div className="text-2xl font-bold text-green-600">{growthIndex != null ? growthIndex : "—"}</div>
+          <div className="mt-1 text-xs text-slate-500">Growth index</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
           <div className="text-2xl font-bold text-slate-900">{points}</div>
@@ -151,7 +151,7 @@ export default async function ChildDetailPage({
           <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50">View &amp; pay</span>
         </Link>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">You&apos;re all paid up — thank you! 🙌</div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">You&apos;re all paid up — thank you!</div>
       )}
 
       {plan && (

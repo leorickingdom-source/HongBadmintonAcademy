@@ -1,16 +1,17 @@
 import Link from "next/link";
+import { Calendar, TrendingUp, CreditCard, Users, Megaphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Section, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, StatCard, Section, Badge, EmptyState, ICON_TINT, cn } from "@/components/ui";
 import { formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 const QUICK_ACTIONS = [
-  { href: "/admin/sessions", icon: "📅", title: "Sessions", sub: "Schedule" },
-  { href: "/admin/scorecards", icon: "📊", title: "Growth reports", sub: "Generate & send" },
-  { href: "/admin/invoices", icon: "💳", title: "Fees & invoices", sub: "Bill & track" },
-  { href: "/admin/people", icon: "👥", title: "Directory", sub: "Students & staff" },
-  { href: "/admin/announce", icon: "📢", title: "Announce", sub: "Community" },
+  { href: "/admin/sessions", Icon: Calendar, title: "Sessions", sub: "Schedule", tone: "blue" },
+  { href: "/admin/scorecards", Icon: TrendingUp, title: "Growth reports", sub: "Generate & send", tone: "green" },
+  { href: "/admin/invoices", Icon: CreditCard, title: "Fees & invoices", sub: "Bill & track", tone: "amber" },
+  { href: "/admin/people", Icon: Users, title: "Directory", sub: "Students & staff", tone: "purple" },
+  { href: "/admin/announce", Icon: Megaphone, title: "Announce", sub: "Community", tone: "rose" },
 ];
 
 async function count(table: string, filter?: (q: any) => any) {
@@ -51,8 +52,8 @@ export default async function AdminDashboard() {
             href={q.href}
             className="group flex flex-col items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-50 text-2xl">
-              {q.icon}
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", ICON_TINT[q.tone])}>
+              <q.Icon className="h-5 w-5" />
             </span>
             <div className="w-full min-w-0">
               <div className="line-clamp-2 min-h-[2.5em] font-semibold leading-tight text-slate-900">{q.title}</div>

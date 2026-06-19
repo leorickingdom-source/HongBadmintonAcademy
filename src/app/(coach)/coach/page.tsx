@@ -1,17 +1,18 @@
 import Link from "next/link";
+import { UserCheck, Calendar, Star, Banknote } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
+import { PageHeader, StatCard, Section, EmptyState, Badge, ICON_TINT, cn } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { coachClassIds } from "./_data";
 
 export const dynamic = "force-dynamic";
 
 const COACH_ACTIONS = [
-  { href: "/coach/checkin", icon: "📲", title: "Check-in & mark", sub: "Tap cards or mark by hand" },
-  { href: "/coach/schedule", icon: "📅", title: "Schedule", sub: "Your sessions this month" },
-  { href: "/coach/marking", icon: "📊", title: "Marking", sub: "Score students this month" },
-  { href: "/coach/payroll", icon: "💰", title: "My Payroll", sub: "Lessons & pay this month" },
+  { href: "/coach/checkin", Icon: UserCheck, title: "Check-in & mark", sub: "Tap cards or mark by hand", tone: "green" },
+  { href: "/coach/schedule", Icon: Calendar, title: "Schedule", sub: "Your sessions this month", tone: "blue" },
+  { href: "/coach/marking", Icon: Star, title: "Marking", sub: "Score students this month", tone: "amber" },
+  { href: "/coach/payroll", Icon: Banknote, title: "My Payroll", sub: "Lessons & pay this month", tone: "teal" },
 ];
 
 export default async function CoachDashboard() {
@@ -96,8 +97,8 @@ export default async function CoachDashboard() {
             href={q.href}
             className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-50 text-2xl">
-              {q.icon}
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", ICON_TINT[q.tone])}>
+              <q.Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
               <div className="font-semibold leading-tight text-slate-900">{q.title}</div>

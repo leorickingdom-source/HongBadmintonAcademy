@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { Calendar, TrendingUp, CreditCard } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  PageHeader, StatCard, Card, EmptyState, Badge,
+  PageHeader, StatCard, Card, EmptyState, Badge, Avatar, ICON_TINT, cn,
 } from "@/components/ui";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
 import type { FeeInterval } from "@/lib/types";
@@ -12,9 +13,9 @@ export const dynamic = "force-dynamic";
 const INTERVAL_SUFFIX: Record<FeeInterval, string> = { monthly: "/mo", one_time: "" };
 
 const PARENT_ACTIONS = [
-  { href: "/parent/schedule", icon: "📅", title: "Schedule", sub: "Upcoming sessions" },
-  { href: "/parent/scorecards", icon: "📊", title: "Score cards", sub: "Monthly reports" },
-  { href: "/parent/invoices", icon: "💳", title: "Fees & payments", sub: "Pay & history" },
+  { href: "/parent/schedule", Icon: Calendar, title: "Schedule", sub: "Upcoming sessions", tone: "teal" },
+  { href: "/parent/scorecards", Icon: TrendingUp, title: "Score cards", sub: "Monthly reports", tone: "emerald" },
+  { href: "/parent/invoices", Icon: CreditCard, title: "Fees & payments", sub: "Pay & history", tone: "amber" },
 ];
 
 export default async function ParentDashboard() {
@@ -128,10 +129,10 @@ export default async function ParentDashboard() {
           <Link
             key={q.href}
             href={q.href}
-            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
+            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-emerald-300 hover:shadow-sm"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-50 text-2xl">
-              {q.icon}
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", ICON_TINT[q.tone])}>
+              <q.Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
               <div className="font-semibold leading-tight text-slate-900">{q.title}</div>
@@ -149,7 +150,7 @@ export default async function ParentDashboard() {
       <div className="mt-8">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900">Upcoming sessions</h2>
-          <Link href="/parent/schedule" className="text-sm font-medium text-green-700 hover:underline">
+          <Link href="/parent/schedule" className="text-sm font-medium text-emerald-700 hover:underline">
             View all →
           </Link>
         </div>
@@ -191,13 +192,16 @@ export default async function ParentDashboard() {
             const currency = fees?.currency ?? plan?.currency ?? "MYR";
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
-                <Card className="h-full p-5 transition-all hover:border-green-300 hover:shadow-md">
+                <Card className="h-full p-5 transition-all hover:border-emerald-300 hover:shadow-md">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-base font-semibold text-slate-900 group-hover:text-green-700">
-                        {c.full_name}
+                    <div className="flex items-center gap-3">
+                      <Avatar name={c.full_name} size={44} />
+                      <div>
+                        <div className="text-base font-semibold text-slate-900 group-hover:text-emerald-700">
+                          {c.full_name}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
                       </div>
-                      <div className="mt-1 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
                     </div>
                     <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
                   </div>
@@ -239,7 +243,7 @@ export default async function ParentDashboard() {
                     </div>
                   </div>
 
-                  <div className="mt-4 text-sm font-medium text-slate-500 group-hover:text-green-700">
+                  <div className="mt-4 text-sm font-medium text-slate-500 group-hover:text-emerald-700">
                     View progress &amp; payments →
                   </div>
                 </Card>

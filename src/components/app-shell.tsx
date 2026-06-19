@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Feather } from "lucide-react";
+import { Home, Feather, Calendar, CreditCard, TrendingUp, UserCheck, ClipboardList, Banknote, Tablet, LayoutGrid } from "lucide-react";
 import { Avatar, cn } from "@/components/ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { APP_SHORT, ROLE_LABEL, type NavItem } from "@/lib/constants";
@@ -18,6 +18,21 @@ export interface NavGroup {
 function isActive(pathname: string, href: string): boolean {
   if (ROOTS.includes(href)) return pathname === href;
   return pathname === href || pathname.startsWith(href + "/");
+}
+
+// Mobile bottom-tab icon + short label, derived from the nav href/label.
+function tabIcon(href: string) {
+  if (href.includes("schedule")) return Calendar;
+  if (href.includes("scorecard")) return TrendingUp;
+  if (href.includes("invoice")) return CreditCard;
+  if (href.includes("kiosk")) return Tablet;
+  if (href.includes("checkin")) return UserCheck;
+  if (href.includes("marking")) return ClipboardList;
+  if (href.includes("payroll")) return Banknote;
+  return LayoutGrid;
+}
+function shortLabel(label: string): string {
+  return label.replace(/ ?[&·].*/, "").replace(/^My /, "").trim().split(" ")[0];
 }
 
 export function AppShell({
@@ -114,6 +129,18 @@ export function AppShell({
   // Logo is a one-tap shortcut back to the role's home (the main menu).
   const home = ROOTS.includes(`/${role}`) ? `/${role}` : "/";
   const homeActive = pathname === home;
+  // Parent/coach get a mobile bottom-tab bar (consumer-app pattern). Admin keeps
+  // the sidebar — too many sections for tabs.
+  const bottomItems =
+    role === "admin"
+      ? []
+      : [
+          { href: home, short: "Home", Icon: Home },
+          ...groups
+            .flatMap((g) => g.items)
+            .slice(0, 4)
+            .map((it) => ({ href: it.href, short: shortLabel(it.label), Icon: tabIcon(it.href) })),
+        ];
 
   // Dashboard is pinned above the section groups so it's always one tap away
   // (no expanding an accordion to find it).
@@ -192,10 +219,30 @@ export function AppShell({
         </aside>
 
         {/* Content */}
-        <main className="flex-1 p-4 md:h-screen md:overflow-y-auto md:p-8">
+        <main className="flex-1 p-4 pb-20 md:h-screen md:overflow-y-auto md:p-8 md:pb-8">
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>
       </div>
+
+      {bottomItems.length > 0 && (
+        <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+          {bottomItems.map((it) => {
+            const active = isActive(pathname, it.href);
+            const Icon = it.Icon;
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                onClick={() => setOpen(false)}
+                className={cn("flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium", active ? "text-green-700" : "text-slate-500")}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="max-w-full truncate px-1">{it.short}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }

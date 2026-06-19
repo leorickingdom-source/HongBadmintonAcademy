@@ -3,6 +3,7 @@ import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState, LinkButton, B
 import { formatCurrency } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
 import { computeAnalytics } from "@/lib/analytics";
+import { RevenueAreaChart, CountBarChart, SkillBarChart } from "@/components/charts";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,7 @@ export default async function AnalyticsPage({
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Skills breakdown" description="Average % per criterion, this month">
           {a.skillsBreakdown.length ? (
-            <Bars data={Object.fromEntries(a.skillsBreakdown.map((s) => [s.name, s.pct]))} suffix="%" />
+            <SkillBarChart data={a.skillsBreakdown} />
           ) : (
             <EmptyState message="No assessments scored this month." />
           )}
@@ -139,20 +140,7 @@ export default async function AnalyticsPage({
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Revenue trend" description="Succeeded payments, last 6 months">
           {a.revenueTrend.some((m) => m.amount > 0) ? (
-            <div className="space-y-2.5">
-              {(() => {
-                const max = Math.max(1, ...a.revenueTrend.map((m) => m.amount));
-                return a.revenueTrend.map((m) => (
-                  <div key={m.label} className="flex items-center gap-3 text-sm">
-                    <span className="w-10 shrink-0 text-slate-600">{m.label}</span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-2.5 rounded-full bg-green-500" style={{ width: `${(m.amount / max) * 100}%` }} />
-                    </div>
-                    <span className="w-24 text-right font-medium tabular-nums text-slate-700">{formatCurrency(m.amount, a.currency)}</span>
-                  </div>
-                ));
-              })()}
-            </div>
+            <RevenueAreaChart data={a.revenueTrend} currency={a.currency} />
           ) : (
             <EmptyState message="No payments in the last 6 months." />
           )}
@@ -160,20 +148,7 @@ export default async function AnalyticsPage({
 
         <Section title="New students" description="Sign-ups per month, last 6 months">
           {a.newStudentTrend.some((m) => m.count > 0) ? (
-            <div className="space-y-2.5">
-              {(() => {
-                const max = Math.max(1, ...a.newStudentTrend.map((m) => m.count));
-                return a.newStudentTrend.map((m) => (
-                  <div key={m.label} className="flex items-center gap-3 text-sm">
-                    <span className="w-10 shrink-0 text-slate-600">{m.label}</span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-2.5 rounded-full bg-blue-500" style={{ width: `${(m.count / max) * 100}%` }} />
-                    </div>
-                    <span className="w-8 text-right font-medium tabular-nums text-slate-700">{m.count}</span>
-                  </div>
-                ));
-              })()}
-            </div>
+            <CountBarChart data={a.newStudentTrend} />
           ) : (
             <EmptyState message="No sign-ups in the last 6 months." />
           )}

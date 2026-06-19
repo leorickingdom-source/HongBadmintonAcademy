@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState, cn } from "@/components/ui";
+import { Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState, Avatar, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { Paginator } from "@/components/paginator";
@@ -9,12 +9,6 @@ import { SortHeader } from "@/components/sort-header";
 import { formatDate } from "@/lib/format";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { deleteStudent, deleteStudents } from "./actions";
-
-function initials(name: string): string {
-  const p = name.trim().split(/\s+/).filter(Boolean);
-  if (!p.length) return "?";
-  return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
-}
 
 function RankPill({ rank }: { rank: string | null }) {
   if (!rank) return <span className="text-slate-400">—</span>;
@@ -100,9 +94,7 @@ export async function StudentsList({
           <div key={s.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <Link href={`/admin/students/${s.id}`} className="flex min-w-0 items-center gap-2.5">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
-                  {initials(s.full_name)}
-                </span>
+                <Avatar name={s.full_name} size={36} className="flex-shrink-0" />
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-slate-900">{s.full_name}</span>
                   <span className="block truncate text-xs text-slate-500">
@@ -164,9 +156,7 @@ export async function StudentsList({
                   <Td><BulkCheckbox id={s.id} /></Td>
                   <Td>
                     <Link href={`/admin/students/${s.id}`} className="group flex items-center gap-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
-                        {initials(s.full_name)}
-                      </span>
+                      <Avatar name={s.full_name} size={32} />
                       <span className="font-medium text-slate-900 group-hover:text-green-700">{s.full_name}</span>
                     </Link>
                   </Td>

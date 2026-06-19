@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Collapsible, LinkButton, Table, Th, Td, EmptyState, Badge, cn } from "@/components/ui";
+import { PageHeader, Collapsible, LinkButton, Table, Th, Td, EmptyState, Badge, Avatar, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { Paginator } from "@/components/paginator";
@@ -10,12 +10,6 @@ import { formatDate } from "@/lib/format";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import type { Role } from "@/lib/types";
 import type { ReactNode } from "react";
-
-function initials(name: string): string {
-  const p = name.trim().split(/\s+/).filter(Boolean);
-  if (!p.length) return "?";
-  return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
-}
 
 type SortKey = "name" | "email" | "joined" | "status";
 
@@ -141,9 +135,7 @@ export async function PeopleList({
                   <Td><BulkCheckbox id={p.id} /></Td>
                   <Td>
                     <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
-                        {initials(p.full_name ?? "?")}
-                      </span>
+                      <Avatar name={p.full_name ?? "?"} size={32} />
                       <Link href={`${base}/${p.id}`} className="font-medium text-slate-900 hover:text-green-700 hover:underline">
                         {p.full_name ?? "—"}
                       </Link>

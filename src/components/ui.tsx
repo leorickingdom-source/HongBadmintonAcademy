@@ -296,6 +296,18 @@ export function ProgressRing({
   );
 }
 
+// Tinted icon-chip backgrounds for action cards / nav (full literals so Tailwind
+// JIT keeps them). Pair a lucide icon on top: <Icon className="h-5 w-5" />.
+export const ICON_TINT: Record<string, string> = {
+  green: "bg-green-50 text-green-600",
+  emerald: "bg-emerald-50 text-emerald-600",
+  teal: "bg-teal-50 text-teal-600",
+  blue: "bg-blue-50 text-blue-600",
+  amber: "bg-amber-50 text-amber-600",
+  purple: "bg-purple-50 text-purple-600",
+  rose: "bg-rose-50 text-rose-600",
+};
+
 // ─── Badge ────────────────────────────────────────────────────────────────
 const TONE: Record<string, string> = {
   green: "bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20",

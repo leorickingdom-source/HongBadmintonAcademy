@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/env";
 import { APP_NAME } from "@/lib/constants";
+import { Feather } from "lucide-react";
 import { Button, Card, Field, Input } from "@/components/ui";
 
 export default function LoginForm() {
@@ -35,8 +36,8 @@ export default function LoginForm() {
   return (
     <Card className="w-full max-w-sm p-8">
       <div className="mb-6 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-green-600 text-xl font-bold text-white">
-          🏸
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-green-600 text-white">
+          <Feather className="h-6 w-6" />
         </div>
         <h1 className="text-lg font-semibold text-slate-900">{APP_NAME}</h1>
         <p className="text-sm text-slate-500">Management System — sign in</p>

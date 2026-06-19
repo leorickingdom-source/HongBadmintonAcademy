@@ -1,12 +1,13 @@
-import { PageHeader, Card, LinkButton } from "@/components/ui";
+import { GraduationCap, ClipboardList, FileText, Wallet } from "lucide-react";
+import { PageHeader, Card, LinkButton, ICON_TINT, cn } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 const EXPORTS = [
-  { type: "students", label: "Students", desc: "Profiles, NFC tags and parent links.", icon: "🧑‍🎓" },
-  { type: "attendance", label: "Attendance", desc: "Tap-in / tap-out records per session.", icon: "📋" },
-  { type: "invoices", label: "Invoices", desc: "All fees with status and due dates.", icon: "🧾" },
-  { type: "payments", label: "Payments", desc: "Reconciliation log of transactions.", icon: "💳" },
+  { type: "students", label: "Students", desc: "Profiles, NFC tags and parent links.", Icon: GraduationCap, tone: "blue" },
+  { type: "attendance", label: "Attendance", desc: "Tap-in / tap-out records per session.", Icon: ClipboardList, tone: "green" },
+  { type: "invoices", label: "Invoices", desc: "All fees with status and due dates.", Icon: FileText, tone: "amber" },
+  { type: "payments", label: "Payments", desc: "Reconciliation log of transactions.", Icon: Wallet, tone: "teal" },
 ];
 
 export default function ReportsPage() {
@@ -20,8 +21,8 @@ export default function ReportsPage() {
         {EXPORTS.map((e) => (
           <Card key={e.type} className="p-5 transition-shadow hover:shadow-md">
             <div className="flex items-center gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xl">
-                {e.icon}
+              <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", ICON_TINT[e.tone])}>
+                <e.Icon className="h-5 w-5" />
               </span>
               <div className="min-w-0">
                 <div className="font-semibold text-slate-900">{e.label}</div>

@@ -34,13 +34,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (path === "/login" && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.searchParams.delete("next");
-    return NextResponse.redirect(url);
-  }
-
+  // NOTE: intentionally do NOT redirect /login away when a Supabase `user`
+  // exists. A stale/orphaned auth session (user with no resolvable profile)
+  // would otherwise bounce /login → "/" → parent cookie → /parent-login,
+  // making staff login unreachable. /login always renders the form; a fresh
+  // sign-in replaces the session and the root router lands them by role.
   return response;
 }
 

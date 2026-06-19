@@ -1,4 +1,5 @@
-import { Clock, MapPin } from "lucide-react";
+import Link from "next/link";
+import { Clock, MapPin, UserCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
@@ -14,33 +15,24 @@ export default async function CoachDashboard() {
   const today = new Date().toLocaleDateString("en-CA");
 
   let sessions: any[] = [];
-  let studentCount = 0;
-  let todayCount = 0;
   if (classIds.length) {
-    const [{ data: s }, { count }, { count: tCount }] = await Promise.all([
-      supabase
-        .from("sessions")
-        .select("id, session_date, start_time, end_time, location, status, classes(name)")
-        .in("class_id", classIds)
-        .gte("session_date", today)
-        .order("session_date")
-        .order("start_time")
-        .limit(3),
-      supabase
-        .from("enrollments")
-        .select("*", { count: "exact", head: true })
-        .in("class_id", classIds)
-        .eq("active", true),
-      supabase
-        .from("sessions")
-        .select("*", { count: "exact", head: true })
-        .in("class_id", classIds)
-        .eq("session_date", today),
-    ]);
+    const { data: s } = await supabase
+      .from("sessions")
+      .select("id, session_date, start_time, end_time, location, status, classes(name)")
+      .in("class_id", classIds)
+      .gte("session_date", today)
+      .order("session_date")
+      .order("start_time")
+      .limit(5);
     sessions = s ?? [];
-    studentCount = count ?? 0;
-    todayCount = tCount ?? 0;
   }
+
+  // Current class to check in: today's first session that hasn't ended yet
+  // (in progress once it has also started). Drives the "Start check-in" CTA.
+  const nowHM = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(11, 19);
+  const todaySessions = sessions.filter((s) => s.session_date === today);
+  const current = todaySessions.find((s) => (s.end_time ?? "") >= nowHM) ?? null;
+  const inProgress = current ? (current.start_time ?? "") <= nowHM : false;
 
   // ─── Coach performance (this month) ──────────────────────────────────────
   let lessonsThis = 0;
@@ -82,11 +74,32 @@ export default async function CoachDashboard() {
         description="Your classes and today's sessions."
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <StatCard label="Your classes" value={classIds.length} />
-        <StatCard label="Students" value={studentCount} tone="green" />
-        <StatCard label="Sessions today" value={todayCount} tone={todayCount ? "blue" : "slate"} />
-      </div>
+      {current ? (
+        <Link
+          href="/coach/checkin"
+          className="flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 p-4 transition-colors hover:bg-green-100/70"
+        >
+          <div className="min-w-0">
+            <div className="text-xs font-semibold uppercase tracking-wide text-green-700">
+              {inProgress ? "In progress" : "Next today"}
+            </div>
+            <div className="text-lg font-bold text-slate-900">{current.classes?.name ?? "Class"}</div>
+            <div className="text-sm text-slate-600">
+              {formatTime(current.start_time)}–{formatTime(current.end_time)}{current.location ? ` · ${current.location}` : ""}
+            </div>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white">
+            <UserCheck className="h-4 w-4" /> Start check-in →
+          </span>
+        </Link>
+      ) : todaySessions.length > 0 ? (
+        <Link href="/coach/checkin" className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm hover:bg-slate-50">
+          <span className="text-slate-600">Today's classes are done.</span>
+          <span className="font-medium text-green-700">Open check-in →</span>
+        </Link>
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">No class scheduled today.</div>
+      )}
 
       <h2 className="mb-3 mt-8 text-lg font-semibold text-slate-900">My performance</h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

@@ -10,8 +10,6 @@ import type { FeeInterval } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const INTERVAL_SUFFIX: Record<FeeInterval, string> = { monthly: "/mo", one_time: "" };
-
 export default async function ParentDashboard() {
   const me = await requireParent();
   const supabase = createAdminClient();
@@ -155,25 +153,38 @@ export default async function ParentDashboard() {
     <div>
       <PageHeader title={`Hello, ${me.full_name ?? "Parent"}`} />
 
-      {unpaid && unpaid > 0 ? (
-        <Link
-          href="/parent/invoices"
-          className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 transition-colors hover:bg-red-100/70"
-        >
-          <div className="min-w-0">
-            <div className="text-lg font-bold text-red-700">{formatCurrency(totalOutstanding, outCurrency)}</div>
-            <div className="text-xs font-medium text-red-600">
-              {unpaid} unpaid invoice{unpaid > 1 ? "s" : ""} · tap to pay
-            </div>
-          </div>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">
-            Pay now →
-          </span>
-        </Link>
-      ) : (
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">
-          All fees paid — thank you!
+      {/* ─── Your children — performance first ───────────────────────────── */}
+      {children && children.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {children.map((c) => {
+            const clsName = classByChild.get(c.id);
+            return (
+              <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
+                <Card className="h-full p-5 transition-all hover:border-emerald-300 hover:shadow-md">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={c.full_name} src={(c as any).photo_url} size={44} />
+                      <div>
+                        <div className="text-base font-semibold text-slate-900 group-hover:text-emerald-700">
+                          {c.full_name}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
+                      </div>
+                    </div>
+                    <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-sm font-medium text-emerald-700">
+                    <span>View growth report</span>
+                    <span aria-hidden>→</span>
+                  </div>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
+      ) : (
+        <EmptyState message="No children linked to your account yet. Contact the academy." />
       )}
 
       {/* ─── Upcoming sessions ──────────────────────────────────────────── */}
@@ -193,61 +204,32 @@ export default async function ParentDashboard() {
         )}
       </div>
 
-      <h2 className="mb-4 mt-8 text-lg font-semibold text-slate-900">Your children</h2>
-
-      {children && children.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {children.map((c) => {
-            const clsName = classByChild.get(c.id);
-            const fees = feesByChild.get(c.id);
-            const plan = fees?.plan;
-            const outstanding = fees?.outstanding ?? 0;
-            const currency = fees?.currency ?? plan?.currency ?? "MYR";
-            return (
-              <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
-                <Card className="h-full p-5 transition-all hover:border-emerald-300 hover:shadow-md">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={c.full_name} src={(c as any).photo_url} size={44} />
-                      <div>
-                        <div className="text-base font-semibold text-slate-900 group-hover:text-emerald-700">
-                          {c.full_name}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
-                      </div>
-                    </div>
-                    <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
-                    <div className="text-sm">
-                      {plan ? (
-                        <span className="font-semibold text-slate-900">
-                          {formatCurrency(Number(plan.amount), plan.currency)}
-                          <span className="text-xs font-medium text-slate-400">{INTERVAL_SUFFIX[plan.interval as FeeInterval]}</span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">No package</span>
-                      )}
-                    </div>
-                    {outstanding > 0 ? (
-                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
-                        {formatCurrency(outstanding, currency)} due
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                        Paid up
-                      </span>
-                    )}
-                  </div>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      ) : (
-        <EmptyState message="No children linked to your account yet. Contact the academy." />
-      )}
+      {/* ─── Fees — kept calm and last ───────────────────────────────────── */}
+      <div className="mt-8">
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">Fees</h2>
+        {unpaid && unpaid > 0 ? (
+          <Link
+            href="/parent/invoices"
+            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:bg-slate-100"
+          >
+            <div className="min-w-0">
+              <div className="text-base font-semibold text-slate-900">
+                {formatCurrency(totalOutstanding, outCurrency)} outstanding
+              </div>
+              <div className="mt-0.5 text-xs text-slate-500">
+                {unpaid} invoice{unpaid > 1 ? "s" : ""} — settle whenever it&apos;s convenient
+              </div>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50">
+              View &amp; pay
+            </span>
+          </Link>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
+            You&apos;re all paid up — thank you! 🙌
+          </div>
+        )}
+      </div>
     </div>
   );
 }

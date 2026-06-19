@@ -60,7 +60,7 @@ function buildBody(
     return `Hi ${parentName}, a friendly reminder that the fee of ${fee} for ${studentName} is due today. Pay here: ${payUrl}`;
   }
   if (kind.startsWith("overdue")) {
-    return `Hi ${parentName}, the fee of ${fee} for ${studentName} was due on ${formatDate(dueDate)} and is now ${daysLate} day${daysLate === 1 ? "" : "s"} overdue. Please settle it here: ${payUrl}`;
+    return `Hi ${parentName}, a gentle reminder — the fee of ${fee} for ${studentName} (due ${formatDate(dueDate)}) is still outstanding. You can settle it here whenever it's convenient: ${payUrl}. Thank you!`;
   }
   return `Hi ${parentName}, a reminder that the fee of ${fee} for ${studentName} is due on ${formatDate(dueDate)}. Pay here: ${payUrl}`;
 }

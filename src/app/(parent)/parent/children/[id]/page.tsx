@@ -139,19 +139,19 @@ export default async function ChildDetailPage({
         </div>
       </div>
 
-      {/* ── Fees ─────────────────────────────────────────────────────────── */}
+      {/* ── Fees (kept calm) ─────────────────────────────────────────────── */}
       {outstanding > 0 ? (
-        <Link href="/parent/invoices" className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 transition-colors hover:bg-red-100/70">
+        <Link href="/parent/invoices" className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:bg-slate-100">
           <div className="min-w-0">
-            <div className="text-lg font-bold text-red-700">{formatCurrency(outstanding, currency)}</div>
-            <div className="text-xs font-medium text-red-600">
-              {unpaid.length} unpaid invoice{unpaid.length > 1 ? "s" : ""} · tap to pay
+            <div className="text-base font-semibold text-slate-900">{formatCurrency(outstanding, currency)} outstanding</div>
+            <div className="mt-0.5 text-xs text-slate-500">
+              {unpaid.length} invoice{unpaid.length > 1 ? "s" : ""} — settle whenever it&apos;s convenient
             </div>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Pay now →</span>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50">View &amp; pay</span>
         </Link>
       ) : (
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">All fees paid — thank you!</div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">You&apos;re all paid up — thank you! 🙌</div>
       )}
 
       {plan && (

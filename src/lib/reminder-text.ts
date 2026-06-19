@@ -25,8 +25,7 @@ export function feeReminderText(opts: {
   const today = opts.today ?? mytToday();
 
   if (dueDate && dueDate < today) {
-    const days = Math.floor((Date.parse(today) - Date.parse(dueDate)) / 86_400_000);
-    return `Hi ${who}, the fee of ${fee} for ${child} was due on ${formatDate(dueDate)} and is now ${days} day${days === 1 ? "" : "s"} overdue. Please settle it here: ${payUrl}`;
+    return `Hi ${who}, a gentle reminder — the fee of ${fee} for ${child} (due ${formatDate(dueDate)}) is still outstanding. You can settle it here whenever it's convenient: ${payUrl}. Thank you!`;
   }
   if (dueDate && dueDate === today) {
     return `Hi ${who}, a friendly reminder that the fee of ${fee} for ${child} is due today. Pay here: ${payUrl}`;

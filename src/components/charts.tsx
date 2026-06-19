@@ -2,7 +2,7 @@
 
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
-  XAxis, YAxis, Tooltip, CartesianGrid,
+  XAxis, YAxis, Tooltip, CartesianGrid, Cell,
 } from "recharts";
 
 // Recharts can't read CSS vars from canvas/SVG context, so colours are the
@@ -61,6 +61,27 @@ export function SkillBarChart({ data }: { data: { name: string; pct: number }[] 
           <YAxis type="category" dataKey="name" tick={AXIS} tickLine={false} axisLine={false} width={120} />
           <Tooltip formatter={(v: any) => `${v}%`} cursor={{ fill: "#f8fafc" }} contentStyle={TOOLTIP} />
           <Bar dataKey="pct" fill="#10b981" radius={[0, 4, 4, 0]} maxBarSize={20} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Categorical bars with a per-category colour (status breakdowns).
+export function CategoryBarChart({ data }: { data: { name: string; value: number; color: string }[] }) {
+  return (
+    <div className="h-48 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+          <XAxis dataKey="name" tick={AXIS} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} interval={0} />
+          <YAxis tick={AXIS} tickLine={false} axisLine={false} width={28} allowDecimals={false} />
+          <Tooltip cursor={{ fill: "#f8fafc" }} contentStyle={TOOLTIP} />
+          <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
+            {data.map((d, i) => (
+              <Cell key={i} fill={d.color} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

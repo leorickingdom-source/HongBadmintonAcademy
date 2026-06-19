@@ -3,27 +3,15 @@ import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState, LinkButton, B
 import { formatCurrency } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
 import { computeAnalytics } from "@/lib/analytics";
-import { RevenueAreaChart, CountBarChart, SkillBarChart } from "@/components/charts";
+import { RevenueAreaChart, CountBarChart, SkillBarChart, CategoryBarChart } from "@/components/charts";
 
 export const dynamic = "force-dynamic";
 
-function Bars({ data, tones, suffix = "" }: { data: Record<string, number>; tones?: Record<string, string>; suffix?: string }) {
-  const entries = Object.entries(data);
-  const max = Math.max(1, ...entries.map(([, v]) => v));
-  if (entries.length === 0) return <EmptyState message="No data yet." />;
-  return (
-    <div className="space-y-2.5">
-      {entries.map(([k, v]) => (
-        <div key={k} className="flex items-center gap-3 text-sm">
-          <span className="w-28 shrink-0 truncate capitalize text-slate-600" title={k}>{k}</span>
-          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-            <div className={`h-2.5 rounded-full ${tones?.[k] ?? "bg-green-500"}`} style={{ width: `${(v / max) * 100}%` }} />
-          </div>
-          <span className="w-12 text-right font-medium tabular-nums text-slate-700">{v}{suffix}</span>
-        </div>
-      ))}
-    </div>
-  );
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const INV_COLOR: Record<string, string> = { paid: "#16a34a", unpaid: "#f59e0b", overdue: "#ef4444", draft: "#94a3b8", canceled: "#cbd5e1", refunded: "#64748b" };
+const MSG_COLOR: Record<string, string> = { delivered: "#16a34a", read: "#15803d", sent: "#3b82f6", queued: "#94a3b8", failed: "#ef4444" };
+function recordToBars(data: Record<string, number>, colors: Record<string, string>) {
+  return Object.entries(data).map(([k, v]) => ({ name: cap(k), value: v, color: colors[k] ?? "#94a3b8" }));
 }
 
 export default async function AnalyticsPage({
@@ -215,11 +203,22 @@ export default async function AnalyticsPage({
       {/* Attendance + invoices + rewards + WhatsApp */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Attendance breakdown">
-          <Bars data={a.attendanceBreakdown} tones={{ present: "bg-green-500", late: "bg-amber-500", absent: "bg-red-500", excused: "bg-slate-400" }} />
+          <CategoryBarChart
+            data={[
+              { name: "Present", value: a.attendanceBreakdown.present, color: "#16a34a" },
+              { name: "Late", value: a.attendanceBreakdown.late, color: "#f59e0b" },
+              { name: "Absent", value: a.attendanceBreakdown.absent, color: "#ef4444" },
+              { name: "Excused", value: a.attendanceBreakdown.excused, color: "#94a3b8" },
+            ]}
+          />
         </Section>
 
         <Section title="Invoices by status">
-          <Bars data={a.invoiceStatus} tones={{ paid: "bg-green-500", unpaid: "bg-amber-500", overdue: "bg-red-500" }} />
+          {Object.keys(a.invoiceStatus).length ? (
+            <CategoryBarChart data={recordToBars(a.invoiceStatus, INV_COLOR)} />
+          ) : (
+            <EmptyState message="No invoices yet." />
+          )}
         </Section>
 
         <Section title={`Reward leaderboard · ${a.rewardPeriod}`} flush>
@@ -240,7 +239,11 @@ export default async function AnalyticsPage({
         </Section>
 
         <Section title="WhatsApp delivery">
-          <Bars data={a.messageStatus} tones={{ delivered: "bg-green-500", read: "bg-green-600", sent: "bg-blue-500", queued: "bg-slate-400", failed: "bg-red-500" }} />
+          {Object.keys(a.messageStatus).length ? (
+            <CategoryBarChart data={recordToBars(a.messageStatus, MSG_COLOR)} />
+          ) : (
+            <EmptyState message="No messages yet." />
+          )}
         </Section>
       </div>
     </div>

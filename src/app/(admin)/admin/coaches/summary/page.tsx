@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, LinkButton, EmptyState, StatCard, Card } from "@/components/ui";
+import { PageHeader, LinkButton, EmptyState, StatCard, Card, Avatar } from "@/components/ui";
 import { FilterSearch } from "@/components/filter-controls";
 import { formatCurrency } from "@/lib/format";
 import { setCoachRate } from "../../_people/actions";
@@ -151,7 +151,10 @@ export default async function CoachSummaryPage({
           {visibleRows.map((r) => (
             <Card key={r.id} className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="font-semibold text-green-700">{r.name}</div>
+                <div className="flex items-center gap-2.5">
+                  <Avatar name={r.name} size={36} />
+                  <div className="font-semibold text-slate-900">{r.name}</div>
+                </div>
                 <form action={setCoachRate} className="flex items-center gap-1.5 text-xs text-slate-500">
                   <input type="hidden" name="id" value={r.id} />
                   <span>RM</span>

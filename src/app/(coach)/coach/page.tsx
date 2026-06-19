@@ -1,19 +1,11 @@
-import Link from "next/link";
-import { UserCheck, Calendar, Star, Banknote, Clock, MapPin } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Section, EmptyState, Badge, ICON_TINT, cn } from "@/components/ui";
+import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
 import { formatTime } from "@/lib/format";
 import { coachClassIds } from "./_data";
 
 export const dynamic = "force-dynamic";
-
-const COACH_ACTIONS = [
-  { href: "/coach/checkin", Icon: UserCheck, title: "Check-in & mark", sub: "Tap cards or mark by hand", tone: "green" },
-  { href: "/coach/schedule", Icon: Calendar, title: "Schedule", sub: "Your sessions this month", tone: "blue" },
-  { href: "/coach/marking", Icon: Star, title: "Marking", sub: "Score students this month", tone: "amber" },
-  { href: "/coach/payroll", Icon: Banknote, title: "My Payroll", sub: "Lessons & pay this month", tone: "teal" },
-];
 
 export default async function CoachDashboard() {
   const me = await requireRole("coach");
@@ -89,24 +81,6 @@ export default async function CoachDashboard() {
         title={`Welcome, ${me.full_name ?? "Coach"}`}
         description="Your classes and today's sessions."
       />
-
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {COACH_ACTIONS.map((q) => (
-          <Link
-            key={q.href}
-            href={q.href}
-            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
-          >
-            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", ICON_TINT[q.tone])}>
-              <q.Icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <div className="font-semibold leading-tight text-slate-900">{q.title}</div>
-              <div className="truncate text-xs text-slate-500">{q.sub}</div>
-            </div>
-          </Link>
-        ))}
-      </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Your classes" value={classIds.length} />

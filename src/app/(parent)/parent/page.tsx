@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Clock, MapPin, User, Users } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   PageHeader, Card, EmptyState, Badge, Avatar,
 } from "@/components/ui";
 import { formatCurrency, formatTime } from "@/lib/format";
+import { ParentSessionList, type SessionItem } from "@/components/parent-session-list";
 import type { FeeInterval } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -85,7 +85,7 @@ export default async function ParentDashboard() {
   const { data: upcomingSessions } = classIds.length
     ? await supabase
         .from("sessions")
-        .select("id, session_date, start_time, end_time, location, class_id")
+        .select("id, session_date, start_time, end_time, location, status, class_id")
         .in("class_id", classIds)
         .gte("session_date", today)
         .order("session_date")
@@ -132,6 +132,25 @@ export default async function ParentDashboard() {
   const totalOutstanding = [...feesByChild.values()].reduce((s, f) => s + f.outstanding, 0);
   const outCurrency = [...feesByChild.values()][0]?.currency ?? "MYR";
 
+  const homeSessions: SessionItem[] = (upcomingSessions ?? []).map((s: any) => {
+    const d = new Date(`${s.session_date}T00:00:00`);
+    return {
+      id: s.id,
+      kind: "upcoming",
+      mon: d.toLocaleDateString("en-MY", { month: "short" }),
+      day: d.getDate(),
+      wd: d.toLocaleDateString("en-MY", { weekday: "short" }),
+      timeLabel: `${formatTime(s.start_time)}–${formatTime(s.end_time)}`,
+      fullDate: d.toLocaleDateString("en-MY", { weekday: "long", day: "numeric", month: "long" }),
+      location: s.location,
+      className: classNameMap.get(s.class_id) ?? "—",
+      coach: classCoach.get(s.class_id) || null,
+      status: s.status ?? "scheduled",
+      who: classToChild.get(s.class_id) ?? [],
+      kids: [],
+    };
+  });
+
   return (
     <div>
       <PageHeader title={`Hello, ${me.full_name ?? "Parent"}`} />
@@ -165,34 +184,9 @@ export default async function ParentDashboard() {
             View all →
           </Link>
         </div>
-        {upcomingSessions && upcomingSessions.length > 0 ? (
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-            {(upcomingSessions as any[]).map((s) => {
-              const names = classToChild.get(s.class_id) ?? [];
-              const clsName = classNameMap.get(s.class_id) ?? "—";
-              const d = new Date(`${s.session_date}T00:00:00`);
-              const mon = d.toLocaleDateString("en-MY", { month: "short" });
-              const wd = d.toLocaleDateString("en-MY", { weekday: "short" });
-              return (
-                <div key={s.id} className="flex items-center gap-3.5 px-4 py-3.5">
-                  <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-50">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">{mon}</span>
-                    <span className="text-xl font-bold leading-none text-emerald-800">{d.getDate()}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-900">{clsName}</div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
-                      <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
-                      {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
-                      {classCoach.get(s.class_id) && <span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5" />Coach {classCoach.get(s.class_id)}</span>}
-                      {childIds.length > 1 && names.length > 0 && (
-                        <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{names.join(", ")}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+        {homeSessions.length > 0 ? (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <ParentSessionList sessions={homeSessions} />
           </div>
         ) : (
           <p className="text-sm text-slate-500">No upcoming sessions.</p>

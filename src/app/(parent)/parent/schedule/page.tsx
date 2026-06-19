@@ -1,6 +1,6 @@
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { PageHeader, Section, EmptyState } from "@/components/ui";
+import { PageHeader, Section, Collapsible, EmptyState } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { ParentSessionList, type SessionItem } from "@/components/parent-session-list";
 
@@ -114,7 +114,7 @@ export default async function ParentSchedulePage() {
     };
   };
 
-  const upcomingItems: SessionItem[] = upcoming.map((s) => ({ ...baseItem(s), kind: "upcoming", kids: [] }));
+  const upcomingItems: SessionItem[] = upcoming.slice(0, 8).map((s) => ({ ...baseItem(s), kind: "upcoming", kids: [] }));
 
   const pastItems: SessionItem[] = past.map((s) => ({
     ...baseItem(s),
@@ -167,9 +167,9 @@ export default async function ParentSchedulePage() {
       )}
 
       {pastItems.length > 0 && (
-        <Section title="Recent sessions" description="Tap a session to see attendance & coach marks" flush>
+        <Collapsible title="Recent sessions" count={pastItems.length} defaultOpen={false}>
           <ParentSessionList sessions={pastItems} />
-        </Section>
+        </Collapsible>
       )}
     </div>
   );

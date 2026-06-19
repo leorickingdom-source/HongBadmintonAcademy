@@ -10,8 +10,7 @@ import {
   updatePerson,
   unlinkChild,
   generateParentLoginLink,
-  unlockParentPin,
-  clearParentPin,
+  sendParentPasswordReset,
 } from "../../_people/actions";
 import { LoginLinkPanel } from "./login-link-panel";
 
@@ -50,9 +49,6 @@ export default async function EditParentPage({
     levelsByKid.set(e.student_id, arr);
   }
 
-  const pinSet = !!(person as any).pin_hash;
-  const pinLocked = !!(person as any).pin_locked_at;
-
   return (
     <div className="space-y-6">
       <PageHeader title="Edit parent" description={person.full_name ?? undefined} />
@@ -65,42 +61,18 @@ export default async function EditParentPage({
 
       <Section
         title="Parent app sign-in"
-        description="One-tap login link (no email, no password). Send via WhatsApp."
+        description="Parents sign in with their email + password. Send a reset email, or a one-tap login link."
       >
         <div className="space-y-4 p-5">
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-medium text-slate-800">PIN:</span>
-            <Badge tone={pinLocked ? "red" : pinSet ? "green" : "slate"}>
-              {pinLocked ? "Locked" : pinSet ? "Set" : "Not set"}
-            </Badge>
-            {pinLocked && (
-              <span className="text-xs text-slate-500">
-                Locked after 5 wrong attempts — unlock or send a fresh link.
-              </span>
-            )}
-          </div>
-
           <div className="flex flex-wrap gap-2">
+            <form action={sendParentPasswordReset}>
+              <input type="hidden" name="parent_id" value={id} />
+              <SubmitButton pendingText="Sending…">Send password reset email</SubmitButton>
+            </form>
             <form action={generateParentLoginLink}>
               <input type="hidden" name="parent_id" value={id} />
-              <SubmitButton pendingText="Generating…">Generate login link</SubmitButton>
+              <SubmitButton variant="secondary" pendingText="Generating…">Generate login link</SubmitButton>
             </form>
-            {pinLocked && (
-              <form action={unlockParentPin}>
-                <input type="hidden" name="parent_id" value={id} />
-                <SubmitButton variant="secondary" pendingText="Unlocking…">
-                  Unlock PIN
-                </SubmitButton>
-              </form>
-            )}
-            {pinSet && (
-              <form action={clearParentPin}>
-                <input type="hidden" name="parent_id" value={id} />
-                <SubmitButton variant="secondary" pendingText="Clearing…">
-                  Reset PIN
-                </SubmitButton>
-              </form>
-            )}
           </div>
 
           {link && <LoginLinkPanel link={link} wa={wa ?? null} />}

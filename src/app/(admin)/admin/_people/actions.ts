@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { profileSchema } from "@/lib/validation";
 import type { Role } from "@/lib/types";
-import { createLoginToken, adminUnlockPin, adminClearPin } from "@/lib/parent-auth";
+import { createLoginToken } from "@/lib/parent-auth";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
 
@@ -128,22 +128,36 @@ export async function generateParentLoginLink(formData: FormData) {
   redirect(`/admin/parents/${parentId}?${params.toString()}`);
 }
 
-// Admin unlock — clears the 5-attempt lockout.
-export async function unlockParentPin(formData: FormData) {
+// Admin "Send password reset email" — Supabase emails the parent a reset link
+// that lands on /parent-login/reset. Needs the parent to have an email on file
+// and Supabase SMTP configured to actually deliver.
+export async function sendParentPasswordReset(formData: FormData) {
   const parentId = String(formData.get("parent_id"));
-  if (!parentId) return;
-  await adminUnlockPin(parentId);
-  revalidatePath(`/admin/parents/${parentId}`);
-  redirect(`/admin/parents/${parentId}?saved=PIN%20unlocked`);
-}
+  if (!parentId) redirect("/admin/parents");
 
-// Admin clear PIN — forces the parent to set a new one on their next login link.
-export async function clearParentPin(formData: FormData) {
-  const parentId = String(formData.get("parent_id"));
-  if (!parentId) return;
-  await adminClearPin(parentId);
+  const db = createAdminClient();
+  const { data: parent } = await db
+    .from("profiles")
+    .select("id, role, email")
+    .eq("id", parentId)
+    .maybeSingle();
+  if (!parent || parent.role !== "parent") {
+    redirect(`/admin/parents/${parentId}?error=${encodeURIComponent("Not a parent profile")}`);
+  }
+  if (!parent.email) {
+    redirect(`/admin/parents/${parentId}?error=${encodeURIComponent("This parent has no email on file — add one first.")}`);
+  }
+
+  const supabase = await createClient();
+  const baseUrl = await getBaseUrl();
+  const { error } = await supabase.auth.resetPasswordForEmail(parent.email, {
+    redirectTo: `${baseUrl}/parent-login/reset`,
+  });
+  if (error) {
+    redirect(`/admin/parents/${parentId}?error=${encodeURIComponent(error.message)}`);
+  }
   revalidatePath(`/admin/parents/${parentId}`);
-  redirect(`/admin/parents/${parentId}?saved=PIN%20cleared`);
+  redirect(`/admin/parents/${parentId}?saved=${encodeURIComponent("Password reset email sent.")}`);
 }
 
 // Set a coach's per-lesson pay rate (drives the auto-calculated payroll). Stored

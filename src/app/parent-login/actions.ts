@@ -1,61 +1,100 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { checkPhonePin, setParentSessionCookie, setPin, isValidPin } from "@/lib/parent-auth";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { setParentSessionCookie } from "@/lib/parent-auth";
+import { getBaseUrl } from "@/lib/url";
 
-function errorRedirect(next: string | null, message: string): never {
-  const url = new URL("/parent-login", "http://x");
-  url.searchParams.set("error", message);
-  if (next) url.searchParams.set("next", next);
-  redirect(`${url.pathname}?${url.searchParams.toString()}`);
+function loginError(next: string | null, message: string): never {
+  const params = new URLSearchParams({ error: message });
+  if (next) params.set("next", next);
+  redirect(`/parent-login?${params.toString()}`);
 }
 
-// Phone + PIN sign-in (edge-case re-auth — see proposal v7 §7.2).
-export async function signInWithPin(formData: FormData) {
-  const phone = String(formData.get("phone") ?? "");
-  const pin = String(formData.get("pin") ?? "");
+// Email + password sign-in. Parents authenticate against Supabase Auth (where
+// admin created them with an email + password), but the parent app itself runs
+// on our own 1-year signed cookie — so once the password checks out we drop the
+// Supabase session and issue the hba_parent cookie. (Admin & coach keep the
+// Supabase session; parents never use it.)
+export async function signInWithEmail(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
   const next = (formData.get("next") as string) || null;
+  if (!email || !password) loginError(next, "Enter your email and password.");
 
-  const result = await checkPhonePin(phone, pin);
-  if (result.ok) {
-    await setParentSessionCookie(result.profileId);
-    redirect(next || "/parent");
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const user = data?.user;
+  if (error || !user) loginError(next, "Wrong email or password.");
+
+  const db = createAdminClient();
+  const { data: prof } = await db
+    .from("profiles")
+    .select("id, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // We don't keep the Supabase session for parents.
+  await supabase.auth.signOut({ scope: "local" });
+
+  if (!prof || prof.role !== "parent") {
+    loginError(next, "This login is for parents. Staff should use the staff login.");
   }
 
-  if (result.reason === "locked") {
-    errorRedirect(next, "Too many wrong attempts. Contact the academy to unlock.");
-  }
-  if (result.reason === "no-match") {
-    errorRedirect(next, "We couldn't find an account with that phone + PIN.");
-  }
-  const remaining = result.remaining ?? null;
-  errorRedirect(
-    next,
-    remaining != null
-      ? `Wrong PIN. ${remaining} attempt${remaining === 1 ? "" : "s"} left before lockout.`
-      : "Wrong PIN.",
-  );
+  await setParentSessionCookie(prof.id);
+  redirect(next || "/parent");
 }
 
-// First-time PIN setup (after token consume). Token consume already issued the
-// session cookie, so we just need the profile id, which we read from the cookie.
-export async function submitPinSetup(formData: FormData) {
-  const pin = String(formData.get("pin") ?? "");
+// Forgot password → Supabase sends a reset email. We always report success so
+// the form never reveals whether an email is registered.
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) redirect(`/parent-login/forgot?error=${encodeURIComponent("Enter your email.")}`);
+
+  const supabase = await createClient();
+  const baseUrl = await getBaseUrl();
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${baseUrl}/parent-login/reset` });
+  redirect("/parent-login/forgot?sent=1");
+}
+
+// Set a new password from the reset link. Supabase appends ?code=… to the
+// redirect; we exchange it for a recovery session, set the password, then issue
+// our own cookie and drop the Supabase session.
+export async function setNewPassword(formData: FormData) {
+  const code = String(formData.get("code") ?? "");
+  const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  if (!isValidPin(pin)) {
-    redirect(`/parent-login/setup?error=${encodeURIComponent("PIN must be exactly 4 digits.")}`);
+  const back = (msg: string): never =>
+    redirect(`/parent-login/reset?code=${encodeURIComponent(code)}&error=${encodeURIComponent(msg)}`);
+  if (password.length < 8) back("Password must be at least 8 characters.");
+  if (password !== confirm) back("Passwords don't match — try again.");
+
+  const supabase = await createClient();
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      redirect(`/parent-login/forgot?error=${encodeURIComponent("This reset link has expired. Please request a new one.")}`);
+    }
   }
-  if (pin !== confirm) {
-    redirect(`/parent-login/setup?error=${encodeURIComponent("PINs don't match — try again.")}`);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(`/parent-login/forgot?error=${encodeURIComponent("This reset link is invalid. Please request a new one.")}`);
   }
 
-  const { getParentIdFromCookie } = await import("@/lib/parent-auth");
-  const pid = await getParentIdFromCookie();
-  if (!pid) redirect("/parent-login");
+  const { error: upErr } = await supabase.auth.updateUser({ password });
+  if (upErr) back(upErr.message);
 
-  const r = await setPin(pid, pin);
-  if (!r.ok) redirect(`/parent-login/setup?error=${encodeURIComponent(r.error ?? "Could not save PIN")}`);
+  const db = createAdminClient();
+  const { data: prof } = await db.from("profiles").select("id, role").eq("id", user.id).maybeSingle();
 
+  await supabase.auth.signOut({ scope: "local" });
+
+  if (!prof || prof.role !== "parent") {
+    redirect(`/parent-login?error=${encodeURIComponent("This account is not a parent account.")}`);
+  }
+  await setParentSessionCookie(prof.id);
   redirect("/parent");
 }

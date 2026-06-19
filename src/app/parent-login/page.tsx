@@ -1,13 +1,10 @@
 import { redirect } from "next/navigation";
 import { Feather } from "lucide-react";
 import { getParentIdFromCookie } from "@/lib/parent-auth";
-import { PinLoginForm } from "./pin-login-form";
+import { EmailLoginForm } from "./email-login-form";
 
 export const dynamic = "force-dynamic";
 
-// Edge-case re-auth: parent's cookie expired or was cleared. They enter phone +
-// 4-digit PIN to get back in without bothering admin. Admin "Generate Login
-// Link" is the recovery path if the PIN is also forgotten.
 export default async function ParentLoginPage({
   searchParams,
 }: {
@@ -25,22 +22,15 @@ export default async function ParentLoginPage({
         <Feather className="h-9 w-9" />
       </div>
       <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Welcome back, parent
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Enter your phone number and 4-digit PIN.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back, parent</h1>
+        <p className="mt-1 text-sm text-slate-500">Sign in with your email and password.</p>
       </div>
 
-      <PinLoginForm error={error} next={next ?? null} />
+      <EmailLoginForm error={error} next={next ?? null} />
 
-      <div className="text-center text-xs text-slate-400">
-        Forgot your PIN?{" "}
-        <span className="text-slate-500">
-          WhatsApp the academy and admin will send you a fresh login link.
-        </span>
-      </div>
+      <a href="/parent-login/forgot" className="text-center text-xs font-medium text-slate-500 hover:text-slate-700">
+        Forgot your password?
+      </a>
 
       <a href="/login" className="text-center text-xs font-medium text-slate-500 hover:text-slate-700">
         Coach or admin? Staff login →

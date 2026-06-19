@@ -2,7 +2,7 @@
 // Network-first for navigations (always show fresh data when online), cache-first
 // for hashed static assets (immutable). API + auth routes are bypassed entirely.
 
-const CACHE = "hba-shell-v1";
+const CACHE = "hba-shell-v2";
 const PRECACHE = ["/icon.svg", "/icon-maskable.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
@@ -80,23 +80,19 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Page navigations: network-first, fall back to cache, then to "/" shell.
+  // Page navigations: network-ONLY, never cached. Caching HTML navigations
+  // stored role/auth-specific redirects (e.g. "/" → /parent) and served stale
+  // login pages — the cause of "opens to parent-login" and a missing staff
+  // link. Auth + data are dynamic, so offline shows a notice, not a stale page.
   if (req.mode === "navigate") {
     e.respondWith(
-      (async () => {
-        try {
-          const res = await fetch(req);
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => null);
-          return res;
-        } catch {
-          const cached = await caches.match(req);
-          if (cached) return cached;
-          const shell = await caches.match("/");
-          if (shell) return shell;
-          return new Response("Offline", { status: 503, statusText: "Offline" });
-        }
-      })(),
+      fetch(req).catch(
+        () =>
+          new Response(
+            "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><body style='font-family:system-ui;padding:2rem;text-align:center;color:#475569'><h1 style='color:#16a34a;margin:0 0 .5rem'>HBA</h1><p>You're offline. Reconnect and try again.</p></body>",
+            { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
+          ),
+      ),
     );
     return;
   }

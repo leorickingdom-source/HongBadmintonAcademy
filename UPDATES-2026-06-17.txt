@@ -1,0 +1,74 @@
+HONG BADMINTON ACADEMY — SYSTEM UPDATES (Part 2)
+Date: 17 June 2026
+Covers everything done since the previous update note.
+
+====================================================================
+ANALYTICS — MAJOR UPGRADE (academy KPIs)
+====================================================================
+- New headline KPI row: Revenue, Collection rate, Active students,
+  Attendance rate, Retention rate, Average skill.
+- Average skill is now clear: shown as a % with an easy "≈ X / 10"
+  read-out, plus the change vs last month (improvement/decline).
+- Skills breakdown: average score per skill (e.g. Smash, Footwork,
+  Backhand, Serve) — actionable for coaches.
+- Retention block: 30-day retention rate, average attendance per
+  student, and students who haven't shown up in 30+ days.
+- Coach performance table: students, attendance %, and average skill
+  score given — per coach.
+- Class occupancy: how full each class is vs its capacity.
+- Fee aging: outstanding money grouped by how overdue it is
+  (0-30 / 31-60 / 61-90 / 90+ days).
+- Student rank distribution now shows percentages, not just counts.
+- New-student trend (6 months) and an inactive/"left" count.
+- Reward leaderboard is now tied to the month you're viewing.
+- Everything above is included in the PDF and CSV exports too.
+
+(Not built — these need new data we don't yet record: rank-progression
+rate, true churn/renewal rate, tournament participation.)
+
+====================================================================
+WHATSAPP — FASTER & CLEARER
+====================================================================
+- Announcements, the monthly notice, and report-card notices now send
+  IMMEDIATELY (one group message, instant) instead of sitting in the
+  slow, throttled queue. If the worker is offline they fall back to the
+  queue automatically.
+- Cancelling a session now notifies the affected parents immediately.
+- Congratulations message: when a student is promoted to a higher rank,
+  their parent automatically gets a WhatsApp congrats.
+- Monthly post personalisation: admins can save a free-text note that is
+  added to the automatic monthly reports + fees post — so it goes out as
+  one warm, personalised message each month.
+- The Announcements page is now ONE composer with two clear buttons:
+  "Send now" and "Save as monthly note" (no more two look-alike boxes).
+- Re-link the WhatsApp number from inside the app: Settings now shows a
+  QR to scan after a logout — no server/SSH access needed. (The worker
+  also gained a browser QR page for the same purpose.)
+
+====================================================================
+HOLIDAYS
+====================================================================
+- One-click cleanup now also removes already-scheduled upcoming sessions
+  that fall on a holiday (past/cancelled sessions are kept).
+
+====================================================================
+SETTINGS — SIMPLIFIED
+====================================================================
+- Monthly schedule reduced from three fields to two: "Monthly run day"
+  (when invoices + reports generate and the combined post goes out) and
+  "Invoice due day". Existing settings carry over automatically.
+- Removed the admin self profile-edit card to declutter Settings.
+
+====================================================================
+HOUSEKEEPING & DATA
+====================================================================
+- The daily backup now automatically trims old history (WhatsApp log +
+  finished message queue older than 90 days) AFTER taking the snapshot —
+  keeps the database lean; nothing is lost (it's in that day's backup).
+- Invoices can now be searched by invoice number.
+- Leaderboard "attendance tier" was clarified and then removed (kept the
+  attendance rate, streak and class rank).
+
+Note: WhatsApp sending is currently switched OFF (worker paused). Resume
+it in Settings and re-link the number (Settings → scan QR) when ready to
+go live.

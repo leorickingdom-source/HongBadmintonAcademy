@@ -7,7 +7,7 @@ import type { AttendanceStatus } from "@/lib/types";
 import { setAttendanceAction, setPerfAction, markAllPresentAction } from "./board-actions";
 
 export interface Roster {
-  student: { id: string; full_name: string };
+  student: { id: string; full_name: string; photo_url?: string | null };
   att?: { status: AttendanceStatus; tap_in_at: string | null } | null;
   mark?: number | null;
 }
@@ -19,6 +19,8 @@ export interface Block {
     start_time: string;
     end_time: string;
     location: string | null;
+    session_date?: string;
+    grace_minutes?: number | null;
     classes?: { name: string | null } | null;
   };
   roster: Roster[];

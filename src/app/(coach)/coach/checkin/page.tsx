@@ -4,7 +4,8 @@ import { PageHeader, EmptyState } from "@/components/ui";
 import { coachClassIds } from "../_data";
 import { NfcScanner } from "@/components/nfc-scanner";
 import { scanTap } from "./actions";
-import { CheckinBoard, type Block } from "./checkin-board";
+import { type Block } from "./checkin-board";
+import { CheckinSwitcher } from "./checkin-switcher";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export default async function CheckinPage() {
   const { data: sessions } = classIds.length
     ? await supabase
         .from("sessions")
-        .select("id, class_id, start_time, end_time, location, classes(name)")
+        .select("id, class_id, session_date, start_time, end_time, location, grace_minutes, classes(name)")
         .in("class_id", classIds)
         .eq("session_date", today)
         .order("start_time")
@@ -28,7 +29,7 @@ export default async function CheckinPage() {
     const [{ data: enr }, { data: att }, { data: marks }] = await Promise.all([
       supabase
         .from("enrollments")
-        .select("students(id, full_name)")
+        .select("students(id, full_name, photo_url)")
         .eq("class_id", s.class_id)
         .eq("active", true),
       supabase
@@ -56,7 +57,7 @@ export default async function CheckinPage() {
     <div className="space-y-6">
       <PageHeader
         title="Check-in"
-        description="Tap NFC cards, mark by hand, or hit ‘Mark N present’ to speed through. Tap ‘Rate’ on any row to score (1–5)."
+        description="Coach board (NFC + manual) or Kiosk mode where students tap their own name. Late taps auto-flag after the grace window."
       />
 
       <NfcScanner action={scanTap} />
@@ -64,7 +65,7 @@ export default async function CheckinPage() {
       {blocks.length === 0 ? (
         <EmptyState message="No sessions scheduled today." />
       ) : (
-        <CheckinBoard initialBlocks={blocks} />
+        <CheckinSwitcher blocks={blocks} />
       )}
     </div>
   );

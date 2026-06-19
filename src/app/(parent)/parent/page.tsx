@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Calendar, TrendingUp, CreditCard, Clock, MapPin, User, Users } from "lucide-react";
+import { Clock, MapPin, User, Users } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  PageHeader, StatCard, Card, EmptyState, Badge, Avatar, ICON_TINT, cn,
+  PageHeader, StatCard, Card, EmptyState, Badge, Avatar,
 } from "@/components/ui";
 import { formatCurrency, formatTime } from "@/lib/format";
 import type { FeeInterval } from "@/lib/types";
@@ -11,12 +11,6 @@ import type { FeeInterval } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 const INTERVAL_SUFFIX: Record<FeeInterval, string> = { monthly: "/mo", one_time: "" };
-
-const PARENT_ACTIONS = [
-  { href: "/parent/schedule", Icon: Calendar, title: "Schedule", sub: "Upcoming sessions", tone: "teal" },
-  { href: "/parent/scorecards", Icon: TrendingUp, title: "Score cards", sub: "Monthly reports", tone: "emerald" },
-  { href: "/parent/invoices", Icon: CreditCard, title: "Fees & payments", sub: "Pay & history", tone: "amber" },
-];
 
 export default async function ParentDashboard() {
   const me = await requireParent();
@@ -138,21 +132,6 @@ export default async function ParentDashboard() {
   return (
     <div>
       <PageHeader title={`Hello, ${me.full_name ?? "Parent"}`} />
-
-      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {PARENT_ACTIONS.map((q) => (
-          <Link
-            key={q.href}
-            href={q.href}
-            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-emerald-300 hover:shadow-sm"
-          >
-            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", ICON_TINT[q.tone])}>
-              <q.Icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 font-semibold leading-tight text-slate-900">{q.title}</div>
-          </Link>
-        ))}
-      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="Unpaid invoices" value={unpaid ?? 0} tone={unpaid ? "red" : "green"} />

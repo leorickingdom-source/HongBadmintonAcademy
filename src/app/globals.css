@@ -14,8 +14,14 @@
 }
 
 html {
-  /* default view = old 90% zoom; rem-based Tailwind scales text + spacing together */
+  /* Desktop stays compact (dense admin tables). Phones — where parents and
+     courtside coaches read — get a larger base so body ≈ 17px, not 14px. */
   font-size: 90%;
+}
+@media (max-width: 768px) {
+  html {
+    font-size: 106%;
+  }
 }
 
 html,

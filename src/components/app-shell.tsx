@@ -234,7 +234,7 @@ export function AppShell({
                 key={it.href}
                 href={it.href}
                 onClick={() => setOpen(false)}
-                className={cn("flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium", active ? "text-green-700" : "text-slate-500")}
+                className={cn("flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium", active ? "text-green-700" : "text-slate-500")}
               >
                 <Icon className="h-5 w-5" />
                 <span className="max-w-full truncate px-1">{it.short}</span>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -163,7 +164,9 @@ export default async function ManageClassPage({
             <tbody>
               {enrollments.map((e: any) => (
                 <tr key={e.id} className="hover:bg-slate-50">
-                  <Td className="font-medium text-slate-900">{e.students?.full_name ?? e.student_id}</Td>
+                  <Td className="font-medium">
+                    <Link href={`/admin/students/${e.student_id}`} className="text-slate-900 hover:text-green-700 hover:underline">{e.students?.full_name ?? e.student_id}</Link>
+                  </Td>
                   <Td className="text-right">
                     <form action={unenrollStudent}>
                       <input type="hidden" name="id" value={e.id} />

@@ -55,11 +55,13 @@ export function AppShell({
   groups,
   role,
   name,
+  accountHref,
   children,
 }: {
   groups: NavGroup[];
   role: string;
   name: string;
+  accountHref?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -231,6 +233,16 @@ export function AppShell({
                 <div className="text-[11px] text-slate-400">{ROLE_LABEL[role] ?? role}</div>
               </div>
             </div>
+            {accountHref && (
+              <Link
+                href={accountHref}
+                onClick={() => setOpen(false)}
+                className="mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              >
+                <Settings className="h-4 w-4 shrink-0 text-slate-400" />
+                Account
+              </Link>
+            )}
             <SignOutButton role={role} />
           </div>
         </aside>

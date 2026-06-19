@@ -13,6 +13,7 @@ export default async function ParentLayout({
       groups={[{ group: "Parent", items: PARENT_NAV }]}
       role={profile.role}
       name={profile.full_name ?? profile.email ?? "Parent"}
+      accountHref="/parent/account"
     >
       {children}
     </AppShell>

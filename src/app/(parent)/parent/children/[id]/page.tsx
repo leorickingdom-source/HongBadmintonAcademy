@@ -1,26 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, TrendingUp, Calendar, CreditCard, Clock, MapPin, ChevronRight } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  PageHeader, StatCard, Section, Table, Th, Td, Badge, EmptyState, LinkButton, Avatar, cn,
-} from "@/components/ui";
-import { RankLadder, RankHistory, type RankEvent } from "@/components/rank-ladder";
+import { Avatar, Card, StatCard, Badge, cn } from "@/components/ui";
+import { RankLadder } from "@/components/rank-ladder";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
-import { SubmitButton } from "@/components/submit-button";
-import { formatDate, formatDateTime, formatCurrency, monthLabel, formatTime } from "@/lib/format";
-import type { AttendanceStatus, InvoiceStatus, FeeInterval } from "@/lib/types";
-import { payInvoice } from "../../invoices/actions";
+import { formatCurrency, formatDate, formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-const ATT_TONE: Record<AttendanceStatus, "green" | "yellow" | "red" | "slate"> = {
-  present: "green", late: "yellow", absent: "red", excused: "slate",
-};
-const INV_TONE: Record<InvoiceStatus, "green" | "yellow" | "red" | "slate"> = {
-  draft: "slate", unpaid: "yellow", paid: "green", overdue: "red", canceled: "slate", refunded: "slate",
-};
-const INTERVAL_SUFFIX: Record<FeeInterval, string> = { monthly: "/mo", one_time: "" };
 
 function ageFromDob(dob: string | null): number | null {
   if (!dob) return null;
@@ -29,6 +17,8 @@ function ageFromDob(dob: string | null): number | null {
   return Math.floor((Date.now() - d.getTime()) / 3.15576e10);
 }
 
+// Parent child page — a calm SUMMARY. Full invoice / attendance / assessment
+// tables live on the Fees, Schedule and Growth tabs; here we link out to them.
 export default async function ChildDetailPage({
   params,
 }: {
@@ -53,313 +43,146 @@ export default async function ChildDetailPage({
     { data: assessments },
     { data: ledger },
     { data: invoices },
-    { data: rankEvents },
+    { data: scorecard },
   ] = await Promise.all([
-    supabase
-      .from("enrollments")
-      .select("class_id, classes(name, level)")
-      .eq("student_id", id)
-      .eq("active", true)
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("attendance")
-      .select("status, tap_in_at, tap_out_at, sessions(session_date, classes(name))")
-      .eq("student_id", id)
-      .order("created_at", { ascending: false })
-      .limit(30),
-    supabase
-      .from("assessments")
-      .select("assessed_on, overall_score, comment, marking_schemes(name)")
-      .eq("student_id", id)
-      .order("assessed_on", { ascending: false })
-      .limit(20),
-    supabase
-      .from("reward_ledger")
-      .select("points, reason, awarded_at")
-      .eq("student_id", id)
-      .order("awarded_at", { ascending: false }),
-    supabase
-      .from("invoices")
-      .select("id, invoice_no, amount, currency, status, period_month, due_date, fee_plans(name, amount, currency, interval)")
-      .eq("student_id", id)
-      .order("period_month", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("rank_events")
-      .select("from_rank, to_rank, created_at")
-      .eq("student_id", id)
-      .order("created_at", { ascending: false })
-      .limit(10),
+    supabase.from("enrollments").select("class_id, classes(name, level)").eq("student_id", id).eq("active", true).limit(1).maybeSingle(),
+    supabase.from("attendance").select("status").eq("student_id", id).order("created_at", { ascending: false }).limit(60),
+    supabase.from("assessments").select("overall_score").eq("student_id", id).order("assessed_on", { ascending: false }).limit(20),
+    supabase.from("reward_ledger").select("points").eq("student_id", id),
+    supabase.from("invoices").select("amount, currency, status").eq("student_id", id),
+    supabase.from("scorecards").select("summary").eq("student_id", id).order("period_month", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const classId = (enrollment as any)?.class_id ?? null;
+  const cls = (enrollment as any)?.classes ?? null;
   const today = new Date().toLocaleDateString("en-CA");
-  const { data: upcomingSessions } = classId
+  const { data: nextRows } = classId
     ? await supabase
         .from("sessions")
-        .select("id, session_date, start_time, end_time, location, status")
+        .select("session_date, start_time, end_time, location")
         .eq("class_id", classId)
         .gte("session_date", today)
         .order("session_date")
         .order("start_time")
-        .limit(6)
+        .limit(1)
     : { data: [] as any[] };
+  const next = (nextRows ?? [])[0] ?? null;
 
-  const cls = (enrollment as any)?.classes ?? null;
   const age = ageFromDob(student.dob);
   const currentRank = studentRank((student as any).rank, [cls?.level ?? null]);
-  const events = (rankEvents ?? []) as RankEvent[];
 
   const att = attendance ?? [];
-  const total = att.length;
   const attended = att.filter((a: any) => a.status === "present" || a.status === "late").length;
-  const rate = total ? Math.round((attended / total) * 100) : null;
+  const rate = att.length ? Math.round((attended / att.length) * 100) : null;
+
   const scores = (assessments ?? []).map((a: any) => Number(a.overall_score)).filter((n) => !Number.isNaN(n));
-  const avgScore = scores.length ? (scores.reduce((x, y) => x + y, 0) / scores.length).toFixed(1) : "—";
+  const avgScore = scores.length ? (scores.reduce((x, y) => x + y, 0) / scores.length).toFixed(0) : null;
+  const growthIndex = (scorecard as any)?.summary?.growth_index ?? null;
+
   const points = (ledger ?? []).reduce((x: number, r: any) => x + Number(r.points), 0);
 
-  const inv = (invoices ?? []) as any[];
-  const plan = inv.find((i) => i.fee_plans)?.fee_plans ?? null;
-  const outstanding = inv
-    .filter((i) => i.status === "unpaid" || i.status === "overdue")
-    .reduce((s, i) => s + Number(i.amount), 0);
-  const planCurrency = plan?.currency ?? inv[0]?.currency ?? "MYR";
+  const unpaid = (invoices ?? []).filter((i: any) => i.status === "unpaid" || i.status === "overdue");
+  const outstanding = unpaid.reduce((s: number, i: any) => s + Number(i.amount), 0);
+  const currency = (invoices ?? [])[0]?.currency ?? "MYR";
 
-  const subtitle = [
-    age != null ? `Age ${age}` : null,
-    cls?.name ?? null,
-  ].filter(Boolean).join(" · ") || "No class enrolment yet";
+  const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null].filter(Boolean).join(" · ") || "No class enrolment yet";
+
+  const LINKS = [
+    { href: "/parent/scorecards", label: "View growth report", Icon: TrendingUp },
+    { href: "/parent/schedule", label: "All sessions & attendance", Icon: Calendar },
+    { href: "/parent/invoices", label: "Fees & payments", Icon: CreditCard },
+  ];
 
   return (
-    <div className="space-y-6">
-      <Link href="/parent" className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900">
-        ← Back to dashboard
+    <div className="space-y-4">
+      <Link href="/parent" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900">
+        <ArrowLeft className="h-4 w-4" /> Back to dashboard
       </Link>
 
-      <PageHeader
-        title={student.full_name}
-        description={subtitle}
-        action={<Badge tone={student.status === "active" ? "green" : "slate"}>{student.status}</Badge>}
-      />
-
-      <div className="-mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-500">
-        {student.dob && (
-          <span><span className="text-slate-400">Birthday:</span> {formatDate(student.dob)}</span>
-        )}
-        <span><span className="text-slate-400">Member since:</span> {formatDate((student as any).created_at)}</span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Attendance" value={rate != null ? `${rate}%` : "—"} sub={`${attended}/${total} sessions`} />
-        <StatCard label="Avg skill score" value={avgScore} sub={`${scores.length} assessments`} />
-        <StatCard label="Reward points" value={points} tone="green" />
-        <StatCard
-          label="Outstanding"
-          value={outstanding > 0 ? formatCurrency(outstanding, planCurrency) : "RM 0"}
-          tone={outstanding > 0 ? "red" : "green"}
-        />
-      </div>
-
-      {/* ─── Rank & progress ────────────────────────────────────────────── */}
-      <Section title="Rank & progress">
-        <div className="mb-6 flex items-center gap-3">
-          <Avatar name={student.full_name} src={(student as any).photo_url} size={48} />
-          <div>
-            <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Current rank</div>
-            <span className={cn("mt-0.5 inline-block rounded-md px-2 py-0.5 text-sm font-semibold", rankBadgeClass(currentRank))}>
-              {currentRank ?? "Unranked"}
-            </span>
+      {/* ── Header + rank ladder ─────────────────────────────────────────── */}
+      <Card className="p-5">
+        <div className="flex items-center gap-3">
+          <Avatar name={student.full_name} src={(student as any).photo_url} size={52} />
+          <div className="min-w-0 flex-1">
+            <div className="text-lg font-bold text-slate-900">{student.full_name}</div>
+            <div className="text-sm text-slate-500">{subtitle}</div>
           </div>
-        </div>
-        <RankLadder current={currentRank} />
-        <div className="mt-6 border-t border-slate-100 pt-4">
-          <div className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">Rank history</div>
-          {events.length ? (
-            <RankHistory events={events} />
+          {currentRank ? (
+            <span className={cn("inline-flex shrink-0 items-center rounded-md px-2.5 py-1 text-xs font-semibold", rankBadgeClass(currentRank))}>{currentRank}</span>
           ) : (
-            <p className="text-sm text-slate-400">No rank changes recorded yet — {currentRank ?? "unranked"} since joining.</p>
+            <Badge tone={student.status === "active" ? "green" : "slate"}>{student.status}</Badge>
           )}
         </div>
-      </Section>
-
-      {/* ─── Package & fees ─────────────────────────────────────────────── */}
-      <Section title="Package & Fees" flush>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-          <div>
-            <div className="text-sm text-slate-500">{plan?.name ?? "No package assigned"}</div>
-            <div className="text-2xl font-bold text-green-700">
-              {plan ? (
-                <>
-                  {formatCurrency(Number(plan.amount), plan.currency)}
-                  <span className="text-sm font-medium text-slate-400">
-                    {INTERVAL_SUFFIX[plan.interval as FeeInterval]}
-                  </span>
-                </>
-              ) : (
-                <span className="text-slate-400">—</span>
-              )}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Outstanding</div>
-            <div className={`text-2xl font-bold ${outstanding > 0 ? "text-red-600" : "text-green-700"}`}>
-              {outstanding > 0 ? formatCurrency(outstanding, planCurrency) : "Paid up"}
-            </div>
-          </div>
+        <div className="mt-2 text-xs text-slate-400">
+          {student.dob ? `Born ${formatDate(student.dob)} · ` : ""}Member since {formatDate((student as any).created_at)}
         </div>
+        <div className="mt-5">
+          <RankLadder current={currentRank} />
+        </div>
+      </Card>
 
-        {inv.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <Th>Invoice</Th><Th>Month</Th><Th>Fee</Th><Th>Due</Th>
-                  <Th>Status</Th><Th className="text-right">Action</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {inv.map((i) => (
-                  <tr key={i.id}>
-                    <Td className="font-mono text-xs text-slate-500">{i.invoice_no ?? "—"}</Td>
-                    <Td>{i.period_month ? monthLabel(i.period_month) : "—"}</Td>
-                    <Td className="font-medium text-slate-900">{formatCurrency(Number(i.amount), i.currency)}</Td>
-                    <Td className="text-slate-500">{formatDate(i.due_date)}</Td>
-                    <Td><Badge tone={INV_TONE[i.status as InvoiceStatus]}>{i.status}</Badge></Td>
-                    <Td className="text-right">
-                      {i.status !== "paid" && i.status !== "canceled" && i.status !== "refunded" ? (
-                        <form action={payInvoice}>
-                          <input type="hidden" name="id" value={i.id} />
-                          <SubmitButton pendingText="Redirecting…" className="!px-3 !py-1.5">Pay now</SubmitButton>
-                        </form>
-                      ) : i.status === "paid" ? (
-                        <span className="text-xs font-medium text-green-600">Paid</span>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* ── 3 quick stats ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard label="Attendance" value={rate != null ? `${rate}%` : "—"} />
+        {growthIndex != null ? (
+          <StatCard label="Growth index" value={growthIndex} tone="green" />
         ) : (
-          <div className="p-5"><EmptyState message="No invoices for this child yet." /></div>
+          <StatCard label="Avg skill" value={avgScore != null ? `${avgScore}%` : "—"} tone="green" />
         )}
-      </Section>
+        <StatCard label="Reward points" value={points} />
+      </div>
 
-      {/* ─── Upcoming sessions ──────────────────────────────────────────── */}
-      <Section title="Upcoming sessions" flush>
-        {upcomingSessions && upcomingSessions.length ? (
-          <ul className="divide-y divide-slate-100">
-            {upcomingSessions.map((s: any) => (
-              <li key={s.id} className="flex items-center justify-between px-5 py-4">
-                <div>
-                  <div className="font-semibold text-slate-900">{formatDate(s.session_date)}</div>
-                  <div className="text-sm text-slate-500">
-                    {formatTime(s.start_time)}–{formatTime(s.end_time)}
-                    {s.location ? ` · ${s.location}` : ""}
-                  </div>
-                </div>
-                <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>
-                  {s.status}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="p-5"><EmptyState message="No upcoming sessions." /></div>
-        )}
-      </Section>
-
-      {/* ─── Attendance (recent first; older collapsed) ──────────────────── */}
-      <Section title="Attendance history" flush>
-        {att.length ? (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr><Th>Date</Th><Th>Class</Th><Th>Status</Th><Th>Tap in</Th></tr></thead>
-                <tbody>
-                  {att.slice(0, 3).map((a: any, i) => (
-                    <tr key={i}>
-                      <Td>{formatDate(a.sessions?.session_date)}</Td>
-                      <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
-                      <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
-                      <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* ── Fees ─────────────────────────────────────────────────────────── */}
+      {outstanding > 0 ? (
+        <Link href="/parent/invoices" className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 transition-colors hover:bg-red-100/70">
+          <div className="min-w-0">
+            <div className="text-lg font-bold text-red-700">{formatCurrency(outstanding, currency)}</div>
+            <div className="text-xs font-medium text-red-600">
+              {unpaid.length} unpaid invoice{unpaid.length > 1 ? "s" : ""} · tap to pay
             </div>
-            {att.length > 3 && (
-              <details className="border-t border-slate-100">
-                <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-green-700 hover:bg-slate-50">
-                  Show {att.length - 3} earlier sessions
-                </summary>
-                <div className="overflow-x-auto border-t border-slate-100">
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {att.slice(3).map((a: any, i) => (
-                        <tr key={i}>
-                          <Td>{formatDate(a.sessions?.session_date)}</Td>
-                          <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
-                          <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
-                          <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            )}
-          </>
-        ) : (
-          <div className="p-5"><EmptyState message="No attendance records yet." /></div>
-        )}
-      </Section>
-
-      {/* ─── Progress ───────────────────────────────────────────────────── */}
-      <Section title="Progress" flush>
-        {assessments && assessments.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr><Th>Date</Th><Th>Scheme</Th><Th>Score</Th><Th>Comment</Th></tr></thead>
-              <tbody>
-                {assessments.map((a: any, i) => (
-                  <tr key={i}>
-                    <Td>{formatDate(a.assessed_on)}</Td>
-                    <Td className="text-slate-500">{a.marking_schemes?.name ?? "—"}</Td>
-                    <Td><Badge tone="blue">{a.overall_score != null ? `${a.overall_score}%` : "—"}</Badge></Td>
-                    <Td className="max-w-sm truncate text-slate-500" title={a.comment ?? ""}>{a.comment ?? "—"}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
-        ) : (
-          <div className="p-5"><EmptyState message="No assessments yet." /></div>
-        )}
-      </Section>
-
-      {/* ─── Rewards ────────────────────────────────────────────────────── */}
-      {ledger && ledger.length > 0 && (
-        <Section title="Rewards" flush>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr><Th>Date</Th><Th>Reason</Th><Th className="text-right">Points</Th></tr></thead>
-              <tbody>
-                {ledger.map((r: any, i) => (
-                  <tr key={i}>
-                    <Td>{formatDate(r.awarded_at)}</Td>
-                    <Td className="text-slate-500">{r.reason ?? "—"}</Td>
-                    <Td className="text-right font-semibold text-green-700">+{r.points}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Pay now →</span>
+        </Link>
+      ) : (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">All fees paid — thank you!</div>
       )}
+
+      {/* ── Next session ─────────────────────────────────────────────────── */}
+      {next && (
+        <Card className="flex items-center gap-3.5 p-4">
+          {(() => {
+            const d = new Date(`${next.session_date}T00:00:00`);
+            return (
+              <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-50">
+                <span className="text-[10px] font-semibold uppercase text-emerald-600">{d.toLocaleDateString("en-MY", { month: "short" })}</span>
+                <span className="text-lg font-bold leading-none text-emerald-800">{d.getDate()}</span>
+              </div>
+            );
+          })()}
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-slate-900">Next: {cls?.name ?? "Session"}</div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{formatTime(next.start_time)}–{formatTime(next.end_time)}</span>
+              {next.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{next.location}</span>}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ── Links out to the detail tabs ─────────────────────────────────── */}
+      <Card className="overflow-hidden">
+        <div className="divide-y divide-slate-100">
+          {LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className="flex items-center justify-between px-4 py-3.5 text-sm font-medium text-slate-900 hover:bg-slate-50">
+              <span className="inline-flex items-center gap-2.5">
+                <l.Icon className="h-4 w-4 text-emerald-600" />
+                {l.label}
+              </span>
+              <ChevronRight className="h-4 w-4 text-slate-300" />
+            </Link>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }

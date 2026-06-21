@@ -14,7 +14,7 @@ const isIn = (s?: string | null) => s === "present" || s === "late";
 // marks "late", otherwise "present" — the NFC rule, applied to kiosk taps too.
 function lateOrPresent(session: Block["session"]): "present" | "late" {
   if (!session.session_date || session.grace_minutes == null) return "present";
-  const start = new Date(`${session.session_date}T${session.start_time}`);
+  const start = new Date(`${session.session_date}T${session.start_time}+08:00`);
   if (Number.isNaN(start.getTime())) return "present";
   return Date.now() > start.getTime() + session.grace_minutes * 60000 ? "late" : "present";
 }

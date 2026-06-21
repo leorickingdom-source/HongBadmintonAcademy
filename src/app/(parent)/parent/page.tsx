@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  PageHeader, Card, EmptyState, Badge, Avatar,
+  PageHeader, Card, EmptyState, Badge, Avatar, cn,
 } from "@/components/ui";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { type SessionItem } from "@/components/parent-session-list";
@@ -141,6 +141,7 @@ export default async function ParentDashboard() {
 
   const totalOutstanding = [...feesByChild.values()].reduce((s, f) => s + f.outstanding, 0);
   const outCurrency = [...feesByChild.values()][0]?.currency ?? "MYR";
+  const overdueCount = (invoices ?? []).filter((i: any) => i.status === "overdue").length;
 
   // Latest growth report per child (rows are newest-first) + who was promoted this month.
   const growthByChild = new Map<string, number | null>();
@@ -254,18 +255,30 @@ export default async function ParentDashboard() {
         {unpaid && unpaid > 0 ? (
           <Link
             href="/parent/invoices"
-            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:bg-slate-100"
+            className={cn(
+              "flex items-center justify-between gap-3 rounded-xl border p-4 transition-colors",
+              overdueCount > 0 ? "border-red-200 bg-red-50 hover:bg-red-100/70" : "border-slate-200 bg-slate-50 hover:bg-slate-100",
+            )}
           >
             <div className="min-w-0">
-              <div className="text-base font-semibold text-slate-900">
+              <div className={cn("text-base font-semibold", overdueCount > 0 ? "text-red-700" : "text-slate-900")}>
                 {formatCurrency(totalOutstanding, outCurrency)} outstanding
               </div>
-              <div className="mt-0.5 text-xs text-slate-500">
-                {unpaid} invoice{unpaid > 1 ? "s" : ""} — settle whenever it&apos;s convenient
+              <div className={cn("mt-0.5 text-xs", overdueCount > 0 ? "font-medium text-red-600" : "text-slate-500")}>
+                {overdueCount > 0
+                  ? `${overdueCount} overdue · please settle soon`
+                  : `${unpaid} invoice${unpaid > 1 ? "s" : ""} — settle whenever it's convenient`}
               </div>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50">
-              View &amp; pay
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors",
+                overdueCount > 0
+                  ? "border-red-600 bg-red-600 text-white hover:bg-red-700"
+                  : "border-emerald-600 text-emerald-700 hover:bg-emerald-50",
+              )}
+            >
+              {overdueCount > 0 ? "Pay now" : "View & pay"}
             </span>
           </Link>
         ) : (

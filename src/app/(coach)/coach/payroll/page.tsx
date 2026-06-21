@@ -89,7 +89,7 @@ export default async function CoachPayrollPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Pay rate" value={money(rate)} sub="per lesson" />
         <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="your classes" />
         <StatCard label="Last month" value={money(lastPay)} sub={`${lastSess.length} lessons · ${lm.label}`} />

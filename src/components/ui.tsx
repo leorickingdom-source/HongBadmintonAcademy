@@ -196,7 +196,7 @@ export function StatCard({
         <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
         {icon && <span className="text-slate-300">{icon}</span>}
       </div>
-      <div className={cn("mt-2 text-2xl font-bold leading-tight tabular-nums break-words sm:text-3xl", STAT_ACCENT[tone])}>{value}</div>
+      <div className={cn("mt-2 whitespace-nowrap text-2xl font-bold leading-tight tabular-nums sm:text-3xl", STAT_ACCENT[tone])}>{value}</div>
       {sub && <div className="mt-1 text-xs text-slate-400">{sub}</div>}
     </Card>
   );

@@ -1,11 +1,8 @@
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Banknote } from "lucide-react";
 import { PageHeader, Badge, EmptyState, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { env } from "@/lib/env";
-import { waLink } from "@/lib/wa";
 import type { InvoiceStatus } from "@/lib/types";
 import { payInvoice } from "./actions";
 
@@ -117,28 +114,6 @@ export default async function ParentInvoicesPage({
       ) : (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
           {history.length > 0 ? "You're all paid up — thank you!" : "No invoices yet."}
-        </div>
-      )}
-
-      {invoiceGroups.length > 0 && (
-        <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-          <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-          <p>
-            Paid by cash or transfer?{" "}
-            {env.academyWhatsapp ? (
-              <a
-                href={waLink(env.academyWhatsapp, "Hi, here is my payment receipt for invoice ") ?? "#"}
-                target="_blank"
-                rel="noopener"
-                className="font-medium text-green-700 hover:underline"
-              >
-                Send your receipt on WhatsApp
-              </a>
-            ) : (
-              <span className="font-medium text-slate-700">Send your receipt on WhatsApp</span>
-            )}{" "}
-            — we&apos;ll mark it paid.
-          </p>
         </div>
       )}
 

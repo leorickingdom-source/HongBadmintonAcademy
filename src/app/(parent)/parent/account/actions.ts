@@ -36,3 +36,25 @@ export async function changeParentPassword(formData: FormData) {
 
   redirect("/parent/account?saved=1");
 }
+
+// Parent self-service contact update. Changes the login email in Supabase Auth
+// (auto-confirmed, no email round-trip) and mirrors email + phone onto the
+// profile — so the parent can fix their own details without bugging admin.
+export async function updateParentContact(formData: FormData) {
+  const me = await requireParent();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("phone") ?? "").trim();
+
+  function fail(msg: string): never {
+    redirect(`/parent/account?error=${encodeURIComponent(msg)}`);
+  }
+  if (!/^\S+@\S+\.\S+$/.test(email)) fail("Enter a valid email address.");
+
+  const db = createAdminClient();
+  const { error: authErr } = await db.auth.admin.updateUserById(me.id, { email, email_confirm: true });
+  if (authErr) fail(authErr.message);
+  const { error } = await db.from("profiles").update({ email, phone: phone || null }).eq("id", me.id);
+  if (error) fail(error.message);
+
+  redirect("/parent/account?saved=contact");
+}

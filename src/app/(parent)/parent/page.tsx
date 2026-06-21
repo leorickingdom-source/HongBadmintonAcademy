@@ -5,7 +5,7 @@ import {
   PageHeader, Card, EmptyState, Badge, Avatar,
 } from "@/components/ui";
 import { formatCurrency, formatTime } from "@/lib/format";
-import { ParentSessionList, type SessionItem } from "@/components/parent-session-list";
+import { type SessionItem } from "@/components/parent-session-list";
 import { RANK_ORDER } from "@/lib/ranks";
 import type { FeeInterval } from "@/lib/types";
 
@@ -178,26 +178,26 @@ export default async function ParentDashboard() {
 
       {/* ─── Your children — growth first ────────────────────────────────── */}
       {children && children.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           {children.map((c) => {
             const clsName = classByChild.get(c.id);
             const gi = growthByChild.get(c.id);
             const hasReport = growthByChild.has(c.id);
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
-                <Card className="h-full p-5 transition-all hover:border-emerald-300 hover:shadow-md">
+                <Card className="h-full p-4 transition-all hover:border-emerald-300 hover:shadow-md">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <Avatar name={c.full_name} src={(c as any).photo_url} size={44} />
+                      <Avatar name={c.full_name} src={(c as any).photo_url} size={40} />
                       <div>
                         <div className="text-base font-semibold text-slate-900 group-hover:text-emerald-700">
                           {c.full_name}
                         </div>
-                        <div className="mt-1 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
+                        <div className="mt-0.5 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
+                      {c.status !== "active" && <Badge tone="slate">{c.status}</Badge>}
                       {promoted.has(c.id) && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                           ↑ Promoted
@@ -206,7 +206,7 @@ export default async function ParentDashboard() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
                     {hasReport ? (
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-2xl font-bold text-emerald-700">{gi ?? "—"}</span>
@@ -226,22 +226,27 @@ export default async function ParentDashboard() {
         <EmptyState message="No children linked to your account yet. Contact the academy." />
       )}
 
-      {/* ─── Upcoming sessions ──────────────────────────────────────────── */}
-      <div className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Upcoming sessions</h2>
-          <Link href="/parent/schedule" className="text-sm font-medium text-emerald-700 hover:underline">
-            View all →
-          </Link>
-        </div>
-        {homeSessions.length > 0 ? (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <ParentSessionList sessions={homeSessions} />
+      {/* ─── Next session — one slim line; full list is the Schedule tab ──── */}
+      {homeSessions.length > 0 && (
+        <Link
+          href="/parent/schedule"
+          className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:bg-slate-50"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-emerald-50">
+              <span className="text-[10px] font-semibold uppercase text-emerald-600">{homeSessions[0].mon}</span>
+              <span className="text-base font-bold leading-none text-emerald-800">{homeSessions[0].day}</span>
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-slate-900">Next: {homeSessions[0].className}</div>
+              <div className="truncate text-xs text-slate-500">
+                {homeSessions[0].wd} {homeSessions[0].timeLabel}{homeSessions[0].location ? ` · ${homeSessions[0].location}` : ""}
+              </div>
+            </div>
           </div>
-        ) : (
-          <p className="text-sm text-slate-500">No upcoming sessions.</p>
-        )}
-      </div>
+          <span className="shrink-0 text-sm font-medium text-emerald-700">Schedule →</span>
+        </Link>
+      )}
 
       {/* ─── Fees — kept calm and last ───────────────────────────────────── */}
       <div className="mt-8">

@@ -1,6 +1,6 @@
 import { requireParent } from "@/lib/parent-auth";
 import { PageHeader, Card, Field, Input, Button } from "@/components/ui";
-import { changeParentPassword } from "./actions";
+import { changeParentPassword, updateParentContact } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,19 +16,34 @@ export default async function ParentAccountPage({
     <div className="space-y-6">
       <PageHeader title="Account" description={me.email ?? undefined} />
 
+      {saved && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          {saved === "contact" ? "Contact details updated." : "Password updated."}
+        </p>
+      )}
+      {error && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
+      )}
+
+      <Card className="max-w-md p-6">
+        <h2 className="text-base font-semibold text-slate-900">Contact details</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          You sign in with this email; we use your phone for WhatsApp updates.
+        </p>
+        <form action={updateParentContact} className="mt-4 space-y-4">
+          <Field label="Email" required>
+            <Input type="email" name="email" defaultValue={me.email ?? ""} required autoComplete="email" />
+          </Field>
+          <Field label="Phone">
+            <Input type="tel" name="phone" defaultValue={me.phone ?? ""} autoComplete="tel" placeholder="012-345 6789" />
+          </Field>
+          <Button type="submit">Save contact</Button>
+        </form>
+      </Card>
+
       <Card className="max-w-md p-6">
         <h2 className="text-base font-semibold text-slate-900">Change password</h2>
         <p className="mt-1 text-sm text-slate-500">Update the password you use to sign in.</p>
-
-        {saved && (
-          <p className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-            Password updated.
-          </p>
-        )}
-        {error && (
-          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
-        )}
-
         <form action={changeParentPassword} className="mt-4 space-y-4">
           <Field label="Current password" required>
             <Input type="password" name="current" required autoComplete="current-password" />

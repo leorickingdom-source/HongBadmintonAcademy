@@ -84,7 +84,7 @@ export default async function ParentScorecardsPage() {
                 </div>
 
                 {/* Headline: the one thing a parent needs — index + coach's line. */}
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-emerald-50 p-5">
+                <div className="flex flex-col gap-3 rounded-xl bg-emerald-50 p-5 sm:flex-row sm:items-center sm:gap-x-6">
                   <div className="flex items-center gap-3">
                     <div>
                       <div className="text-xs font-medium text-emerald-700">HBA Growth Index</div>
@@ -141,8 +141,6 @@ export default async function ParentScorecardsPage() {
                 {c.pdf_url && (
                   <a
                     href={`/api/scorecards/${c.id}/pdf`}
-                    target="_blank"
-                    rel="noopener"
                     className="mt-4 inline-block text-sm font-medium text-emerald-700 hover:underline"
                   >
                     Download PDF →

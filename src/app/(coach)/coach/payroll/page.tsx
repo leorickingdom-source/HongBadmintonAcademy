@@ -97,25 +97,44 @@ export default async function CoachPayrollPage() {
 
       {classRows.length > 0 ? (
         <Section title="By class · this month" flush>
-          <Table>
-            <thead>
-              <tr><Th>Class</Th><Th className="text-right">Lessons</Th><Th className="text-right">Pay</Th></tr>
-            </thead>
-            <tbody>
-              {classRows.map((c) => (
-                <tr key={c.name} className="hover:bg-slate-50">
-                  <Td className="font-medium text-slate-900">{c.name}</Td>
-                  <Td className="text-right tabular-nums">{c.lessons}</Td>
-                  <Td className="text-right font-semibold tabular-nums text-slate-900">{money(c.pay)}</Td>
+          {/* Mobile: stacked rows (a 3-col table is too tight on a phone). */}
+          <ul className="divide-y divide-slate-100 sm:hidden">
+            {classRows.map((c) => (
+              <li key={c.name} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="truncate font-medium text-slate-900">{c.name}</div>
+                  <div className="text-xs text-slate-500">{c.lessons} lesson{c.lessons === 1 ? "" : "s"}</div>
+                </div>
+                <div className="shrink-0 font-semibold tabular-nums text-slate-900">{money(c.pay)}</div>
+              </li>
+            ))}
+            <li className="flex items-center justify-between gap-3 border-t-2 border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="font-semibold text-slate-900">Total · {thisSess.length} lesson{thisSess.length === 1 ? "" : "s"}</div>
+              <div className="shrink-0 font-bold tabular-nums text-emerald-700">{money(thisPay)}</div>
+            </li>
+          </ul>
+          {/* Desktop: full table. */}
+          <div className="hidden sm:block">
+            <Table>
+              <thead>
+                <tr><Th>Class</Th><Th className="text-right">Lessons</Th><Th className="text-right">Pay</Th></tr>
+              </thead>
+              <tbody>
+                {classRows.map((c) => (
+                  <tr key={c.name} className="hover:bg-slate-50">
+                    <Td className="font-medium text-slate-900">{c.name}</Td>
+                    <Td className="text-right tabular-nums">{c.lessons}</Td>
+                    <Td className="text-right font-semibold tabular-nums text-slate-900">{money(c.pay)}</Td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-slate-200 bg-slate-50">
+                  <Td className="font-semibold text-slate-900">Total</Td>
+                  <Td className="text-right font-semibold tabular-nums">{thisSess.length}</Td>
+                  <Td className="text-right font-bold tabular-nums text-emerald-700">{money(thisPay)}</Td>
                 </tr>
-              ))}
-              <tr className="border-t-2 border-slate-200 bg-slate-50">
-                <Td className="font-semibold text-slate-900">Total</Td>
-                <Td className="text-right font-semibold tabular-nums">{thisSess.length}</Td>
-                <Td className="text-right font-bold tabular-nums text-emerald-700">{money(thisPay)}</Td>
-              </tr>
-            </tbody>
-          </Table>
+              </tbody>
+            </Table>
+          </div>
         </Section>
       ) : (
         <EmptyState

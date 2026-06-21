@@ -42,17 +42,33 @@ export async function changeParentPassword(formData: FormData) {
 // profile — so the parent can fix their own details without bugging admin.
 export async function updateParentContact(formData: FormData) {
   const me = await requireParent();
+  const currentEmail = me.email;
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const phone = String(formData.get("phone") ?? "").trim();
+  const current = String(formData.get("current") ?? "");
 
   function fail(msg: string): never {
     redirect(`/parent/account?error=${encodeURIComponent(msg)}`);
   }
   if (!/^\S+@\S+\.\S+$/.test(email)) fail("Enter a valid email address.");
 
+  const emailChanged = !currentEmail || email !== currentEmail.toLowerCase();
+
+  // Changing the login email is identity-critical — confirm the current
+  // password first (throwaway verify session, immediately dropped).
+  if (emailChanged && currentEmail) {
+    if (!current) fail("Enter your current password to change your email.");
+    const supabase = await createClient();
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: currentEmail, password: current });
+    await supabase.auth.signOut({ scope: "local" });
+    if (signInErr) fail("Current password is incorrect.");
+  }
+
   const db = createAdminClient();
-  const { error: authErr } = await db.auth.admin.updateUserById(me.id, { email, email_confirm: true });
-  if (authErr) fail(authErr.message);
+  if (emailChanged) {
+    const { error: authErr } = await db.auth.admin.updateUserById(me.id, { email, email_confirm: true });
+    if (authErr) fail(authErr.message);
+  }
   const { error } = await db.from("profiles").update({ email, phone: phone || null }).eq("id", me.id);
   if (error) fail(error.message);
 

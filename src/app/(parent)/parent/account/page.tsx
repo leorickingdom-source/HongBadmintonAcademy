@@ -37,6 +37,9 @@ export default async function ParentAccountPage({
           <Field label="Phone">
             <Input type="tel" name="phone" defaultValue={me.phone ?? ""} autoComplete="tel" placeholder="012-345 6789" />
           </Field>
+          <Field label="Current password" hint="Only needed when changing your email">
+            <Input type="password" name="current" autoComplete="current-password" />
+          </Field>
           <Button type="submit">Save contact</Button>
         </form>
       </Card>

@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateScorecardsCore } from "@/lib/scorecards";
 import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
 import { pushToUsers } from "@/lib/push";
+import { createNotifications } from "@/lib/notifications";
 import { getMonthlySchedule, mytDayOfMonth } from "@/lib/settings";
 import { getBaseUrl } from "@/lib/url";
 import { isAuthorizedCron } from "@/lib/cron";
@@ -50,6 +51,12 @@ export async function GET(req: NextRequest) {
         body: "Your child's monthly Growth Report is ready to view.",
         url: "/parent/scorecards",
         tag: "report",
+      });
+      await createNotifications(parentIds, {
+        type: "report",
+        title: "Growth report ready",
+        body: "Your child's monthly Growth Report is ready to view.",
+        url: "/parent/scorecards",
       });
     }
 

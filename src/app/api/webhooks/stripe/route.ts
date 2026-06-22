@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/payments/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyAdmins } from "@/lib/notifications";
 import { env, isStripeConfigured } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -91,6 +92,12 @@ export async function POST(req: NextRequest) {
           status: "succeeded",
           method: "card",
           raw: s as unknown as Record<string, unknown>,
+        });
+        await notifyAdmins({
+          type: "payment",
+          title: "Payment received",
+          body: `${((s.amount_total ?? 0) / 100).toFixed(2)} ${(s.currency ?? env.paymentCurrency).toUpperCase()} paid online.`,
+          url: "/admin/invoices",
         });
       }
       break;

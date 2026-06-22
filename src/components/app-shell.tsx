@@ -56,12 +56,14 @@ export function AppShell({
   role,
   name,
   accountHref,
+  bell,
   children,
 }: {
   groups: NavGroup[];
   role: string;
   name: string;
   accountHref?: string;
+  bell?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -200,16 +202,19 @@ export function AppShell({
       {/* Mobile top bar */}
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
         {brand}
-        <button
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-          className="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50"
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {bell}
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            className="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="md:flex">
@@ -220,7 +225,10 @@ export function AppShell({
             open ? "block" : "hidden",
           )}
         >
-          <div className="mb-6 hidden px-2 md:block">{brand}</div>
+          <div className="mb-6 hidden items-center justify-between px-2 md:flex">
+            {brand}
+            {bell}
+          </div>
 
           {dashboardLink}
           {nav}

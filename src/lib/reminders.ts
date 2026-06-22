@@ -7,6 +7,7 @@ import { getWhatsappProvider } from "@/lib/whatsapp";
 import { APP_NAME } from "@/lib/constants";
 import { env } from "@/lib/env";
 import { pushToUsers } from "@/lib/push";
+import { createNotifications, notifyCoachesOfClass } from "@/lib/notifications";
 
 // Anti-ban knobs the app enforces (worker just polls + obeys). Window, daily cap
 // and min-gap are admin-tunable via Settings → getSendPolicy(); randomSkipChance
@@ -79,6 +80,12 @@ export async function enqueueDueReminders() {
       body: "You have an outstanding invoice — tap to view & pay.",
       url: "/parent/invoices",
       tag: "fees",
+    });
+    await createNotifications([...pushParents], {
+      type: "fees",
+      title: "Fee reminder",
+      body: "You have an outstanding invoice — tap to view & pay.",
+      url: "/parent/invoices",
     });
   }
   return { scanned: (dueToday?.length ?? 0) + (overdue?.length ?? 0), pushed: pushParents.size };
@@ -355,7 +362,21 @@ export async function enqueueSessionCancelNotice(sessionId: string): Promise<num
       url: "/parent/schedule",
       tag: "session-cancel",
     });
+    await createNotifications(parentIds, {
+      type: "session-cancel",
+      title: "Session cancelled",
+      body: `The ${className} session on ${when} is cancelled.`,
+      url: "/parent/schedule",
+    });
   }
+
+  // Let the class's coaches know in-app too.
+  await notifyCoachesOfClass((s as any).class_id, {
+    type: "session-cancel",
+    title: "Session cancelled",
+    body: `${className} on ${when} was cancelled.`,
+    url: "/coach/schedule",
+  });
 
   // 2) One post to the Community group.
   const groupId = env.waCommunityGroupId;
@@ -407,6 +428,12 @@ export async function sendRankUpNotice(studentId: string, newRank: string | null
     body: `${(s as any)?.full_name ?? "Your child"} has been promoted to ${newRank} rank.`,
     url: "/parent",
     tag: "rank",
+  });
+  await createNotifications([parent?.id], {
+    type: "rank",
+    title: "🎉 Rank up!",
+    body: `${(s as any)?.full_name ?? "Your child"} has been promoted to ${newRank} rank.`,
+    url: "/parent",
   });
 
   // Rank-up is push-only now — flip RANK_UP_WHATSAPP above to re-enable WhatsApp.

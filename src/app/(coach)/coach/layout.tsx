@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { AppShell } from "@/components/app-shell";
+import { NotificationBellServer } from "@/components/notification-bell-server";
 import { COACH_NAV } from "@/lib/constants";
 
 export default async function CoachLayout({
@@ -14,6 +15,7 @@ export default async function CoachLayout({
       role={profile.role}
       name={profile.full_name ?? profile.email ?? "Coach"}
       accountHref="/coach/account"
+      bell={<NotificationBellServer />}
     >
       {children}
     </AppShell>

@@ -49,7 +49,7 @@ export default async function ChildDetailPage({
     supabase.from("attendance").select("status").eq("student_id", id).order("created_at", { ascending: false }).limit(60),
     supabase.from("assessments").select("overall_score").eq("student_id", id).order("assessed_on", { ascending: false }).limit(20),
     supabase.from("reward_ledger").select("points").eq("student_id", id),
-    supabase.from("invoices").select("amount, currency, status").eq("student_id", id),
+    supabase.from("invoices").select("amount, currency, status, due_date").eq("student_id", id),
     supabase.from("scorecards").select("summary").eq("student_id", id).order("period_month", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
@@ -84,6 +84,8 @@ export default async function ChildDetailPage({
   const unpaid = (invoices ?? []).filter((i: any) => i.status === "unpaid" || i.status === "overdue");
   const outstanding = unpaid.reduce((s: number, i: any) => s + Number(i.amount), 0);
   const currency = (invoices ?? [])[0]?.currency ?? "MYR";
+  // Invoices never auto-flip to "overdue" — detect past-due from the date.
+  const hasOverdue = unpaid.some((i: any) => i.due_date && i.due_date < today);
   const plan = (student as any).fee_plans ?? null;
 
   const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null].filter(Boolean).join(" · ") || "No class enrolment yet";
@@ -141,14 +143,29 @@ export default async function ChildDetailPage({
 
       {/* ── Fees (kept calm) ─────────────────────────────────────────────── */}
       {outstanding > 0 ? (
-        <Link href="/parent/invoices" className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:bg-slate-100">
+        <Link
+          href="/parent/invoices"
+          className={cn(
+            "flex items-center justify-between gap-3 rounded-xl border p-4 transition-colors",
+            hasOverdue ? "border-red-200 bg-red-50 hover:bg-red-100/70" : "border-slate-200 bg-slate-50 hover:bg-slate-100",
+          )}
+        >
           <div className="min-w-0">
-            <div className="text-base font-semibold text-slate-900">{formatCurrency(outstanding, currency)} outstanding</div>
-            <div className="mt-0.5 text-xs text-slate-500">
-              {unpaid.length} invoice{unpaid.length > 1 ? "s" : ""} — settle whenever it&apos;s convenient
+            <div className={cn("text-base font-semibold", hasOverdue ? "text-red-700" : "text-slate-900")}>{formatCurrency(outstanding, currency)} outstanding</div>
+            <div className={cn("mt-0.5 text-xs", hasOverdue ? "font-medium text-red-600" : "text-slate-500")}>
+              {hasOverdue
+                ? "Overdue · please settle soon"
+                : `${unpaid.length} invoice${unpaid.length > 1 ? "s" : ""} — settle whenever it's convenient`}
             </div>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50">View &amp; pay</span>
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors",
+              hasOverdue ? "border-red-600 bg-red-600 text-white hover:bg-red-700" : "border-emerald-600 text-emerald-700 hover:bg-emerald-50",
+            )}
+          >
+            {hasOverdue ? "Pay now" : "View & pay"}
+          </span>
         </Link>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">You&apos;re all paid up — thank you!</div>

@@ -60,6 +60,10 @@ export default async function ParentInvoicesPage({
   }
   const invoiceGroups = [...byChild.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 
+  // Invoices never auto-flip to "overdue" — detect past-due from the date.
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const isPastDue = (i: any) => (i.status === "unpaid" || i.status === "overdue") && i.due_date && i.due_date < todayStr;
+
   return (
     <div>
       <PageHeader title="Fees & Payments" />
@@ -89,7 +93,7 @@ export default async function ParentInvoicesPage({
                     key={i.id}
                     className={cn(
                       "flex items-center justify-between gap-3 px-4 py-3.5",
-                      i.status === "overdue" && "bg-amber-50",
+                      isPastDue(i) && "bg-red-50",
                     )}
                   >
                     <div className="min-w-0">
@@ -99,7 +103,7 @@ export default async function ParentInvoicesPage({
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge>
+                      <Badge tone={isPastDue(i) ? "red" : TONE[i.status as InvoiceStatus]}>{isPastDue(i) ? "overdue" : i.status}</Badge>
                       <form action={payInvoice}>
                         <input type="hidden" name="id" value={i.id} />
                         <SubmitButton pendingText="…" className="!px-3 !py-1.5">Pay</SubmitButton>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -39,7 +40,7 @@ export default async function ParentDashboard() {
       childIds.length
         ? supabase
             .from("invoices")
-            .select("student_id, amount, currency, status, created_at, fee_plans(name, amount, currency, interval)")
+            .select("student_id, amount, currency, status, due_date, created_at, fee_plans(name, amount, currency, interval)")
             .in("student_id", childIds)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
@@ -141,7 +142,11 @@ export default async function ParentDashboard() {
 
   const totalOutstanding = [...feesByChild.values()].reduce((s, f) => s + f.outstanding, 0);
   const outCurrency = [...feesByChild.values()][0]?.currency ?? "MYR";
-  const overdueCount = (invoices ?? []).filter((i: any) => i.status === "overdue").length;
+  // Past due = unpaid/overdue with a due_date before today (invoices never auto-
+  // flip to status "overdue", so detect it from the date).
+  const overdueCount = (invoices ?? []).filter(
+    (i: any) => (i.status === "unpaid" || i.status === "overdue") && i.due_date && i.due_date < today,
+  ).length;
 
   // Latest growth report per child (rows are newest-first) + who was promoted this month.
   const growthByChild = new Map<string, number | null>();
@@ -172,6 +177,8 @@ export default async function ParentDashboard() {
       kids: [],
     };
   });
+
+  const todaysSessions = (upcomingSessions ?? []).filter((s: any) => s.session_date === today);
 
   return (
     <div>
@@ -227,8 +234,35 @@ export default async function ParentDashboard() {
         <EmptyState message="No children linked to your account yet. Contact the academy." />
       )}
 
-      {/* ─── Next session — one slim line; full list is the Schedule tab ──── */}
-      {homeSessions.length > 0 && (
+      {/* ─── Today's schedule (else the next upcoming session) ───────────── */}
+      {todaysSessions.length > 0 ? (
+        <div className="mt-6">
+          <h2 className="mb-2 text-lg font-semibold text-slate-900">Today&apos;s schedule</h2>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            {todaysSessions.map((s: any) => (
+              <Link
+                key={s.id}
+                href="/parent/schedule"
+                className="flex items-center gap-3 border-t border-slate-100 px-4 py-3 transition-colors first:border-t-0 hover:bg-slate-50"
+              >
+                <div className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-emerald-50">
+                  <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                  <span className="mt-0.5 text-[11px] font-bold leading-none text-emerald-800">{formatTime(s.start_time)}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-slate-900">{classNameMap.get(s.class_id) ?? "Class"}</div>
+                  <div className="truncate text-xs text-slate-500">
+                    {formatTime(s.start_time)}–{formatTime(s.end_time)}{s.location ? ` · ${s.location}` : ""}
+                  </div>
+                </div>
+                {s.status && s.status !== "scheduled" && (
+                  <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : homeSessions.length > 0 ? (
         <Link
           href="/parent/schedule"
           className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:bg-slate-50"
@@ -247,7 +281,7 @@ export default async function ParentDashboard() {
           </div>
           <span className="shrink-0 text-sm font-medium text-emerald-700">Schedule →</span>
         </Link>
-      )}
+      ) : null}
 
       {/* ─── Fees — kept calm and last ───────────────────────────────────── */}
       <div className="mt-8">

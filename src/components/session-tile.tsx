@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { formatDate, formatTime } from "@/lib/format";
 import { rankBadgeClass, rankCardClass } from "@/lib/ranks";
@@ -50,7 +51,6 @@ export function SessionTile({ s }: { s: CalendarSession }) {
           </span>
         )}
         {s.coachName && <div className="mt-0.5 truncate text-[10px] text-slate-600">🎯 {s.coachName}</div>}
-        {s.location && <div className="mt-px truncate text-[10px] text-slate-500">📍 {s.location}</div>}
       </button>
 
       {open && (
@@ -74,6 +74,14 @@ export function SessionTile({ s }: { s: CalendarSession }) {
               <div>🎯 {s.coachName ?? "No coach"}</div>
               <div className="capitalize">Status: <span className="font-medium">{s.status}</span></div>
             </div>
+
+            <Link
+              href={`/admin/sessions/${s.id}`}
+              onClick={() => setOpen(false)}
+              className="mt-3 inline-flex text-sm font-medium text-green-700 hover:underline"
+            >
+              View roster &amp; attendance →
+            </Link>
 
             <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
               {canceled ? (

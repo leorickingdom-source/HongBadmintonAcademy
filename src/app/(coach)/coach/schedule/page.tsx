@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, Badge, cn } from "@/components/ui";
@@ -11,6 +12,33 @@ export const dynamic = "force-dynamic";
 
 function todayMYT(): string {
   return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+// One tappable row → the session detail page. Used for both upcoming and past.
+function CoachSessionRow({ s }: { s: any }) {
+  const d = new Date(`${s.session_date}T00:00:00`);
+  const upcoming = s.session_date >= todayMYT();
+  return (
+    <li>
+      <Link href={`/coach/sessions/${s.id}`} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50">
+        <div className={cn("flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl", upcoming ? "bg-emerald-50" : "bg-slate-100")}>
+          <span className={cn("text-[10px] font-semibold uppercase tracking-wide", upcoming ? "text-emerald-600" : "text-slate-500")}>{d.toLocaleDateString("en-MY", { month: "short" })}</span>
+          <span className={cn("text-xl font-bold leading-none", upcoming ? "text-emerald-800" : "text-slate-700")}>{d.getDate()}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
+            <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{d.toLocaleDateString("en-MY", { weekday: "short" })} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
+            {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
+          </div>
+        </div>
+        {s.status !== "scheduled" && (
+          <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
+        )}
+        <span className="shrink-0 text-slate-300">›</span>
+      </Link>
+    </li>
+  );
 }
 
 export default async function CoachSchedulePage({
@@ -42,6 +70,11 @@ export default async function CoachSchedulePage({
     loadHolidayMap(supabase, start, end),
   ]);
 
+  const all = (sessions ?? []) as any[];
+  const today = todayMYT();
+  const upcoming = all.filter((s) => s.session_date >= today);
+  const past = all.filter((s) => s.session_date < today);
+
   return (
     <div className="space-y-6">
       <PageHeader title="My schedule" description="Your classes' sessions, month by month." />
@@ -49,44 +82,41 @@ export default async function CoachSchedulePage({
         <EmptyState message="You're not assigned to any classes yet." />
       ) : (
         <>
-          {/* Phone: a readable list — the month grid is too cramped on a narrow screen. */}
+          {/* Phone: a readable list — upcoming first, earlier sessions collapsed.
+              Tap a row for the full session + roster. */}
           <div className="md:hidden">
-            {(sessions ?? []).length ? (
-              <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                {(sessions ?? []).map((s: any) => {
-                  const d = new Date(`${s.session_date}T00:00:00`);
-                  const upcoming = s.session_date >= todayMYT();
-                  return (
-                    <li key={s.id} className="flex items-center gap-3.5 px-4 py-3.5">
-                      <div className={cn("flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl", upcoming ? "bg-emerald-50" : "bg-slate-100")}>
-                        <span className={cn("text-[10px] font-semibold uppercase tracking-wide", upcoming ? "text-emerald-600" : "text-slate-500")}>{d.toLocaleDateString("en-MY", { month: "short" })}</span>
-                        <span className={cn("text-xl font-bold leading-none", upcoming ? "text-emerald-800" : "text-slate-700")}>{d.getDate()}</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
-                          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{d.toLocaleDateString("en-MY", { weekday: "short" })} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
-                          {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
-                        </div>
-                      </div>
-                      {s.status !== "scheduled" && (
-                        <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+            {all.length ? (
+              <div className="space-y-4">
+                <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  {(upcoming.length ? upcoming : all).map((s: any) => (
+                    <CoachSessionRow key={s.id} s={s} />
+                  ))}
+                </ul>
+                {upcoming.length > 0 && past.length > 0 && (
+                  <details className="group">
+                    <summary className="cursor-pointer list-none text-sm font-medium text-slate-600 hover:text-slate-900">
+                      <span className="select-none">▸ Earlier this month ({past.length})</span>
+                    </summary>
+                    <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                      {past.map((s: any) => (
+                        <CoachSessionRow key={s.id} s={s} />
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
             ) : (
               <EmptyState message="No sessions this month." />
             )}
           </div>
 
-          {/* Desktop: the month calendar. */}
+          {/* Desktop: the month calendar. Tap a tile for the session detail. */}
           <div className="hidden md:block">
             <MonthCalendar
               monthStr={monthStr}
               basePath="/coach/schedule"
               interactive={false}
+              detailBase="/coach/sessions"
               holidays={holidays}
               sessions={(sessions ?? []).map((s: any) => ({
                 id: s.id,

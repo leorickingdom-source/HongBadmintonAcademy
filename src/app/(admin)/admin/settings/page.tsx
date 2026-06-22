@@ -1,11 +1,11 @@
 import { requireRole } from "@/lib/auth";
 import { PageHeader, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { isWorkerPaused, isFeeRemindersPaused, getMonthlySchedule } from "@/lib/settings";
+import { isWorkerPaused, getMonthlySchedule } from "@/lib/settings";
 import { WaLinkPanel } from "@/components/wa-link-panel";
 import { PushPanel } from "@/components/push-panel";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
-import { toggleWorker, toggleFeeReminders, saveMonthlySchedule } from "./actions";
+import { toggleWorker, saveMonthlySchedule } from "./actions";
 import { savePushSubscription, removePushSubscription, sendTestPushToSelf } from "./push-actions";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,6 @@ export default async function SettingsPage({
   await requireRole("admin");
   const { error, saved } = await searchParams;
   const paused = await isWorkerPaused();
-  const feePaused = await isFeeRemindersPaused();
   const schedule = await getMonthlySchedule();
 
   return (
@@ -50,26 +49,6 @@ export default async function SettingsPage({
 
       <Section title="Link WhatsApp (scan QR)" description="Re-link the dedicated number after a logout — scan from here, no SSH needed." flush>
         <WaLinkPanel />
-      </Section>
-
-      <Section title="Auto fee reminders">
-        <div className="flex flex-wrap items-center justify-between gap-4 p-5">
-          <div className="text-sm text-slate-600">
-            <div className="mb-1 flex items-center gap-2">
-              <span className="font-medium text-slate-800">Status:</span>
-              <Badge tone={feePaused ? "amber" : "green"}>{feePaused ? "Parked" : "On"}</Badge>
-            </div>
-            {feePaused
-              ? "No fee reminders are queued or sent. Growth reports & announcements still go out."
-              : "Due/overdue fee reminders auto-queue daily and drip-send to parents."}
-          </div>
-          <form action={toggleFeeReminders}>
-            <input type="hidden" name="paused" value={feePaused ? "false" : "true"} />
-            <SubmitButton variant={feePaused ? "primary" : "secondary"} pendingText="Saving…">
-              {feePaused ? "Resume reminders" : "Park reminders"}
-            </SubmitButton>
-          </form>
-        </div>
       </Section>
 
       <Section title="Push notifications (test)" description="Web Push via PWA. Subscribe this device, then fire a test push to your own subscriptions." flush>

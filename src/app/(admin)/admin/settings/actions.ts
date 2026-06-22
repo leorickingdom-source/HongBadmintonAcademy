@@ -3,20 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
-import { setWorkerPaused, setFeeRemindersPaused, setSendPolicy, setMonthlySchedule } from "@/lib/settings";
+import { setWorkerPaused, setSendPolicy, setMonthlySchedule } from "@/lib/settings";
 
 // Pause/resume the WhatsApp drip worker. The desired new state arrives as a
 // hidden "paused" field ("true"/"false"). Admin-only.
 export async function toggleWorker(formData: FormData) {
   await requireRole("admin");
   await setWorkerPaused(formData.get("paused") === "true");
-  revalidatePath("/admin/settings");
-}
-
-// Park/resume the auto fee reminders only (worker keeps sending everything else).
-export async function toggleFeeReminders(formData: FormData) {
-  await requireRole("admin");
-  await setFeeRemindersPaused(formData.get("paused") === "true");
   revalidatePath("/admin/settings");
 }
 

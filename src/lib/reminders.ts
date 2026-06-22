@@ -46,115 +46,32 @@ function daysBetween(fromDate: string, toDate: string): number {
   return Math.floor((Date.parse(toDate) - Date.parse(fromDate)) / 86_400_000);
 }
 
-function buildBody(
-  kind: string,
-  parentName: string,
-  studentName: string,
-  amount: unknown,
-  currency: string,
-  dueDate: string,
-  payUrl: string,
-  daysLate = 0,
-): string {
-  const fee = formatCurrency(Number(amount), currency);
-  if (kind === "due_day") {
-    return `Hi ${parentName}, a friendly reminder that the fee of ${fee} for ${studentName} is due today. Pay here: ${payUrl}`;
-  }
-  if (kind.startsWith("overdue")) {
-    return `Hi ${parentName}, a gentle reminder — the fee of ${fee} for ${studentName} (due ${formatDate(dueDate)}) is still outstanding. You can settle it here whenever it's convenient: ${payUrl}. Thank you!`;
-  }
-  return `Hi ${parentName}, a reminder that the fee of ${fee} for ${studentName} is due on ${formatDate(dueDate)}. Pay here: ${payUrl}`;
-}
+// (The WhatsApp fee-reminder text builder was removed — fee nudges are now
+// web-push only, see enqueueDueReminders.)
 
-// Daily cron: enqueue reminders for invoices due in 3 days (before_due), due
-// today (due_day), or already overdue (overdue_<n> at the OVERDUE_NUDGES
-// day-late milestones), all still unpaid. Deduped by the (invoice_id, kind) index.
-export async function enqueueDueReminders(baseUrl: string) {
+// Daily cron: web-push parents whose invoice is due TODAY or has hit an overdue
+// milestone (3/7/14/28 days). WhatsApp fee reminders were REMOVED (DMing parents
+// about money is the highest ban risk); push is opt-in + free, and exact-
+// milestone gating means the daily run can't spam a parent.
+export async function enqueueDueReminders() {
   const db = createAdminClient();
   const today = mytDateStr(0);
-  const inThree = mytDateStr(3);
 
-  const { data: invoices, error } = await db
-    .from("invoices")
-    .select(
-      "id, amount, currency, due_date, parent_id, status, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name, phone)",
-    )
-    .in("status", PAYABLE)
-    .in("due_date", [today, inThree]);
-  if (error) throw new Error(error.message);
+  const [{ data: dueToday }, { data: overdue }] = await Promise.all([
+    db.from("invoices").select("parent_id, due_date").in("status", PAYABLE).eq("due_date", today),
+    db.from("invoices").select("parent_id, due_date").in("status", PAYABLE).lt("due_date", today),
+  ]);
 
-  const rows: Array<Record<string, unknown>> = [];
-  // Parents to push (best-effort) — only at exact milestones so the daily cron
-  // can't spam: due-today once, then each overdue milestone once.
   const pushParents = new Set<string>();
-  for (const inv of invoices ?? []) {
-    const parent = (inv as any).parent;
-    if (inv.due_date === today && inv.parent_id) pushParents.add(inv.parent_id);
-    const phone = normalizePhoneMY(parent?.phone);
-    if (!phone) continue;
-    const kind = inv.due_date === today ? "due_day" : "before_due";
-    const studentName = (inv as any).students?.full_name ?? "your child";
-    rows.push({
-      kind,
-      invoice_id: inv.id,
-      recipient_profile_id: inv.parent_id,
-      recipient_phone: phone,
-      body: buildBody(
-        kind,
-        parent.full_name ?? "Parent",
-        studentName,
-        inv.amount,
-        inv.currency,
-        inv.due_date,
-        `${baseUrl}/parent/invoices`,
-      ),
-    });
+  for (const inv of dueToday ?? []) {
+    if ((inv as any).parent_id) pushParents.add((inv as any).parent_id);
   }
-
-  // Overdue (still-unpaid, due_date in the past): nudge at the largest milestone
-  // reached. Scanning all past-due invoices (not a bounded window) makes this
-  // self-healing if the cron ever misses days — dedup skips milestones already
-  // sent, so it simply catches up to the current one.
-  const { data: overdue, error: odErr } = await db
-    .from("invoices")
-    .select(
-      "id, amount, currency, due_date, parent_id, status, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name, phone)",
-    )
-    .in("status", PAYABLE)
-    .lt("due_date", today);
-  if (odErr) throw new Error(odErr.message);
-
   for (const inv of overdue ?? []) {
-    const parent = (inv as any).parent;
-    const daysLate = daysBetween(inv.due_date, today);
-    if ((OVERDUE_NUDGES as readonly number[]).includes(daysLate) && inv.parent_id) pushParents.add(inv.parent_id);
-    const phone = normalizePhoneMY(parent?.phone);
-    if (!phone) continue;
-    // Largest milestone reached so far — avoids firing every earlier milestone
-    // at once for an invoice that was already late when first scanned.
-    const milestone = [...OVERDUE_NUDGES].reverse().find((t) => daysLate >= t);
-    if (milestone == null) continue;
-    const kind = `overdue_${milestone}`;
-    const studentName = (inv as any).students?.full_name ?? "your child";
-    rows.push({
-      kind,
-      invoice_id: inv.id,
-      recipient_profile_id: inv.parent_id,
-      recipient_phone: phone,
-      body: buildBody(
-        kind,
-        parent.full_name ?? "Parent",
-        studentName,
-        inv.amount,
-        inv.currency,
-        inv.due_date,
-        `${baseUrl}/parent/invoices`,
-        daysLate,
-      ),
-    });
+    const daysLate = daysBetween((inv as any).due_date, today);
+    if ((OVERDUE_NUDGES as readonly number[]).includes(daysLate) && (inv as any).parent_id) {
+      pushParents.add((inv as any).parent_id);
+    }
   }
-
-  const scanned = (invoices?.length ?? 0) + (overdue?.length ?? 0);
 
   if (pushParents.size) {
     await pushToUsers([...pushParents], {
@@ -164,13 +81,7 @@ export async function enqueueDueReminders(baseUrl: string) {
       tag: "fees",
     });
   }
-
-  if (rows.length === 0) return { scanned, enqueued: 0 };
-  const { error: upErr } = await db
-    .from("message_queue")
-    .upsert(rows, { onConflict: "invoice_id,kind", ignoreDuplicates: true });
-  if (upErr) throw new Error(upErr.message);
-  return { scanned, enqueued: rows.length };
+  return { scanned: (dueToday?.length ?? 0) + (overdue?.length ?? 0), pushed: pushParents.size };
 }
 
 // Post ONE monthly notice to the parent Community — instead of messaging each
@@ -412,77 +323,46 @@ export async function recordQueueResult(
   }
 }
 
-// When a session is canceled, notify every enrolled student's parent on WhatsApp.
-// A cancellation is time-sensitive, so each parent is messaged IMMEDIATELY (in
-// parallel) rather than parked in the slow drip. Sends that fail (worker offline)
-// fall back to the queue. One message per parent (siblings deduped). These rows
-// carry no invoice_id, so even the queued fallbacks flow while fees are parked.
-// Returns how many parents were notified. Service-role client (RLS-bypassing).
+// When a session is canceled, post ONE notice to the parent Community group
+// instead of DMing every enrolled parent — far lower ban risk. Time-sensitive,
+// so it's sent immediately (queued as a fallback if the worker is offline).
+// Privacy-safe: class + date only, no child names. Returns 1 if a notice went
+// out, else 0. Service-role client (RLS-bypassing).
 export async function enqueueSessionCancelNotice(sessionId: string): Promise<number> {
+  const groupId = env.waCommunityGroupId;
+  if (!groupId) return 0;
   const db = createAdminClient();
 
   const { data: s } = await db
     .from("sessions")
-    .select("id, class_id, session_date, start_time, end_time, classes(name)")
+    .select("id, session_date, start_time, end_time, classes(name)")
     .eq("id", sessionId)
     .maybeSingle();
   if (!s) return 0;
 
-  const { data: enr } = await db
-    .from("enrollments")
-    .select("students(full_name, parent:profiles!students_parent_id_fkey(id, full_name, phone))")
-    .eq("class_id", (s as any).class_id)
-    .eq("active", true);
-
   const className = (s as any).classes?.name ?? "class";
   const when = `${formatDate((s as any).session_date)} (${formatTime((s as any).start_time)}–${formatTime((s as any).end_time)})`;
+  const body =
+    `🏸 ${APP_NAME}\n` +
+    `The ${className} session on ${when} has been CANCELLED. ` +
+    `Sorry for the inconvenience — see you at the next session!`;
 
-  const seen = new Set<string>();
-  const recipients: { parentId: string | null; phone: string; body: string }[] = [];
-  for (const e of (enr ?? []) as any[]) {
-    const parent = e.students?.parent;
-    const phone = normalizePhoneMY(parent?.phone);
-    if (!phone || seen.has(phone)) continue;
-    seen.add(phone);
-    recipients.push({
-      parentId: parent?.id ?? null,
-      phone,
-      body:
-        `🏸 ${APP_NAME}\n` +
-        `Hi ${parent?.full_name ?? "there"}, the ${className} session on ${when} has been CANCELLED. ` +
-        `Sorry for the inconvenience — we'll see you at the next session!`,
+  const result = await getWhatsappProvider().send({ to: groupId, text: body });
+  if (result.status === "sent") {
+    await db.from("messages").insert({
+      type: "custom",
+      recipient_phone: "community",
+      body,
+      provider: "wwebjs",
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      provider_message_id: result.providerMessageId ?? null,
     });
+    return 1;
   }
-  if (recipients.length === 0) return 0;
-
-  // Send all in parallel (each capped by the provider's own timeout).
-  const provider = getWhatsappProvider();
-  const results = await Promise.allSettled(recipients.map((r) => provider.send({ to: r.phone, text: r.body })));
-
-  const sentLogs: Array<Record<string, unknown>> = [];
-  const queueFallback: Array<Record<string, unknown>> = [];
-  const now = new Date().toISOString();
-  recipients.forEach((r, i) => {
-    const res = results[i];
-    if (res.status === "fulfilled" && res.value.status === "sent") {
-      sentLogs.push({
-        type: "custom",
-        recipient_profile_id: r.parentId,
-        recipient_phone: r.phone,
-        body: r.body,
-        provider: "wwebjs",
-        status: "sent",
-        sent_at: now,
-        provider_message_id: res.value.providerMessageId ?? null,
-      });
-    } else {
-      queueFallback.push({ kind: "session_canceled", recipient_profile_id: r.parentId, recipient_phone: r.phone, body: r.body });
-    }
-  });
-
-  if (sentLogs.length) await db.from("messages").insert(sentLogs);
-  if (queueFallback.length) await db.from("message_queue").insert(queueFallback);
-  return recipients.length;
+  // Worker offline → queue the group post (delivered when it reconnects).
+  await db.from("message_queue").insert({ kind: "session_canceled", recipient_phone: groupId, body });
+  return 1;
 }
 
 // Congratulate a parent when their child is promoted to a higher rank. Positive,

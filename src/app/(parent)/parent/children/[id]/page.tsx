@@ -7,6 +7,7 @@ import { Avatar, Card, Badge, cn } from "@/components/ui";
 import { RankLadder } from "@/components/rank-ladder";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
+import { levelInfo, levelName, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function ChildDetailPage({
   // Service-role bypasses RLS; restrict to this parent's child explicitly.
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, status, dob, parent_id, rank, created_at, photo_url, fee_plans(name, amount, currency, interval)")
+    .select("id, full_name, status, dob, parent_id, rank, level, created_at, photo_url, fee_plans(name, amount, currency, interval)")
     .eq("id", id)
     .eq("parent_id", me.id)
     .maybeSingle();
@@ -44,6 +45,7 @@ export default async function ChildDetailPage({
     { data: ledger },
     { data: invoices },
     { data: scorecard },
+    { data: lastExam },
   ] = await Promise.all([
     supabase.from("enrollments").select("class_id, classes(name, level)").eq("student_id", id).eq("active", true).limit(1).maybeSingle(),
     supabase.from("attendance").select("status").eq("student_id", id).order("created_at", { ascending: false }).limit(60),
@@ -51,6 +53,7 @@ export default async function ChildDetailPage({
     supabase.from("reward_ledger").select("points").eq("student_id", id),
     supabase.from("invoices").select("amount, currency, status, due_date").eq("student_id", id),
     supabase.from("scorecards").select("summary").eq("student_id", id).order("period_month", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("level_exams").select("exam_date, total, band, decision, to_level, next_target, window_label").eq("student_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const classId = (enrollment as any)?.class_id ?? null;
@@ -87,6 +90,17 @@ export default async function ChildDetailPage({
   // Invoices never auto-flip to "overdue" — detect past-due from the date.
   const hasOverdue = unpaid.some((i: any) => i.due_date && i.due_date < today);
   const plan = (student as any).fee_plans ?? null;
+
+  const level = (student as any).level ?? null;
+  const lv = levelInfo(level);
+  const exam = lastExam as any;
+  const examWin = nextExamWindow();
+  const examTone: Record<string, string> = {
+    green: "border-green-200 bg-green-50 text-green-800",
+    blue: "border-blue-200 bg-blue-50 text-blue-800",
+    yellow: "border-amber-200 bg-amber-50 text-amber-800",
+    red: "border-red-200 bg-red-50 text-red-800",
+  };
 
   const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null].filter(Boolean).join(" · ") || "No class enrolment yet";
 
@@ -140,6 +154,42 @@ export default async function ChildDetailPage({
           <div className="mt-1 text-xs text-slate-500">Reward points</div>
         </div>
       </div>
+
+      {/* ── Training level & exams ───────────────────────────────────────── */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-100 text-lg font-bold text-green-700">
+              {level ? `L${level}` : "—"}
+            </span>
+            <div>
+              <div className="text-sm font-semibold text-slate-900">{level ? `Level ${level} · ${levelName(level)}` : "Not yet leveled"}</div>
+              {lv && <div className="text-xs text-slate-400">{lv.objective}</div>}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-slate-400">Next exam</div>
+            <div className="text-sm font-medium text-slate-700">{examWin.label}</div>
+          </div>
+        </div>
+
+        {exam ? (
+          <div className={cn("mt-4 rounded-xl border p-3", examTone[bandFor(Number(exam.total)).tone])}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold">Last exam: {exam.total}/100 · {bandFor(Number(exam.total)).label}</span>
+              <span className="text-xs opacity-70">{formatDate(exam.exam_date)}</span>
+            </div>
+            <div className="mt-1 text-xs opacity-90">
+              {DECISION_LABEL[exam.decision as Decision] ?? exam.decision}
+              {exam.next_target ? ` · Next target: ${exam.next_target}` : ""}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
+            No promotion exam yet. Exams run every 4 months — April, August, December.
+          </div>
+        )}
+      </Card>
 
       {/* ── Fees (kept calm) ─────────────────────────────────────────────── */}
       {outstanding > 0 ? (

@@ -37,6 +37,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/coaches/summary", label: "Coaches & Payroll" },
       { href: "/admin/leaderboard", label: "Leaderboard" },
+      { href: "/admin/exams", label: "Level Exams" },
       { href: "/admin/marking-schemes", label: "Marking Schemes" },
       { href: "/admin/rewards", label: "Reward Rules" },
     ],
@@ -57,6 +58,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/analytics", label: "Analytics" },
       { href: "/admin/reports", label: "Reports & Export" },
+      { href: "/admin/training", label: "Training Syllabus" },
       { href: "/admin/holidays", label: "Holidays" },
       { href: "/admin/settings", label: "Settings" },
     ],
@@ -68,6 +70,7 @@ export const COACH_NAV: NavItem[] = [
   { href: "/coach/checkin", label: "Check-in & mark" },
   { href: "/coach/schedule", label: "Schedule" },
   { href: "/coach/marking", label: "Marking" },
+  { href: "/coach/exams", label: "Level Exams" },
   { href: "/coach/payroll", label: "My Payroll" },
 ];
 

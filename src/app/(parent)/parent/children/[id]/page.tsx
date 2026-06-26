@@ -4,10 +4,10 @@ import { ArrowLeft, TrendingUp, Calendar, CreditCard, Clock, MapPin, ChevronRigh
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Avatar, Card, Badge, cn } from "@/components/ui";
-import { RankLadder } from "@/components/rank-ladder";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { LevelLadder } from "@/components/level-ladder";
+import { studentRank, rankBadgeClass, bestRank } from "@/lib/ranks";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
-import { levelInfo, levelName, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
+import { levelInfo, levelToRank, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +72,12 @@ export default async function ChildDetailPage({
   const next = (nextRows ?? [])[0] ?? null;
 
   const age = ageFromDob(student.dob);
-  const currentRank = studentRank((student as any).rank, [cls?.level ?? null]);
+  // Parent-facing rank derives from the training level (single source of truth),
+  // but never shows lower than an explicit admin coarse-rank override.
+  const currentRank = bestRank([
+    levelToRank((student as any).level),
+    studentRank((student as any).rank, [cls?.level ?? null]),
+  ]);
 
   const att = attendance ?? [];
   const attended = att.filter((a: any) => a.status === "present" || a.status === "late").length;
@@ -91,7 +96,7 @@ export default async function ChildDetailPage({
   const hasOverdue = unpaid.some((i: any) => i.due_date && i.due_date < today);
   const plan = (student as any).fee_plans ?? null;
 
-  const level = (student as any).level ?? null;
+  const level = (student as any).level ?? 1; // every student starts at Level 1 (Starter)
   const lv = levelInfo(level);
   const exam = lastExam as any;
   const examWin = nextExamWindow();
@@ -134,9 +139,6 @@ export default async function ChildDetailPage({
         <div className="mt-2 text-xs text-slate-400">
           {student.dob ? `Born ${formatDate(student.dob)} · ` : ""}Member since {formatDate((student as any).created_at)}
         </div>
-        <div className="mt-5">
-          <RankLadder current={currentRank} />
-        </div>
       </Card>
 
       {/* ── 3 quick stats ────────────────────────────────────────────────── */}
@@ -157,19 +159,12 @@ export default async function ChildDetailPage({
 
       {/* ── Training level & exams ───────────────────────────────────────── */}
       <Card className="p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-100 text-lg font-bold text-green-700">
-              {level ? `L${level}` : "—"}
-            </span>
-            <div>
-              <div className="text-sm font-semibold text-slate-900">{level ? `Level ${level} · ${levelName(level)}` : "Not yet leveled"}</div>
-              {lv && <div className="text-xs text-slate-400">{lv.objective}</div>}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-slate-400">Next exam</div>
-            <div className="text-sm font-medium text-slate-700">{examWin.label}</div>
+        <LevelLadder current={level} />
+        <div className="mt-3 flex items-center justify-between gap-3">
+          {lv ? <div className="text-xs text-slate-500">{lv.objective}</div> : <div />}
+          <div className="shrink-0 text-right">
+            <span className="text-xs text-slate-400">Next exam: </span>
+            <span className="text-xs font-medium text-slate-700">{examWin.label}</span>
           </div>
         </div>
 

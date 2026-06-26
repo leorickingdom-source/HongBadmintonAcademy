@@ -53,7 +53,7 @@ export default async function ChildDetailPage({
     supabase.from("reward_ledger").select("points").eq("student_id", id),
     supabase.from("invoices").select("amount, currency, status, due_date").eq("student_id", id),
     supabase.from("scorecards").select("summary").eq("student_id", id).order("period_month", { ascending: false }).limit(1).maybeSingle(),
-    supabase.from("level_exams").select("exam_date, total, band, decision, to_level, next_target, window_label").eq("student_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("level_exams").select("id, exam_date, total, band, decision, to_level, next_target, window_label").eq("student_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const classId = (enrollment as any)?.class_id ?? null;
@@ -183,6 +183,9 @@ export default async function ChildDetailPage({
               {DECISION_LABEL[exam.decision as Decision] ?? exam.decision}
               {exam.next_target ? ` · Next target: ${exam.next_target}` : ""}
             </div>
+            <a href={`/api/exams/${exam.id}/pdf`} target="_blank" rel="noopener" className="mt-2 inline-block text-xs font-medium underline">
+              Download exam report (PDF)
+            </a>
           </div>
         ) : (
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">

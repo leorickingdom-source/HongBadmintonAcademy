@@ -98,7 +98,7 @@ export default async function CoachExamGradePage({
         {history && history.length > 0 ? (
           <Table>
             <thead>
-              <tr><Th>Date</Th><Th>Level</Th><Th>Score</Th><Th>Result</Th><Th>Decision</Th><Th>Comment</Th></tr>
+              <tr><Th>Date</Th><Th>Level</Th><Th>Score</Th><Th>Result</Th><Th>Decision</Th><Th>Comment</Th><Th>PDF</Th></tr>
             </thead>
             <tbody>
               {(history as any[]).map((h) => (
@@ -109,6 +109,7 @@ export default async function CoachExamGradePage({
                   <Td><Badge tone={BAND_TONE[h.band] ?? "slate"}>{h.band ?? "—"}</Badge></Td>
                   <Td className="text-slate-600">{DECISION_LABEL[h.decision as Decision] ?? h.decision ?? "—"}</Td>
                   <Td className="max-w-xs truncate text-slate-500" title={h.coach_comment ?? ""}>{h.coach_comment ?? "—"}</Td>
+                  <Td><a href={`/api/exams/${h.id}/pdf`} target="_blank" rel="noopener" className="text-green-700 hover:underline">PDF</a></Td>
                 </tr>
               ))}
             </tbody>

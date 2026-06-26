@@ -21,6 +21,10 @@
     {
       "path": "/api/cron/backup",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/exam-window",
+      "schedule": "0 1 1 4,8,12 *"
     }
   ]
 }

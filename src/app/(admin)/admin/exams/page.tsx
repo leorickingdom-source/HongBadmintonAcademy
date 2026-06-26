@@ -74,7 +74,7 @@ export default async function AdminExamsPage() {
         {exams && exams.length > 0 ? (
           <Table>
             <thead>
-              <tr><Th>Date</Th><Th>Student</Th><Th>Level</Th><Th>Score</Th><Th>Result</Th><Th>Decision</Th><Th>Coach</Th></tr>
+              <tr><Th>Date</Th><Th>Student</Th><Th>Level</Th><Th>Score</Th><Th>Result</Th><Th>Decision</Th><Th>Coach</Th><Th>PDF</Th></tr>
             </thead>
             <tbody>
               {(exams as any[]).map((e) => (
@@ -86,6 +86,7 @@ export default async function AdminExamsPage() {
                   <Td><Badge tone={BAND_TONE[e.band] ?? "slate"}>{e.band ?? "—"}</Badge></Td>
                   <Td className="text-slate-600">{DECISION_LABEL[e.decision as Decision] ?? e.decision ?? "—"}</Td>
                   <Td className="text-slate-500">{e.coach?.full_name ?? "—"}</Td>
+                  <Td><a href={`/api/exams/${e.id}/pdf`} target="_blank" rel="noopener" className="text-green-700 hover:underline">PDF</a></Td>
                 </tr>
               ))}
             </tbody>

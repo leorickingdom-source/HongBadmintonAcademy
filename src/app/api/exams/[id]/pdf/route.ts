@@ -10,8 +10,8 @@ import { formatDate } from "@/lib/format";
 
 export const runtime = "nodejs";
 
-const SELECT =
-  "id, exam_date, window_label, from_level, to_level, total, band, decision, scores, coach_comment, next_target, students(full_name)";
+const COLS =
+  "id, exam_date, window_label, from_level, to_level, total, band, decision, scores, coach_comment, next_target";
 const SEC_ORDER = ["technical", "footwork", "tactical", "physical"];
 
 // Render a promotion-exam result PDF on the fly. Authorization mirrors the
@@ -24,7 +24,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   let row: any = null;
   if (user) {
-    const { data } = await supabase.from("level_exams").select(SELECT).eq("id", id).maybeSingle();
+    const { data } = await supabase
+      .from("level_exams")
+      .select(`${COLS}, students(full_name)`)
+      .eq("id", id)
+      .maybeSingle();
     row = data;
   } else {
     const pid = await getParentIdFromCookie();
@@ -32,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       const admin = createAdminClient();
       const { data } = await admin
         .from("level_exams")
-        .select(`${SELECT}, students!inner(parent_id)`)
+        .select(`${COLS}, students!inner(full_name, parent_id)`)
         .eq("id", id)
         .eq("students.parent_id", pid)
         .maybeSingle();

@@ -112,7 +112,7 @@ export async function StudentsList({
                   <input type="hidden" name="id" value={s.id} />
                   <ConfirmButton
                     label="Delete"
-                    confirmText={`Delete ${s.full_name}? This removes attendance, marks and scorecards.`}
+                    confirmText={`Delete ${s.full_name}? This removes attendance, marks and exam results.`}
                   />
                 </form>
               </div>
@@ -165,7 +165,7 @@ export async function StudentsList({
                         <input type="hidden" name="id" value={s.id} />
                         <ConfirmButton
                           label="Delete"
-                          confirmText={`Delete ${s.full_name}? This removes attendance, marks and scorecards.`}
+                          confirmText={`Delete ${s.full_name}? This removes attendance, marks and exam results.`}
                         />
                       </form>
                     </div>
@@ -179,7 +179,7 @@ export async function StudentsList({
             <BulkBar
               action={deleteStudents}
               label="student"
-              confirmText="Delete {n} selected student(s)? This removes their attendance, marks and scorecards."
+              confirmText="Delete {n} selected student(s)? This removes their attendance, marks and exam results."
             />
           </div>
           </BulkProvider>

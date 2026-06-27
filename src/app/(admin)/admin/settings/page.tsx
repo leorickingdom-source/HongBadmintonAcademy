@@ -35,8 +35,8 @@ export default async function SettingsPage({
               <Badge tone={paused ? "red" : "green"}>{paused ? "Paused" : "Running"}</Badge>
             </div>
             {paused
-              ? "Reminders & growth reports are NOT being sent. They stay queued and go out once resumed."
-              : "Queued reminders & growth reports drip-send automatically (throttled)."}
+              ? "Reminders are NOT being sent. They stay queued and go out once resumed."
+              : "Queued reminders drip-send automatically (throttled)."}
           </div>
           <form action={toggleWorker}>
             <input type="hidden" name="paused" value={paused ? "false" : "true"} />
@@ -72,12 +72,12 @@ export default async function SettingsPage({
       <Section title="Monthly schedule">
         <form action={saveMonthlySchedule} className="space-y-4 p-5">
           <p className="text-sm text-slate-600">
-            The <strong>run day</strong> is when invoices and growth reports are generated each month (they go out as
-            one combined Community post). The <strong>due day</strong> is when each fee falls due. Days 1–28; the crons
-            check daily. The manual &quot;Generate this month&quot; buttons work any day.
+            The <strong>run day</strong> is when monthly invoices are generated (and the Community post goes out).
+            The <strong>due day</strong> is when each fee falls due. Days 1–28; the crons check daily. The manual
+            &quot;Generate this month&quot; button works any day.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Monthly run day" hint="Raise fees + build reports + post the notice.">
+            <Field label="Monthly run day" hint="Raise fees + post the Community notice.">
               <Input type="number" name="runDay" min={1} max={28} defaultValue={schedule.runDay} />
             </Field>
             <Field label="Invoice due day">

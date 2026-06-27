@@ -5,7 +5,7 @@ import { PWARegister } from "@/components/pwa-register";
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: "Academy management — attendance, coaching, score cards, fees.",
+  description: "Academy management — attendance, coaching, progress, fees.",
   applicationName: APP_NAME,
   appleWebApp: {
     capable: true,

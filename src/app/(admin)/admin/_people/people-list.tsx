@@ -86,7 +86,7 @@ export async function PeopleList({
   const title = isCoach ? "Coaches" : "Parents";
   const description = isCoach
     ? "Coaching staff accounts and login credentials."
-    : "Parent accounts — receive score cards and pay fees.";
+    : "Parent accounts — receive progress cards and pay fees.";
 
   return (
     <div>

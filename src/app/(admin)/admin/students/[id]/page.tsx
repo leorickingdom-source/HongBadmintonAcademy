@@ -40,7 +40,7 @@ export default async function StudentProfilePage({
 
   const [
     { data: attendance },
-    { data: assessments },
+    { data: exams },
     { data: ledger },
     { data: rules },
     { data: invoices },
@@ -53,10 +53,10 @@ export default async function StudentProfilePage({
       .order("created_at", { ascending: false })
       .limit(30),
     supabase
-      .from("assessments")
-      .select("assessed_on, overall_score, marking_schemes(name), coach:profiles!assessments_coach_id_fkey(full_name)")
+      .from("level_exams")
+      .select("id, exam_date, from_level, to_level, total, band, decision, coach_comment")
       .eq("student_id", id)
-      .order("assessed_on", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(20),
     supabase
       .from("reward_ledger")
@@ -77,10 +77,7 @@ export default async function StudentProfilePage({
   const attended = att.filter((a: any) => a.status === "present" || a.status === "late").length;
   const rate = total ? Math.round((attended / total) * 100) : null;
 
-  const scores = (assessments ?? [])
-    .map((a: any) => Number(a.overall_score))
-    .filter((n) => !Number.isNaN(n));
-  const avgScore = scores.length ? (scores.reduce((x, y) => x + y, 0) / scores.length).toFixed(1) : "—";
+  const lastExam = (exams ?? [])[0] ?? null;
 
   const totalPoints = (ledger ?? []).reduce((x: number, r: any) => x + Number(r.points), 0);
   const classNames = (enrollments ?? []).map((e: any) => e.classes?.name).filter(Boolean).join(", ");
@@ -111,7 +108,7 @@ export default async function StudentProfilePage({
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Attendance rate" value={rate != null ? `${rate}%` : "—"} sub={`${attended}/${total} sessions`} tone="blue" />
-        <StatCard label="Avg skill score" value={avgScore} sub={`${scores.length} assessments`} />
+        <StatCard label="Last exam" value={lastExam ? `${lastExam.total}/100` : "—"} sub={lastExam ? lastExam.band : `${(exams ?? []).length} exams`} />
         <StatCard label="Reward points" value={totalPoints} tone="green" />
         <StatCard label="NFC tag" value={student.nfc_tag_uid ? "✓" : "—"} sub={student.nfc_tag_uid ?? "unbound"} />
       </div>
@@ -179,23 +176,24 @@ export default async function StudentProfilePage({
         ) : <div className="p-5"><EmptyState message="No attendance records yet." /></div>}
       </Section>
 
-      {/* Progress */}
-      <Section title="Progress (assessments)" flush>
-        {assessments && assessments.length ? (
+      {/* Promotion exams */}
+      <Section title="Promotion exams" flush>
+        {exams && exams.length ? (
           <Table>
-            <thead><tr><Th>Date</Th><Th>Scheme</Th><Th>Coach</Th><Th>Overall</Th></tr></thead>
+            <thead><tr><Th>Date</Th><Th>Level</Th><Th>Score</Th><Th>Result</Th><Th>PDF</Th></tr></thead>
             <tbody>
-              {assessments.map((a: any, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <Td>{formatDate(a.assessed_on)}</Td>
-                  <Td className="text-slate-500">{a.marking_schemes?.name ?? "—"}</Td>
-                  <Td className="text-slate-500">{a.coach?.full_name ?? "—"}</Td>
-                  <Td><Badge tone="blue">{a.overall_score != null ? `${a.overall_score}%` : "—"}</Badge></Td>
+              {exams.map((e: any) => (
+                <tr key={e.id} className="hover:bg-slate-50">
+                  <Td>{formatDate(e.exam_date)}</Td>
+                  <Td>{e.from_level} → {e.to_level > 6 ? "Elite" : e.to_level}</Td>
+                  <Td className="font-semibold tabular-nums">{e.total}/100</Td>
+                  <Td><Badge tone={e.band === "excellent" || e.band === "pass" ? "green" : e.band === "borderline" ? "yellow" : "red"}>{e.band ?? "—"}</Badge></Td>
+                  <Td><a href={`/api/exams/${e.id}/pdf`} target="_blank" rel="noopener" className="text-green-700 hover:underline">PDF</a></Td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        ) : <div className="p-5"><EmptyState message="No assessments yet." /></div>}
+        ) : <div className="p-5"><EmptyState message="No promotion exams yet." /></div>}
       </Section>
 
       {/* Rewards */}

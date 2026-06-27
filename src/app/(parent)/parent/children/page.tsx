@@ -43,7 +43,7 @@ export default async function ParentChildrenPage() {
 
   return (
     <div>
-      <PageHeader title="My Children" description="Tap a child to see their level, growth report, schedule and fees." />
+      <PageHeader title="My Children" description="Tap a child to see their level, progress card, schedule and fees." />
 
       {children && children.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">

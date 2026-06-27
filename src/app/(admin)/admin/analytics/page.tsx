@@ -78,12 +78,12 @@ export default async function AnalyticsPage({
             tone={a.retention.rate == null ? "slate" : a.retention.rate >= 80 ? "green" : a.retention.rate >= 60 ? "amber" : "red"}
           />
           <StatCard
-            label="Avg skill"
-            value={a.avgScore != null ? `${a.avgScore}%` : "—"}
+            label="Avg exam score"
+            value={a.avgScore != null ? `${a.avgScore}/100` : "—"}
             sub={
               a.avgScore != null
-                ? `≈ ${(a.avgScore / 10).toFixed(1)}/10${a.skillImprovement != null ? ` · ${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} vs last mo` : ""}`
-                : "no assessments"
+                ? `${a.assessmentCount} exam${a.assessmentCount === 1 ? "" : "s"} this year${a.skillImprovement != null ? ` · ${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} vs last yr` : ""}`
+                : "no exams this year"
             }
             tone={a.skillImprovement != null ? (a.skillImprovement >= 0 ? "green" : "red") : "slate"}
           />
@@ -100,11 +100,11 @@ export default async function AnalyticsPage({
 
       {/* Skills + rank */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Skills breakdown" description="Average % per criterion, this month">
+        <Section title="Exam sections" description="Average % per section across this year's exams">
           {a.skillsBreakdown.length ? (
             <SkillBarChart data={a.skillsBreakdown} />
           ) : (
-            <EmptyState message="No assessments scored this month." />
+            <EmptyState message="No exams scored this year." />
           )}
         </Section>
 
@@ -149,10 +149,10 @@ export default async function AnalyticsPage({
       </div>
 
       {/* Coach performance */}
-      <Section title="Coach performance" description="Students, attendance % and average skill score given — this month" flush>
+      <Section title="Coach performance" description="Students, attendance % (this month) and average exam score given (this year)" flush>
         {a.coachPerformance.length ? (
           <Table>
-            <thead><tr><Th>Coach</Th><Th className="text-right">Students</Th><Th className="text-right">Attendance</Th><Th className="text-right">Avg skill given</Th></tr></thead>
+            <thead><tr><Th>Coach</Th><Th className="text-right">Students</Th><Th className="text-right">Attendance</Th><Th className="text-right">Avg exam given</Th></tr></thead>
             <tbody>
               {a.coachPerformance.map((c) => (
                 <tr key={c.name} className="hover:bg-slate-50">
@@ -161,7 +161,7 @@ export default async function AnalyticsPage({
                   </Td>
                   <Td className="text-right tabular-nums">{c.students}</Td>
                   <Td className="text-right tabular-nums">{c.attendancePct != null ? `${c.attendancePct}%` : "—"}</Td>
-                  <Td className="text-right tabular-nums">{c.avgSkill != null ? `${c.avgSkill}%` : "—"}</Td>
+                  <Td className="text-right tabular-nums">{c.avgSkill != null ? `${c.avgSkill}/100` : "—"}</Td>
                 </tr>
               ))}
             </tbody>

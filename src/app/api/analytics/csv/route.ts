@@ -38,9 +38,9 @@ export async function GET(req: Request) {
     ["Retention (30d) %", a.retention.rate ?? ""],
     ["Avg attendance/student %", a.retention.avgAttendancePct ?? ""],
     ["No-show >30 days", a.retention.inactive30],
-    ["Avg skill score %", a.avgScore ?? ""],
-    ["Skill improvement vs last mo", a.skillImprovement ?? ""],
-    ["Assessments", a.assessmentCount],
+    ["Avg exam score /100", a.avgScore ?? ""],
+    ["Exam score change vs last yr", a.skillImprovement ?? ""],
+    ["Exams this year", a.assessmentCount],
     ["Active students", a.counts.students],
     ["New students (month)", a.newStudentsThisMonth],
     ["Inactive students", a.inactiveStudents],
@@ -58,9 +58,9 @@ export async function GET(req: Request) {
     ["Fee aging · 90+ days", a.feeAging.d90],
   ];
   for (const [k, v] of Object.entries(a.invoiceStatus)) rows.push([`Invoices · ${k}`, v]);
-  for (const [k, v] of Object.entries(a.rankDistribution)) rows.push([`Rank · ${k}`, v]);
-  for (const s of a.skillsBreakdown) rows.push([`Skill · ${s.name} %`, s.pct]);
-  for (const c of a.coachPerformance) rows.push([`Coach · ${c.name} (students/att%/skill%)`, `${c.students} / ${c.attendancePct ?? "-"} / ${c.avgSkill ?? "-"}`]);
+  for (const [k, v] of Object.entries(a.rankDistribution)) rows.push([`Level · ${k}`, v]);
+  for (const s of a.skillsBreakdown) rows.push([`Exam section · ${s.name} %`, s.pct]);
+  for (const c of a.coachPerformance) rows.push([`Coach · ${c.name} (students/att%/exam-100)`, `${c.students} / ${c.attendancePct ?? "-"} / ${c.avgSkill ?? "-"}`]);
   for (const c of a.classOccupancy) rows.push([`Occupancy · ${c.name}`, `${c.enrolled}/${c.capacity} (${c.pct}%)`]);
   for (const c of a.studentsPerClass) rows.push([`Class · ${c.name}`, c.count]);
   for (const s of a.topStudents) rows.push([`Reward · ${s.name}`, s.points]);

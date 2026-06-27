@@ -15,7 +15,7 @@ function monthBounds() {
   return { start: `${y}-${String(m + 1).padStart(2, "0")}-01`, end: new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10) };
 }
 
-// Coach class detail — roster + this-month attendance/assessment at a glance,
+// Coach class detail — roster + this-month attendance + level at a glance,
 // each student linking into their marking page. Mirrors the parent child-detail
 // pattern. A coach can only open their own classes.
 export default async function CoachClassDetailPage({ params }: { params: Promise<{ id: string }> }) {

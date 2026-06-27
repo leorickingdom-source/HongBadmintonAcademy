@@ -68,8 +68,8 @@ export async function GET(req: Request) {
   row("Attendance rate", a.attendanceRate != null ? `${a.attendanceRate}%` : "—");
   row("Retention (30 days)", a.retention.rate != null ? `${a.retention.rate}%` : "—");
   row("Avg attendance / student", a.retention.avgAttendancePct != null ? `${a.retention.avgAttendancePct}%` : "—");
-  row("Avg skill score", a.avgScore != null ? `${a.avgScore}% (${a.assessmentCount} assessments)` : "—");
-  row("Skill improvement", a.skillImprovement != null ? `${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} pts vs last mo` : "—");
+  row("Avg exam score", a.avgScore != null ? `${a.avgScore}/100 (${a.assessmentCount} exams this year)` : "—");
+  row("Exam score change", a.skillImprovement != null ? `${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} pts vs last yr` : "—");
   row("Class occupancy (avg)", a.avgOccupancyPct != null ? `${a.avgOccupancyPct}%` : "—");
   row("Attendance", `present ${a.attendanceBreakdown.present} · late ${a.attendanceBreakdown.late} · absent ${a.attendanceBreakdown.absent} · excused ${a.attendanceBreakdown.excused}`);
 
@@ -82,7 +82,7 @@ export async function GET(req: Request) {
   heading("Coach performance (this month)");
   if (a.coachPerformance.length === 0) row("—", "no coaches");
   a.coachPerformance.forEach((c) =>
-    row(c.name, `${c.students} students · ${c.attendancePct ?? "—"}% att · ${c.avgSkill ?? "—"}% skill`),
+    row(c.name, `${c.students} students · ${c.attendancePct ?? "—"}% att · ${c.avgSkill ?? "—"}/100 avg exam`),
   );
 
   heading("Invoices by status");

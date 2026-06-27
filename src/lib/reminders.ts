@@ -96,11 +96,9 @@ export async function enqueueDueReminders() {
 // (WA_COMMUNITY_GROUP_ID). Privacy-safe: no child names, scores, amounts or who
 // owes — just "log in to view/pay".
 //
-// Content adapts to what actually happened this month:
-//   reports + fees → combined · reports only → reports-only · fees only → fees-only
-// Idempotent per month (kind community_monthly:YYYY-MM). While the row is still
-// queued it's UPDATED in place (so the scorecard run can seed it and the later
-// invoice run can upgrade it to combined); once the worker has sent it, it's
+// Fees-only notice (the monthly Growth Report was retired — the promotion exam
+// is the progress card now). Idempotent per month (kind community_monthly:YYYY-MM).
+// While the row is still queued it's UPDATED in place; once the worker has sent it, it's
 // left alone. Returns the outcome for UI feedback.
 export async function upsertCommunityMonthlyNotice(baseUrl: string, immediate = false) {
   const groupId = env.waCommunityGroupId;
@@ -111,37 +109,20 @@ export async function upsertCommunityMonthlyNotice(baseUrl: string, immediate = 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("en-CA");
   const kind = `community_monthly:${monthStart.slice(0, 7)}`;
 
-  // What's live for this calendar month?
-  const [{ count: reports }, { count: fees }] = await Promise.all([
-    db.from("scorecards").select("id", { count: "exact", head: true }).gte("generated_at", `${monthStart}T00:00:00Z`),
-    db.from("invoices").select("id", { count: "exact", head: true }).eq("period_month", monthStart),
-  ]);
-  const hasReports = (reports ?? 0) > 0;
-  const hasFees = (fees ?? 0) > 0;
-  if (!hasReports && !hasFees) return { posted: "skipped" as const };
+  // Fees-only notice — the monthly Growth Report was retired (the promotion exam
+  // is the progress card now, see src/lib/training.ts), so nothing report-related
+  // is posted here.
+  const { count: fees } = await db
+    .from("invoices")
+    .select("id", { count: "exact", head: true })
+    .eq("period_month", monthStart);
+  if ((fees ?? 0) === 0) return { posted: "skipped" as const };
 
-  let body: string;
-  let variant: "combined" | "reports" | "fees";
-  if (hasReports && hasFees) {
-    variant = "combined";
-    body =
-      `🏸 ${APP_NAME} — monthly update\n` +
-      `📊 New Growth Reports are ready\n` +
-      `💳 This month's fees have been issued\n` +
-      `Parents — log in to view your child's report and pay your invoice:\n${baseUrl}/parent`;
-  } else if (hasReports) {
-    variant = "reports";
-    body =
-      `🏸 ${APP_NAME}\n` +
-      `📊 New Growth Reports are ready.\n` +
-      `Parents — log in to view your child's full report:\n${baseUrl}/parent/scorecards`;
-  } else {
-    variant = "fees";
-    body =
-      `🏸 ${APP_NAME}\n` +
-      `💳 This month's fees have been issued.\n` +
-      `Parents — log in to view and pay your invoice:\n${baseUrl}/parent/invoices`;
-  }
+  const variant: "fees" = "fees";
+  let body =
+    `🏸 ${APP_NAME}\n` +
+    `💳 This month's fees have been issued.\n` +
+    `Parents — log in to view and pay your invoice:\n${baseUrl}/parent/invoices`;
 
   // Prepend the admin's free-text note (Announcements → Monthly notice intro) so
   // the reports/fees notice goes out as one personalised Community post.
@@ -178,8 +159,7 @@ export async function upsertCommunityMonthlyNotice(baseUrl: string, immediate = 
   }
 
   // Manual "Generate this month" path: post the blast NOW (one group message,
-  // low ban risk) instead of waiting on the cautious per-parent drip. Crons keep
-  // it queued so the reports + fees runs can combine into one notice.
+  // low ban risk) instead of waiting on the cautious per-parent drip.
   if (immediate) {
     const result = await getWhatsappProvider().send({ to: groupId, text: body });
     if (result.status === "sent") {

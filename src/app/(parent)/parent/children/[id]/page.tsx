@@ -18,8 +18,8 @@ function ageFromDob(dob: string | null): number | null {
   return Math.floor((Date.now() - d.getTime()) / 3.15576e10);
 }
 
-// Parent child page — a calm SUMMARY. Full invoice / attendance / assessment
-// tables live on the Fees, Schedule and Growth tabs; here we link out to them.
+// Parent child page — a calm SUMMARY. Full invoice / attendance / exam detail
+// lives on the Fees, Schedule and Progress Card tabs; here we link out to them.
 export default async function ChildDetailPage({
   params,
 }: {

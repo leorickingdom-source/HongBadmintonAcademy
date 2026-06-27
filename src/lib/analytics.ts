@@ -62,8 +62,8 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     { data: trendPayments },
     { data: invoices },
     { data: attendance },
-    { data: assessMonth },
-    { data: assessPrev },
+    { data: examsYear },
+    { data: examsPrevYear },
     { data: ledger },
     { data: messages },
     { data: activeEnrollments },
@@ -79,8 +79,8 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     supabase.from("payments").select("amount, created_at").gte("created_at", trendStart.toISOString()).eq("status", "succeeded").limit(10000),
     supabase.from("invoices").select("amount, status, period_month, due_date"),
     supabase.from("attendance").select("student_id, status, sessions(session_date, class_id)").limit(20000),
-    supabase.from("assessments").select("id, coach_id, student_id, overall_score").gte("assessed_on", ymd(mStart)).lt("assessed_on", ymd(mEnd)).limit(10000),
-    supabase.from("assessments").select("overall_score").gte("assessed_on", ymd(prevStart)).lt("assessed_on", ymd(mStart)).limit(10000),
+    supabase.from("level_exams").select("coach_id, total, technical, footwork, tactical, physical").gte("exam_date", `${now.getFullYear()}-01-01`).lt("exam_date", `${now.getFullYear() + 1}-01-01`).limit(10000),
+    supabase.from("level_exams").select("total").gte("exam_date", `${now.getFullYear() - 1}-01-01`).lt("exam_date", `${now.getFullYear()}-01-01`).limit(10000),
     supabase.from("reward_ledger").select("points, student_id, students(full_name)").gte("awarded_at", monthStartISO).lt("awarded_at", mEnd.toISOString()).limit(10000),
     supabase.from("messages").select("status").limit(10000),
     supabase.from("enrollments").select("student_id, class_id, classes(name, level, capacity)").eq("active", true).limit(10000),
@@ -155,34 +155,30 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     inactive30,
   };
 
-  // ── Skill: this-month avg, improvement vs prev, per-criterion breakdown ───
-  const monthScores = (assessMonth ?? []).map((a: any) => Number(a.overall_score)).filter((n: number) => !Number.isNaN(n));
-  const avgScore = monthScores.length ? round1(monthScores.reduce((x: number, y: number) => x + y, 0) / monthScores.length) : null;
-  const prevScores = (assessPrev ?? []).map((a: any) => Number(a.overall_score)).filter((n: number) => !Number.isNaN(n));
-  const avgPrev = prevScores.length ? prevScores.reduce((x: number, y: number) => x + y, 0) / prevScores.length : null;
+  // ── Exam scores: this-year avg, improvement vs last year, section breakdown ──
+  // (Promotion exams run quarterly, so the window is the calendar year, not the
+  // month — see src/lib/training.ts EXAM_MONTHS.)
+  const yearTotals = (examsYear ?? []).map((e: any) => Number(e.total)).filter((n: number) => !Number.isNaN(n));
+  const avgScore = yearTotals.length ? round1(yearTotals.reduce((x: number, y: number) => x + y, 0) / yearTotals.length) : null;
+  const prevTotals = (examsPrevYear ?? []).map((e: any) => Number(e.total)).filter((n: number) => !Number.isNaN(n));
+  const avgPrev = prevTotals.length ? prevTotals.reduce((x: number, y: number) => x + y, 0) / prevTotals.length : null;
   const skillImprovement = avgScore != null && avgPrev != null ? round1(avgScore - avgPrev) : null;
 
-  // Per-criterion breakdown from this month's assessment_scores.
-  const monthAssessIds = (assessMonth ?? []).map((a: any) => a.id);
+  // Average % per exam section across this year's exams (Technical 40 / Footwork
+  // 25 / Game-Tactical 20 / Physical-Attitude 15).
+  const SECTIONS: { key: "technical" | "footwork" | "tactical" | "physical"; name: string; max: number }[] = [
+    { key: "technical", name: "Technical", max: 40 },
+    { key: "footwork", name: "Footwork", max: 25 },
+    { key: "tactical", name: "Game / Tactical", max: 20 },
+    { key: "physical", name: "Physical / Attitude", max: 15 },
+  ];
   let skillsBreakdown: { name: string; pct: number }[] = [];
-  if (monthAssessIds.length) {
-    const { data: scores } = await supabase
-      .from("assessment_scores")
-      .select("criterion_name, score, max_score")
-      .in("assessment_id", monthAssessIds)
-      .limit(20000);
-    const byCrit = new Map<string, { sum: number; n: number }>();
-    for (const s of scores ?? []) {
-      const max = Number(s.max_score) || 1;
-      const pct = (Number(s.score) / max) * 100;
-      const e = byCrit.get(s.criterion_name) ?? { sum: 0, n: 0 };
-      e.sum += pct; e.n++;
-      byCrit.set(s.criterion_name, e);
-    }
-    skillsBreakdown = [...byCrit.entries()]
-      .map(([name, v]) => ({ name, pct: Math.round(v.sum / v.n) }))
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 8);
+  if (yearTotals.length) {
+    skillsBreakdown = SECTIONS.map((sec) => {
+      const pcts = (examsYear ?? []).map((e: any) => (Number(e[sec.key]) / sec.max) * 100);
+      const avg = pcts.length ? pcts.reduce((x: number, y: number) => x + y, 0) / pcts.length : 0;
+      return { name: sec.name, pct: Math.round(avg) };
+    });
   }
 
   // ── Coach performance ─────────────────────────────────────────────────────
@@ -195,11 +191,11 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
   const enrollCountByClass = new Map<string, number>();
   for (const e of activeEnrollments ?? []) enrollCountByClass.set(e.class_id, (enrollCountByClass.get(e.class_id) ?? 0) + 1);
   const skillByCoach = new Map<string, number[]>();
-  for (const a of assessMonth ?? []) {
-    if (!a.coach_id || a.overall_score == null) continue;
-    const arr = skillByCoach.get(a.coach_id) ?? [];
-    arr.push(Number(a.overall_score));
-    skillByCoach.set(a.coach_id, arr);
+  for (const e of examsYear ?? []) {
+    if (!e.coach_id || e.total == null) continue;
+    const arr = skillByCoach.get(e.coach_id) ?? [];
+    arr.push(Number(e.total));
+    skillByCoach.set(e.coach_id, arr);
   }
   const coachPerformance = (coachRows ?? []).map((co: any) => {
     const ids = classIdsFor(co.id);
@@ -303,7 +299,7 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     attendanceRate,
     attendanceBreakdown,
     avgScore,
-    assessmentCount: monthScores.length,
+    assessmentCount: yearTotals.length,
     skillImprovement,
     skillsBreakdown,
     invoiceStatus,

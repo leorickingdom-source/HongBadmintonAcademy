@@ -66,7 +66,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const band = bandFor(total);
   const levelLine = review
     ? `Level ${row.from_level} · Elite review`
-    : `Level ${row.from_level} → Level ${row.to_level} (${toName})`;
+    : `Level ${row.from_level} -> Level ${row.to_level} (${toName})`;
 
   const bytes = await renderExamPdf({
     academyName: APP_NAME,

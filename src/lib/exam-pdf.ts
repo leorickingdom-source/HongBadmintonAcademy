@@ -66,10 +66,24 @@ export async function renderExamPdf(data: ExamPdfData): Promise<Uint8Array> {
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const M = 48;
 
+  // pdf-lib's Helvetica is WinAnsi (Latin-1) — chars outside it (arrows, emoji,
+  // CJK) throw. Map common smart punctuation to ASCII and drop anything else
+  // beyond Latin-1 so coach-typed comments can never crash the render.
+  const clean = (s: string): string =>
+    (s ?? "")
+      .replace(/[‘’‚′]/g, "'")
+      .replace(/[“”„″]/g, '"')
+      .replace(/[–—―]/g, "-")
+      .replace(/[→➔➜]/g, "->")
+      .replace(/…/g, "...")
+      .replace(/[^\x00-\xFF]/g, "");
+
   const text = (s: string, x: number, y: number, size: number, f = font, color = INK) =>
-    page.drawText(s, { x, y, size, font: f, color });
-  const rightText = (s: string, x: number, y: number, size: number, f = font, color = INK) =>
-    page.drawText(s, { x: x - f.widthOfTextAtSize(s, size), y, size, font: f, color });
+    page.drawText(clean(s), { x, y, size, font: f, color });
+  const rightText = (s: string, x: number, y: number, size: number, f = font, color = INK) => {
+    const c = clean(s);
+    page.drawText(c, { x: x - f.widthOfTextAtSize(c, size), y, size, font: f, color });
+  };
 
   // ── Header band ──────────────────────────────────────────────
   page.drawRectangle({ x: 0, y: H - 104, width: W, height: 104, color: BRAND });
@@ -133,7 +147,7 @@ export async function renderExamPdf(data: ExamPdfData): Promise<Uint8Array> {
     if (y < 130) newPage();
     text("Coach comment", M, y, 12, bold);
     y -= 19;
-    for (const line of wrap(data.comment, font, 11, W - M * 2)) {
+    for (const line of wrap(clean(data.comment), font, 11, W - M * 2)) {
       if (y < 90) newPage();
       text(line, M, y, 11, font, INK);
       y -= 16;
@@ -144,7 +158,7 @@ export async function renderExamPdf(data: ExamPdfData): Promise<Uint8Array> {
     if (y < 110) newPage();
     text("Next target", M, y, 12, bold);
     y -= 19;
-    for (const line of wrap(data.nextTarget, font, 11, W - M * 2)) {
+    for (const line of wrap(clean(data.nextTarget), font, 11, W - M * 2)) {
       if (y < 90) newPage();
       text(line, M, y, 11, font, INK);
       y -= 16;

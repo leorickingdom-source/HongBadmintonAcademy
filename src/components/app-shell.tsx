@@ -25,6 +25,7 @@ function isActive(pathname: string, href: string): boolean {
 function navIcon(href: string) {
   if (href.includes("attendance")) return ClipboardCheck;
   if (href.includes("sessions")) return CalendarDays;
+  if (href.includes("children")) return Users;
   if (href.includes("people")) return Users;
   if (href.includes("classes")) return GraduationCap;
   if (href.includes("coaches")) return Users;

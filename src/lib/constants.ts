@@ -37,7 +37,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/coaches/summary", label: "Coaches & Payroll" },
       { href: "/admin/leaderboard", label: "Leaderboard" },
-      { href: "/admin/exams", label: "Level Exams" },
+      { href: "/admin/exams", label: "Exams" },
       { href: "/admin/marking-schemes", label: "Marking Schemes" },
       { href: "/admin/rewards", label: "Reward Rules" },
     ],
@@ -66,15 +66,19 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
 ];
 
 // "Dashboard" is pinned by AppShell, so it is omitted from these lists.
+// Order matters: the mobile bottom-tab bar shows Home + the first 4 items, so
+// the daily-use four (check-in, schedule, marking, payroll) stay on the bar and
+// the periodic Exams page lives one tap deeper in the menu.
 export const COACH_NAV: NavItem[] = [
   { href: "/coach/checkin", label: "Check-in & mark" },
   { href: "/coach/schedule", label: "Schedule" },
   { href: "/coach/marking", label: "Marking" },
-  { href: "/coach/exams", label: "Level Exams" },
   { href: "/coach/payroll", label: "My Payroll" },
+  { href: "/coach/exams", label: "Exams" },
 ];
 
 export const PARENT_NAV: NavItem[] = [
+  { href: "/parent/children", label: "My Children" },
   { href: "/parent/schedule", label: "Schedule" },
   { href: "/parent/scorecards", label: "Growth Reports" },
   { href: "/parent/invoices", label: "Fees & Payments" },

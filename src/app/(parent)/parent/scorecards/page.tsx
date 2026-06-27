@@ -66,7 +66,7 @@ export default async function ParentScorecardsPage() {
 
       {cards && cards.length > 0 ? (
         <div className="space-y-4">
-          {cards.map((c: any, i: number) => {
+          {cards.map((c: any) => {
             const s = c.summary ?? {};
             const dims: { name: string; category: GroupKey | null; score: number }[] = s.dimensions ?? [];
             const trend: { year: number; index: number }[] = s.trend ?? [];
@@ -108,7 +108,7 @@ export default async function ParentScorecardsPage() {
                 </div>
 
                 {/* Everything else is one tap away — keeps it light for non-tech parents. */}
-                <details open={i === 0} className="group mt-3">
+                <details className="group mt-3">
                   <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-emerald-700">
                     <span className="transition-transform group-open:rotate-90">▸</span> See full breakdown
                   </summary>

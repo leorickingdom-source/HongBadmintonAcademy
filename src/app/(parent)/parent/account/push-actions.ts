@@ -39,7 +39,7 @@ export async function sendTestParentPush(): Promise<{ ok: boolean; sent: number;
   const me = await requireParent();
   const r = await pushToUsers([me.id], {
     title: "Hong Badminton Academy",
-    body: "Notifications are on — you'll get growth reports and fee reminders here.",
+    body: "Notifications are on — you'll get exam results and fee reminders here.",
     url: "/parent",
     tag: "hba-test",
   });

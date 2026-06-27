@@ -21,7 +21,7 @@ function HowToTest({ it }: { it: ExamItem }) {
         {it.objective && <p><span className="font-semibold text-slate-600">Objective.</span> <span className="text-slate-600">{it.objective}</span></p>}
         {it.method && <p><span className="font-semibold text-slate-600">Method.</span> <span className="text-slate-600">{it.method}</span></p>}
         <p className="text-slate-500">
-          <span className="font-semibold text-slate-600">Score /5.</span>{" "}
+          <span className="font-semibold text-slate-600">Rubric (per 5 marks).</span>{" "}
           {PERFORMANCE_RUBRIC.map((r) => `${r.score} ${r.label.split(" — ")[1] ?? r.label}`).join(" · ")}
         </p>
         {it.pass && (

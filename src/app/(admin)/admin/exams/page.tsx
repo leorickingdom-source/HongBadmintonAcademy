@@ -96,7 +96,7 @@ export default async function AdminExamsPage() {
             </tbody>
           </Table>
         ) : (
-          <div className="p-5"><EmptyState message="No exams recorded yet. Coaches grade exams under Level Exams." /></div>
+          <div className="p-5"><EmptyState message="No exams recorded yet. Coaches grade them from their Exams page each window (Jan / Apr / Jul / Oct)." /></div>
         )}
       </Section>
     </div>

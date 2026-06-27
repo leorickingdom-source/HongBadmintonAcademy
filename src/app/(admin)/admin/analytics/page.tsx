@@ -32,7 +32,6 @@ export default async function AnalyticsPage({
   const thisM = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
 
   const rankTotal = Object.values(a.rankDistribution).reduce((x, y) => x + y, 0);
-  const RANK_BAR = { Beginner: "bg-green-500", Intermediate: "bg-blue-500", Advanced: "bg-amber-500", Elite: "bg-purple-500", Unranked: "bg-slate-400" } as Record<string, string>;
 
   return (
     <div className="space-y-6">

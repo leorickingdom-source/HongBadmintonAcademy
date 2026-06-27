@@ -38,6 +38,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/coaches/summary", label: "Coaches & Payroll" },
       { href: "/admin/leaderboard", label: "Leaderboard" },
       { href: "/admin/exams", label: "Exams & Progress" },
+      { href: "/admin/training", label: "Training Syllabus" },
       { href: "/admin/rewards", label: "Reward Rules" },
     ],
   },
@@ -56,7 +57,6 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/analytics", label: "Analytics" },
       { href: "/admin/reports", label: "Reports & Export" },
-      { href: "/admin/training", label: "Training Syllabus" },
       { href: "/admin/holidays", label: "Holidays" },
       { href: "/admin/settings", label: "Settings" },
     ],
@@ -64,9 +64,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
 ];
 
 // "Dashboard" is pinned by AppShell, so it is omitted from these lists.
-// Order matters: the mobile bottom-tab bar shows Home + the first 4 items, so
-// the daily-use four (check-in, schedule, marking, payroll) stay on the bar and
-// the periodic Exams page lives one tap deeper in the menu.
+// Order matters: the mobile bottom-tab bar shows Home + these items.
 export const COACH_NAV: NavItem[] = [
   { href: "/coach/checkin", label: "Check-in & mark" },
   { href: "/coach/schedule", label: "Schedule" },

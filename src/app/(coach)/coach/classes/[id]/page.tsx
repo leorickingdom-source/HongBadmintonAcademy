@@ -16,7 +16,7 @@ function monthBounds() {
 }
 
 // Coach class detail — roster + this-month attendance + level at a glance,
-// each student linking into their marking page. Mirrors the parent child-detail
+// each student linking into their exam grading page. Mirrors the parent child-detail
 // pattern. A coach can only open their own classes.
 export default async function CoachClassDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await requireRole("coach");

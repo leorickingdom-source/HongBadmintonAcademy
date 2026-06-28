@@ -9,10 +9,11 @@ import { recordRankChange } from "@/lib/rank-history";
 import { createNotifications, notifyAdmins } from "@/lib/notifications";
 import { pushToUsers } from "@/lib/push";
 import {
-  examSpecFor, bandFor, defaultDecision, levelName,
+  bandFor, defaultDecision, levelName,
   examWindowLabel, getExamEligibility,
   type Decision, type SectionKey,
 } from "@/lib/training";
+import { getExamSpecMerged } from "@/lib/syllabus";
 
 function err(studentId: string, message: string): never {
   redirect(`/coach/exams/${studentId}?error=${encodeURIComponent(message)}`);
@@ -27,7 +28,7 @@ export async function createLevelExam(formData: FormData) {
   const me = await requireRole("coach");
   const student_id = String(formData.get("student_id"));
   const from_level = Number(formData.get("from_level"));
-  const spec = examSpecFor(from_level);
+  const spec = await getExamSpecMerged(from_level);
   if (!spec) err(student_id, "No exam defined for this level");
 
   // Build per-item snapshot + section subtotals from the posted scores.

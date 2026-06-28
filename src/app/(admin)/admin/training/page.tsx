@@ -1,12 +1,13 @@
 import { requireRole } from "@/lib/auth";
 import {
-  PageHeader, Section, Field, Input, Button, Collapsible, cn,
+  PageHeader, Section, Field, Input, Button, cn,
 } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { TrainingSyllabus } from "@/components/training-syllabus";
-import { TRAINING_LEVELS, EXAM_SPECS, levelActiveClass, levelInkClass } from "@/lib/training";
+import { ExamItemsEditor } from "@/components/exam-items-editor";
+import { TRAINING_LEVELS, levelActiveClass, levelInkClass } from "@/lib/training";
 import { loadSyllabus } from "@/lib/syllabus";
-import { saveLevelEdits, saveExamLabelEdits, resetSyllabusOverrides } from "./actions";
+import { saveLevelEdits, resetSyllabusOverrides } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,13 +21,16 @@ export default async function AdminTrainingPage({
   const { levels: mergedLevels, exams: mergedExams } = await loadSyllabus();
 
   // Build current-effective values keyed for easy form lookup. Use the merged
-  // version as defaultValue so the textarea/input reflects any active override.
+  // version as defaultValue so the input reflects any active override.
   const levelByNum = new Map(mergedLevels.map((l) => [l.level, l]));
-  const examItemLabel = (fl: number, sk: string, i: number) => {
-    const spec = mergedExams.find((e) => e.fromLevel === fl);
-    const sec = spec?.sections.find((s) => s.key === sk);
-    return sec?.items[i]?.label ?? "";
-  };
+  // Trimmed shape for the (client) item editor — no guidance fields.
+  const editorExams = mergedExams.map((e) => ({
+    fromLevel: e.fromLevel,
+    toLevel: e.toLevel,
+    title: e.title,
+    review: e.review,
+    sections: e.sections.map((s) => ({ key: s.key, label: s.label, max: s.max, items: s.items.map((it) => ({ label: it.label, max: it.max })) })),
+  }));
 
   return (
     <div className="space-y-6">
@@ -68,41 +72,8 @@ export default async function AdminTrainingPage({
         </form>
       </Section>
 
-      <Section title="Edit exam-item labels" description="Rename items the coach sees on the grading form. Item maxes are kept stable on purpose.">
-        <form action={saveExamLabelEdits} className="space-y-4">
-          {EXAM_SPECS.map((spec) => (
-            <Collapsible
-              key={spec.fromLevel}
-              title={`${spec.title} (Level ${spec.fromLevel}${spec.review ? " · Elite review" : ` → ${spec.toLevel}`})`}
-              defaultOpen={false}
-            >
-              <div className="space-y-4 p-4">
-                {spec.sections.map((sec) => (
-                  <div key={sec.key}>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{sec.label}</span>
-                      <span className="text-xs text-slate-400">/ {sec.max}</span>
-                    </div>
-                    <div className="space-y-2">
-                      {sec.items.map((it, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <Input
-                            name={`ex_${spec.fromLevel}_${sec.key}_${i}`}
-                            defaultValue={examItemLabel(spec.fromLevel, sec.key, i)}
-                            placeholder={it.label}
-                            className="flex-1"
-                          />
-                          <span className="w-10 shrink-0 text-right text-xs text-slate-400">{it.max} pt</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Collapsible>
-          ))}
-          <Button type="submit">Save exam labels</Button>
-        </form>
+      <Section title="Edit exam items" description="Add, remove, rename or re-mark the items coaches grade. Each section must still total its fixed cap (40 / 25 / 20 / 15).">
+        <ExamItemsEditor exams={editorExams} />
       </Section>
 
       <Section title="Current (merged) syllabus" description="What students, parents and coaches see after your overrides.">

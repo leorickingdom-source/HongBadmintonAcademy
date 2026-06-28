@@ -65,7 +65,7 @@ export default async function CoachExamGradePage({
         description={
           spec?.review
             ? `Level ${fromLevel} Elite review · ${win.label}`
-            : `Level ${fromLevel} → ${fromLevel + 1} promotion exam · ${win.label}`
+            : `Level ${fromLevel} → ${fromLevel + 1} assessment · ${win.label}`
         }
       />
 
@@ -78,13 +78,13 @@ export default async function CoachExamGradePage({
       </div>
 
       {saved && (
-        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">Exam result saved.</p>
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">Assessment saved. An admin will review + approve any promotion.</p>
       )}
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className={`rounded-xl border p-3 text-sm shadow-sm ${elig.eligible ? "border-green-200 bg-green-50 text-green-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
         <div className="font-medium">
-          {elig.eligible ? "✓ Eligible for promotion exam" : "⚠ Not yet eligible for promotion exam"}
+          {elig.eligible ? "✓ Eligible for assessment" : "⚠ Not yet eligible for assessment"}
         </div>
         <div className="mt-0.5 text-xs">
           Attendance {elig.attendedPct != null ? `${elig.attendedPct}%` : "—"} · {elig.attended}/{elig.total} sessions in the last 90 days.
@@ -94,11 +94,11 @@ export default async function CoachExamGradePage({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Section title={spec ? spec.title : "Exam"} description="Score each item 0 to its max. Total and pass band update live.">
+          <Section title={spec ? spec.title : "Assessment"} description="Score each item 0 to its max. Total and band update live.">
             {!spec ? (
-              <EmptyState message="No exam rubric defined for this level." />
+              <EmptyState message="No assessment rubric defined for this level." />
             ) : !elig.eligible ? (
-              <EmptyState message="Cannot grade an exam until attendance reaches the minimum. Help the student get to class, then come back." />
+              <EmptyState message="Cannot assess until attendance reaches the minimum. Help the student get to class, then come back." />
             ) : (
               <ExamForm studentId={student.id} spec={spec} />
             )}
@@ -113,12 +113,12 @@ export default async function CoachExamGradePage({
               <li className="flex items-center justify-between"><span className="text-slate-600">60–69</span><Badge tone="yellow">Borderline</Badge></li>
               <li className="flex items-center justify-between"><span className="text-slate-600">Below 60</span><Badge tone="red">Fail</Badge></li>
             </ul>
-            <p className="mt-3 text-xs text-slate-500">≥ 70 promotes to the next level. Borderline retests in 1–2 months.</p>
+            <p className="mt-3 text-xs text-slate-500">≥ 70 recommends a promotion (an admin approves it). Borderline retests in 1–2 months.</p>
           </Section>
         </div>
       </div>
 
-      <Section title="Exam history" flush>
+      <Section title="Assessment history" flush>
         {history && history.length > 0 ? (
           <Table>
             <thead>
@@ -139,7 +139,7 @@ export default async function CoachExamGradePage({
             </tbody>
           </Table>
         ) : (
-          <div className="p-5"><EmptyState message="No exams recorded for this student yet." /></div>
+          <div className="p-5"><EmptyState message="No assessments recorded for this student yet." /></div>
         )}
       </Section>
     </div>

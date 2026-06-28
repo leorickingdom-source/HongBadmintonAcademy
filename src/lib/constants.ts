@@ -68,7 +68,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
 export const COACH_NAV: NavItem[] = [
   { href: "/coach/checkin", label: "Check-in & mark" },
   { href: "/coach/schedule", label: "Schedule" },
-  { href: "/coach/exams", label: "Exams" },
+  { href: "/coach/exams", label: "Assessments" },
   { href: "/coach/payroll", label: "My Payroll" },
 ];
 

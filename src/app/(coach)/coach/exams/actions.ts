@@ -5,9 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { recordRankChange } from "@/lib/rank-history";
-import { createNotifications, notifyAdmins } from "@/lib/notifications";
-import { pushToUsers } from "@/lib/push";
+import { notifyAdmins } from "@/lib/notifications";
 import {
   bandFor, defaultDecision, levelName,
   examWindowLabel, getExamEligibility,
@@ -81,28 +79,17 @@ export async function createLevelExam(formData: FormData) {
   });
   if (error) err(student_id, error.message);
 
-  // Promote only when the coach decided so AND a real next level exists (not the
-  // L6 Elite review). Service-role: bump level + log the level change, notify.
+  // The coach only MARKS — promotion is admin-only. When the coach recommends a
+  // promotion (≥70, not the L6 review), nudge the admins to review + promote on
+  // /admin/exams. No level change + no parent "level up" happens here.
   if (decision === "promote" && !spec.review && spec.toLevel <= 6) {
     const db = createAdminClient();
-    const { data: s } = await db
-      .from("students")
-      .select("full_name, parent_id")
-      .eq("id", student_id)
-      .maybeSingle();
-
-    await db.from("students").update({ level: spec.toLevel }).eq("id", student_id);
-    await recordRankChange(db, { student_id, from: levelName(from_level), to: levelName(spec.toLevel) });
-
-    const name = (s as { full_name?: string } | null)?.full_name ?? "Your child";
-    const parentId = (s as { parent_id?: string | null } | null)?.parent_id ?? null;
-    const body = `${name} passed the Level ${from_level} exam (${total}/100) — now Level ${spec.toLevel}: ${levelName(spec.toLevel)}.`;
-    await pushToUsers([parentId], { title: "🎉 Level up!", body, url: "/parent", tag: "level" });
-    await createNotifications([parentId], { type: "level", title: "🎉 Level up!", body, url: "/parent" });
+    const { data: s } = await db.from("students").select("full_name").eq("id", student_id).maybeSingle();
+    const name = (s as { full_name?: string } | null)?.full_name ?? "A student";
     await notifyAdmins({
-      type: "level",
-      title: "Student promoted",
-      body: `${name} → Level ${spec.toLevel} (${levelName(spec.toLevel)})`,
+      type: "exam",
+      title: "Promotion recommended",
+      body: `${name} scored ${total}/100 — coach recommends Level ${spec.toLevel} (${levelName(spec.toLevel)}). Review + promote.`,
       url: "/admin/exams",
     });
   }

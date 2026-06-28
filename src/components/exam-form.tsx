@@ -134,7 +134,7 @@ export function ExamForm({
 
       {/* Decision */}
       <div className="space-y-1.5">
-        <span className="text-sm font-medium text-slate-700">Promotion decision</span>
+        <span className="text-sm font-medium text-slate-700">Recommendation <span className="font-normal text-slate-400">(admin approves the promotion)</span></span>
         <div className="flex flex-wrap gap-2">
           {decisionOptions.map((d) => {
             const active = effectiveDecision === d;
@@ -177,7 +177,7 @@ export function ExamForm({
         />
       </div>
 
-      <button type="submit" className={buttonClass("primary")}>Save exam result</button>
+      <button type="submit" className={buttonClass("primary")}>Save assessment</button>
     </form>
   );
 }

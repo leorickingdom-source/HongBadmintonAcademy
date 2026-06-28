@@ -76,12 +76,12 @@ export default async function CoachExamsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Level exams"
-        description="Promotion exams run quarterly — January, April, July, October. Grade a student on the 100-point rubric; ≥70 promotes them to the next level."
+        title="Assessments"
+        description="Assess a student on the 100-point rubric. Windows run quarterly — January, April, July, October. ≥70 recommends a promotion; an admin approves it."
       />
 
       <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border p-3 text-sm shadow-sm ${examMonth ? "border-green-300 bg-green-50" : "border-slate-200 bg-white"}`}>
-        <span className="font-medium text-slate-800">{examMonth ? "🏸 Exam window is open" : "Next exam window"}</span>
+        <span className="font-medium text-slate-800">{examMonth ? "🏸 Assessment window is open" : "Next window"}</span>
         <span className={examMonth ? "text-green-700" : "text-slate-500"}>{win.label}</span>
         <span className="text-xs text-slate-400">Requires ≥{EXAM_ATTENDANCE_MIN_PCT}% attendance over the last 90 days.</span>
       </div>
@@ -123,7 +123,7 @@ export default async function CoachExamsPage() {
                       className="!px-3 !py-1.5 text-xs"
                       title={elig?.reason ?? undefined}
                     >
-                      {elig?.eligible ? "Exam" : "View"}
+                      {elig?.eligible ? "Assess" : "View"}
                     </LinkButton>
                   </div>
                 </li>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, Badge, cn } from "@/components/ui";
-import { Clock, MapPin } from "lucide-react";
+import { Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatTime } from "@/lib/format";
 import { MonthCalendar } from "@/components/month-calendar";
 import { loadHolidayMap } from "@/lib/holidays-server";
@@ -54,6 +54,10 @@ export default async function CoachSchedulePage({
   const [y, m] = monthStr.split("-").map(Number);
   const start = `${monthStr}-01`;
   const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  const prevM = `${m === 1 ? y - 1 : y}-${String(m === 1 ? 12 : m - 1).padStart(2, "0")}`;
+  const nextM = `${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}`;
+  const thisM = todayMYT().slice(0, 7);
+  const monthLabelStr = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-MY", { month: "long", year: "numeric" });
 
   const [{ data: sessions }, holidays] = await Promise.all([
     classIds.length
@@ -77,11 +81,26 @@ export default async function CoachSchedulePage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My schedule" description="Your classes' sessions, month by month." />
+      <PageHeader title="My schedule" description="Your classes' sessions, month by month — browse back for past classes." />
       {classIds.length === 0 ? (
         <EmptyState message="You're not assigned to any classes yet." />
       ) : (
         <>
+        {/* Month nav — browse past + future months on any device. */}
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+          <Link href={`/coach/schedule?month=${prevM}`} aria-label="Previous month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
+          <div className="text-center">
+            <div className="text-sm font-semibold text-slate-900">{monthLabelStr}</div>
+            {monthStr !== thisM && (
+              <Link href={`/coach/schedule?month=${thisM}`} className="text-xs font-medium text-green-700 hover:underline">Back to this month</Link>
+            )}
+          </div>
+          <Link href={`/coach/schedule?month=${nextM}`} aria-label="Next month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+            <ChevronRight className="h-5 w-5" />
+          </Link>
+        </div>
           {/* Phone: a readable list — upcoming first, earlier sessions collapsed.
               Tap a row for the full session + roster. */}
           <div className="md:hidden">

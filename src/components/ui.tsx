@@ -202,10 +202,27 @@ export function StatCard({
   );
 }
 
-export function EmptyState({ message }: { message: string }) {
+export function EmptyState({
+  message,
+  icon,
+  hint,
+  action,
+}: {
+  message: string;
+  icon?: ReactNode;
+  hint?: string;
+  action?: ReactNode;
+}) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
-      {message}
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-6 py-9 text-center">
+      {icon && (
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 ring-1 ring-slate-200">
+          {icon}
+        </span>
+      )}
+      <p className="text-sm font-medium text-slate-600">{message}</p>
+      {hint && <p className="max-w-sm text-xs text-slate-400">{hint}</p>}
+      {action && <div className="mt-1">{action}</div>}
     </div>
   );
 }

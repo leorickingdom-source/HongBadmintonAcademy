@@ -1,3 +1,4 @@
+import { CalendarOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Field, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -77,7 +78,13 @@ export default async function HolidaysPage({
             </tbody>
           </Table>
         ) : (
-          <div className="px-5 pt-5"><EmptyState message="No school holidays added yet." /></div>
+          <div className="p-5">
+            <EmptyState
+              icon={<CalendarOff className="h-5 w-5" />}
+              message="No school holidays yet"
+              hint="Add term breaks or closures above — sessions on those dates are skipped when you generate the schedule, and parents see them too."
+            />
+          </div>
         )}
       </Section>
 

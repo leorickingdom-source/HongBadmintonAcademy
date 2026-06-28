@@ -1,3 +1,4 @@
+import { CircleCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Collapsible, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
@@ -62,7 +63,7 @@ export default async function MessagesPage() {
             </tbody>
           </Table>
         ) : (
-          <div className="p-5"><EmptyState message="Nothing queued — all caught up." /></div>
+          <div className="p-5"><EmptyState icon={<CircleCheck className="h-5 w-5 text-green-500" />} message="All caught up" hint="Nothing queued to send." /></div>
         )}
       </Collapsible>
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState, Avatar, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -72,7 +73,16 @@ export async function StudentsList({
 
   const filtered = Boolean(search || status || rank);
   if (total === 0) {
-    return <EmptyState message={filtered ? "No students match these filters." : "No students yet. Add your first student."} />;
+    return filtered ? (
+      <EmptyState message="No students match these filters." />
+    ) : (
+      <EmptyState
+        icon={<Users className="h-5 w-5" />}
+        message="No students yet"
+        hint="Add your first student to start taking attendance, grading exams and billing fees."
+        action={<LinkButton href="/admin/students/new">+ Add student</LinkButton>}
+      />
+    );
   }
 
   return (

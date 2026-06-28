@@ -1,4 +1,4 @@
-import { Banknote, Clock } from "lucide-react";
+import { Banknote, Clock, CircleCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, Avatar, Badge, EmptyState, cn } from "@/components/ui";
 import { WhatsAppButton } from "@/components/whatsapp-button";
@@ -70,7 +70,7 @@ export default async function CollectionsPage() {
 
       <Section title="Overdue accounts" description="Oldest first" flush>
         {rows.length === 0 ? (
-          <div className="p-5"><EmptyState message="Nothing overdue — all caught up." /></div>
+          <div className="p-5"><EmptyState icon={<CircleCheck className="h-5 w-5 text-green-500" />} message="All caught up" hint="No overdue accounts right now." /></div>
         ) : (
           <ul className="divide-y divide-slate-100">
             {rows.map((i) => {

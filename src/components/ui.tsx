@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Inbox } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
 export function cn(...parts: (string | false | null | undefined)[]): string {
@@ -209,15 +210,17 @@ export function EmptyState({
   action,
 }: {
   message: string;
-  icon?: ReactNode;
+  /** Custom icon, or `false` to hide. Defaults to a neutral inbox. */
+  icon?: ReactNode | false;
   hint?: string;
   action?: ReactNode;
 }) {
+  const showIcon = icon !== false;
   return (
     <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-6 py-9 text-center">
-      {icon && (
+      {showIcon && (
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 ring-1 ring-slate-200">
-          {icon}
+          {icon || <Inbox className="h-5 w-5" />}
         </span>
       )}
       <p className="text-sm font-medium text-slate-600">{message}</p>

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Badge, EmptyState, LinkButton } from "@/components/ui";
 import { nextExamWindow, isExamMonth, getExamEligibility, EXAM_ATTENDANCE_MIN_PCT } from "@/lib/training";
 import { loadSyllabus } from "@/lib/syllabus";
+import { dict } from "@/lib/i18n";
 import { coachClassIds } from "../_data";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ function initials(name: string): string {
 
 export default async function CoachExamsPage() {
   const me = await requireRole("coach");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const classIds = await coachClassIds(supabase, me.id);
 
@@ -76,20 +78,20 @@ export default async function CoachExamsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Assessments"
-        description="Assess a student on the 100-point rubric. Windows run quarterly — January, April, July, October. ≥70 recommends a promotion; an admin approves it."
+        title={L.coach_assess}
+        description={L.coach_exams_desc}
       />
 
       <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border p-3 text-sm shadow-sm ${examMonth ? "border-green-300 bg-green-50" : "border-slate-200 bg-white"}`}>
-        <span className="font-medium text-slate-800">{examMonth ? "🏸 Assessment window is open" : "Next window"}</span>
+        <span className="font-medium text-slate-800">{examMonth ? L.window_open : L.next_window}</span>
         <span className={examMonth ? "text-green-700" : "text-slate-500"}>{win.label}</span>
-        <span className="text-xs text-slate-400">Requires ≥{EXAM_ATTENDANCE_MIN_PCT}% attendance over the last 90 days.</span>
+        <span className="text-xs text-slate-400">{L.requires_att_prefix}{EXAM_ATTENDANCE_MIN_PCT}{L.requires_att_suffix}</span>
       </div>
 
       {list.length === 0 ? (
-        <EmptyState message="No students assigned to your classes yet." />
+        <EmptyState message={L.no_students_assigned} />
       ) : (
-        <Section title={`Your students (${list.length})`} flush>
+        <Section title={`${L.your_students} (${list.length})`} flush>
           <ul className="divide-y divide-slate-100">
             {list.map((s) => {
               const ex = lastExam.get(s.id);
@@ -102,7 +104,7 @@ export default async function CoachExamsPage() {
                   <div className="min-w-0 flex-1">
                     <Link href={`/coach/exams/${s.id}`} className="block truncate font-medium text-slate-900 hover:text-green-700 hover:underline">{s.full_name}</Link>
                     <div className="truncate text-xs text-slate-400">
-                      {s.level ? `Level ${s.level} · ${levelName(s.level)}` : "Not yet leveled"}
+                      {s.level ? `${L.level_word} ${s.level} · ${levelName(s.level)}` : L.not_leveled}
                       {s.classes.length > 0 ? ` · ${s.classes.join(" · ")}` : ""}
                     </div>
                   </div>
@@ -123,7 +125,7 @@ export default async function CoachExamsPage() {
                       className="!px-3 !py-1.5 text-xs"
                       title={elig?.reason ?? undefined}
                     >
-                      {elig?.eligible ? "Assess" : "View"}
+                      {elig?.eligible ? L.assess_btn : L.view_btn}
                     </LinkButton>
                   </div>
                 </li>

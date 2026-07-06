@@ -9,6 +9,7 @@ import { formatDate, formatTime } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
 import type { AttendanceStatus } from "@/lib/types";
 import { requestCoachLeave, withdrawCoachLeave } from "./leave-actions";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function CoachSessionDetailPage({
   const { id } = await params;
   const { error, leave } = await searchParams;
   const me = await requireRole("coach");
+  const L = dict(me.locale);
   const supabase = await createClient();
 
   const { data: session } = await supabase
@@ -60,7 +62,7 @@ export default async function CoachSessionDetailPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title={cls?.name ?? "Session"}
+        title={cls?.name ?? L.session_word}
         description={
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {cls?.level && (
@@ -77,13 +79,13 @@ export default async function CoachSessionDetailPage({
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {leave === "sent" && (
         <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          Leave request sent — the admin will confirm.
+          {L.leave_sent_admin}
         </p>
       )}
 
       {isToday && !canceled && (
         <div className="flex flex-wrap gap-2">
-          <LinkButton href="/coach/checkin">Open check-in →</LinkButton>
+          <LinkButton href="/coach/checkin">{L.open_checkin} →</LinkButton>
         </div>
       )}
 
@@ -91,44 +93,45 @@ export default async function CoachSessionDetailPage({
           anchors the "Leave" deep-link from the coach schedule rows. */}
       {!canceled && s.session_date >= todayMYT() && (
         <div id="leave" className="scroll-mt-20">
-        <Section title="Can't make this session?">
+        <Section title={L.cant_make_session}>
           {myLeave ? (
             <div className="flex flex-wrap items-center gap-3">
               <Badge tone={myLeave.status === "approved" ? "green" : myLeave.status === "declined" ? "red" : "yellow"}>
-                leave {myLeave.status}
+                {L.leave_prefix} {myLeave.status}
               </Badge>
               {myLeave.status === "pending" && (
                 <form action={withdrawCoachLeave}>
                   <input type="hidden" name="session_id" value={id} />
-                  <SubmitButton variant="secondary" pendingText="…">Withdraw request</SubmitButton>
+                  <SubmitButton variant="secondary" pendingText="…">{L.withdraw_request}</SubmitButton>
                 </form>
               )}
             </div>
           ) : (
             <form action={requestCoachLeave} className="flex flex-wrap items-center gap-2">
               <input type="hidden" name="session_id" value={id} />
-              <Input name="reason" placeholder="Reason (optional)" maxLength={300} className="w-72" />
-              <SubmitButton variant="secondary" pendingText="Sending…">Request leave</SubmitButton>
+              <Input name="reason" placeholder={L.reason_optional} maxLength={300} className="w-full sm:w-72" />
+              <SubmitButton variant="secondary" pendingText="Sending…">{L.request_leave}</SubmitButton>
             </form>
           )}
         </Section>
         </div>
       )}
 
-      <Section title={`Roster (${roster.length}) · ${marked} marked`} flush>
+      <Section title={`${L.roster_word} (${roster.length}) · ${marked} ${L.marked_word}`} flush>
         {roster.length > 0 ? (
           <Table>
             <thead>
-              <tr><Th>Student</Th><Th>Attendance this session</Th></tr>
+              <tr><Th>{L.student_col}</Th><Th>{L.attendance_this_session}</Th></tr>
             </thead>
             <tbody>
               {roster.map((e) => {
                 const st = byStudent.get(e.student_id);
+                const stLabel = st === "present" ? L.att_present : st === "late" ? L.att_late : st === "absent" ? L.att_absent : st === "excused" ? L.att_excused : st;
                 return (
                   <tr key={e.student_id} className="hover:bg-slate-50">
-                    <Td className="font-medium text-slate-900">{e.students?.full_name ?? e.student_id}</Td>
-                    <Td>
-                      {st ? <Badge tone={ATT_TONE[st as AttendanceStatus] ?? "slate"}>{st}</Badge> : <span className="text-slate-400">not marked</span>}
+                    <Td label={L.student_col} className="font-medium text-slate-900">{e.students?.full_name ?? e.student_id}</Td>
+                    <Td label={L.attendance_this_session}>
+                      {st ? <Badge tone={ATT_TONE[st as AttendanceStatus] ?? "slate"}>{stLabel}</Badge> : <span className="text-slate-400">{L.not_marked}</span>}
                     </Td>
                   </tr>
                 );
@@ -136,7 +139,7 @@ export default async function CoachSessionDetailPage({
             </tbody>
           </Table>
         ) : (
-          <div className="px-5 pt-5"><EmptyState message="No students enrolled in this class." /></div>
+          <div className="px-5 pt-5"><EmptyState message={L.no_enrolled_class} /></div>
         )}
       </Section>
     </div>

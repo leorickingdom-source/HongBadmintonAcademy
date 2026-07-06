@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, Badge, Table, Th, Td, cn } from "@/components/ui";
 import { Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatTime } from "@/lib/format";
+import { formatDate, formatTime } from "@/lib/format";
 import { MonthCalendar } from "@/components/month-calendar";
 import { loadHolidayMap } from "@/lib/holidays-server";
 import { dict } from "@/lib/i18n";
@@ -79,7 +79,7 @@ export default async function CoachSchedulePage({
     classIds.length
       ? supabase
           .from("sessions")
-          .select("id, session_date, start_time, end_time, location, status, classes(name, level)")
+          .select("id, class_id, session_date, start_time, end_time, location, status, classes(name, level)")
           .in("class_id", classIds)
           .gte("session_date", start)
           .lte("session_date", end)
@@ -94,6 +94,19 @@ export default async function CoachSchedulePage({
   const today = todayMYT();
   const upcoming = all.filter((s) => s.session_date >= today);
   const past = all.filter((s) => s.session_date < today);
+
+  // Table view mirrors the admin coverage table: per session, how much of the
+  // roster the coach has marked. Only fetched when the table is actually shown.
+  const markedBySession = new Map<string, number>();
+  const rosterByClass = new Map<string, number>();
+  if (view === "table" && all.length) {
+    const [{ data: attRows }, { data: enrRows }] = await Promise.all([
+      supabase.from("attendance").select("session_id").in("session_id", all.map((s) => s.id)),
+      supabase.from("enrollments").select("class_id").eq("active", true).in("class_id", classIds),
+    ]);
+    for (const a of (attRows ?? []) as any[]) markedBySession.set(a.session_id, (markedBySession.get(a.session_id) ?? 0) + 1);
+    for (const e of (enrRows ?? []) as any[]) rosterByClass.set(e.class_id, (rosterByClass.get(e.class_id) ?? 0) + 1);
+  }
 
   return (
     <div className="space-y-6">
@@ -130,29 +143,34 @@ export default async function CoachSchedulePage({
               <Table>
                 <thead>
                   <tr>
-                    <Th>{L.col_date}</Th>
-                    <Th>{L.col_class}</Th>
-                    <Th>{L.col_time}</Th>
-                    <Th>{L.col_place}</Th>
-                    <Th>{L.col_status}</Th>
+                    <Th>{L.col_date}</Th><Th>{L.col_class}</Th><Th>{L.col_place}</Th><Th>{L.col_status}</Th><Th>{L.col_marked}</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {all.map((s: any) => {
-                    const d = new Date(`${s.session_date}T00:00:00`);
                     const upcoming = s.session_date >= today;
+                    const marked = markedBySession.get(s.id) ?? 0;
+                    const roster = rosterByClass.get(s.class_id) ?? 0;
                     return (
-                      <tr key={s.id} className={cn(!upcoming && "opacity-60")}>
-                        <Td label={L.col_date}>
-                          <Link href={`/coach/sessions/${s.id}`} className="font-medium text-slate-900 hover:text-emerald-700">
-                            {d.toLocaleDateString("en-MY", { weekday: "short", day: "numeric", month: "short" })}
+                      <tr key={s.id} className="hover:bg-slate-50">
+                        <Td className="whitespace-nowrap font-medium text-slate-900" label={L.col_date}>
+                          <Link href={`/coach/sessions/${s.id}`} className="hover:text-green-700 hover:underline">
+                            {formatDate(s.session_date)} · {formatTime(s.start_time)}
                           </Link>
                         </Td>
-                        <Td label={L.col_class}>{s.classes?.name ?? "Class"}</Td>
-                        <Td label={L.col_time}>{formatTime(s.start_time)}–{formatTime(s.end_time)}</Td>
-                        <Td label={L.col_place}>{s.location ?? "—"}</Td>
+                        <Td className="text-slate-600" label={L.col_class}>{s.classes?.name ?? "—"}</Td>
+                        <Td className="text-slate-500" label={L.col_place}>{s.location ?? "—"}</Td>
                         <Td label={L.col_status}>
                           <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : upcoming ? "blue" : "slate"}>{s.status}</Badge>
+                        </Td>
+                        <Td label={L.col_marked}>
+                          {upcoming ? (
+                            <span className="text-slate-300">—</span>
+                          ) : (
+                            <span className={cn("font-medium", marked === 0 ? "text-red-600" : marked >= roster && roster > 0 ? "text-green-600" : "text-amber-600")}>
+                              {marked === 0 ? L.not_marked_word : `${marked}/${roster || marked}`}
+                            </span>
+                          )}
                         </Td>
                       </tr>
                     );

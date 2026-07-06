@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, TrendingUp, Calendar, CreditCard, Clock, MapPin, ChevronRight } from "lucide-react";
+import { ArrowLeft, Clock, MapPin } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Avatar, Card, Badge, cn } from "@/components/ui";
@@ -126,12 +126,6 @@ export default async function ChildDetailPage({
   const branchName = (student as any).branches?.name ?? null;
   const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null, branchName ? `${L.branch}: ${branchName}` : null].filter(Boolean).join(" · ") || "No class enrolment yet";
 
-  const LINKS = [
-    { href: "/parent/scorecards", label: L.view_progress, Icon: TrendingUp },
-    { href: "/parent/schedule", label: L.all_sessions, Icon: Calendar },
-    { href: "/parent/invoices", label: L.fees_payments, Icon: CreditCard },
-  ];
-
   return (
     <div className="space-y-4">
       <Link href="/parent" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900">
@@ -153,9 +147,6 @@ export default async function ChildDetailPage({
             <div className="mt-0.5 text-sm text-slate-500">{subtitle}</div>
           </div>
         </div>
-        <div className="mt-2 text-xs text-slate-400">
-          {student.dob ? `Born ${formatDate(student.dob)} · ` : ""}Member since {formatDate((student as any).created_at)}
-        </div>
       </Card>
 
       {/* ── 3 quick stats ────────────────────────────────────────────────── */}
@@ -173,14 +164,6 @@ export default async function ChildDetailPage({
           <div className="mt-1 text-xs text-slate-500">{L.streak_label}</div>
         </div>
       </div>
-
-      {/* ── Assigned coach (parent-editable) ─────────────────────────────── */}
-      <ChildCoachPicker
-        studentId={student.id}
-        coaches={branchCoaches ?? []}
-        current={(student as any).coach_id ?? null}
-        labels={{ title: L.your_coach, hint: L.choose_coach_hint, none: L.none, saved: L.saved_tick }}
-      />
 
       {/* ── Training level & exams ───────────────────────────────────────── */}
       <Card className="p-5">
@@ -221,7 +204,7 @@ export default async function ChildDetailPage({
           </div>
         ) : (
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
-            No promotion exam yet. Exams run quarterly — January, April, July, October.
+            No promotion exam yet — first one around {examWin.label}.
           </div>
         )}
       </Card>
@@ -287,20 +270,13 @@ export default async function ChildDetailPage({
         </Card>
       )}
 
-      {/* ── Links out to the detail tabs ─────────────────────────────────── */}
-      <Card className="overflow-hidden">
-        <div className="divide-y divide-slate-100">
-          {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="flex items-center justify-between px-4 py-3.5 text-sm font-medium text-slate-900 hover:bg-slate-50">
-              <span className="inline-flex items-center gap-2.5">
-                <l.Icon className="h-4 w-4 text-emerald-600" />
-                {l.label}
-              </span>
-              <ChevronRight className="h-4 w-4 text-slate-300" />
-            </Link>
-          ))}
-        </div>
-      </Card>
+      {/* ── Assigned coach (parent-editable setting, kept at the bottom) ──── */}
+      <ChildCoachPicker
+        studentId={student.id}
+        coaches={branchCoaches ?? []}
+        current={(student as any).coach_id ?? null}
+        labels={{ title: L.your_coach, hint: L.choose_coach_hint, none: L.none, saved: L.saved_tick }}
+      />
     </div>
   );
 }

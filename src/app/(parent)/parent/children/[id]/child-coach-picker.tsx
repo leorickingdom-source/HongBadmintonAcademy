@@ -33,33 +33,29 @@ export function ChildCoachPicker({
   }
 
   return (
-    <div className="rounded-2xl border-2 border-emerald-100 bg-emerald-50/40 p-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
-          <UserCog className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{labels.title}</div>
-          <div className="flex items-center gap-2">
-            {currentName ? <Avatar name={currentName} size={22} /> : null}
-            <span className="truncate text-base font-bold text-slate-900">{currentName ?? labels.none}</span>
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <UserCog className="h-3.5 w-3.5" />{labels.title}
+          </div>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            {currentName ? <Avatar name={currentName} size={20} /> : null}
+            <span className="truncate text-sm font-semibold text-slate-900">{currentName ?? labels.none}</span>
             {saved && <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600"><Check className="h-3.5 w-3.5" />{labels.saved}</span>}
           </div>
         </div>
       </div>
-      <label className="mt-3 block">
-        <span className="mb-1 block text-xs font-medium text-slate-500">{labels.hint}</span>
-        <select
-          value={value}
-          onChange={(e) => change(e.target.value)}
-          className="h-10 w-full rounded-lg border border-emerald-300 bg-white px-3 text-sm font-medium text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-        >
-          <option value="">{labels.none}</option>
-          {coaches.map((c) => (
-            <option key={c.id} value={c.id}>{c.full_name ?? c.id}</option>
-          ))}
-        </select>
-      </label>
+      <select
+        value={value}
+        onChange={(e) => change(e.target.value)}
+        className="mt-3 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+      >
+        <option value="">{labels.none}</option>
+        {coaches.map((c) => (
+          <option key={c.id} value={c.id}>{c.full_name ?? c.id}</option>
+        ))}
+      </select>
     </div>
   );
 }

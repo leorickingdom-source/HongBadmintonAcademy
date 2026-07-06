@@ -134,6 +134,11 @@ export async function GET(req: NextRequest) {
   }
 
   const type = req.nextUrl.searchParams.get("type") ?? "students";
+  // Financial extracts (revenue) are super-admin only; branch admins get the
+  // non-financial datasets they can already see in the app.
+  if (profile.role !== "super_admin" && (type === "invoices" || type === "payments")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const supabase = await createClient();
   const ds = await dataset(type, supabase);

@@ -18,6 +18,7 @@ async function count(table: string, filter?: (q: any) => any) {
 
 export default async function AdminDashboard() {
   const me = await requireRole("admin");
+  const isSuper = me.role === "super_admin";
   const supabase = await createClient();
   const today = new Date().toLocaleDateString("en-CA");
 
@@ -90,11 +91,14 @@ export default async function AdminDashboard() {
         </Link>
       </div>
 
-      {/* Finance — money in this month vs money still out */}
+      {/* Finance — money still out (branch admins chase follow-ups only; the
+          "collected" revenue figure is super-admin only). */}
       <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <Link href="/admin/collections" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label="Collected this month" value={formatCurrency(collected, currency)} tone="green" />
-        </Link>
+        {isSuper && (
+          <Link href="/admin/collections" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+            <StatCard label="Collected this month" value={formatCurrency(collected, currency)} tone="green" />
+          </Link>
+        )}
         <Link href="/admin/invoices?status=unpaid" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
           <StatCard label="Outstanding" value={formatCurrency(outstanding, currency)} tone={outstanding ? "amber" : "slate"} />
         </Link>

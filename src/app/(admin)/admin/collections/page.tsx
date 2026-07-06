@@ -1,5 +1,6 @@
 import { Banknote, Clock, CircleCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import { PageHeader, StatCard, Section, Avatar, Badge, EmptyState, cn } from "@/components/ui";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { computeAnalytics } from "@/lib/analytics";
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
 const DAY = 24 * 60 * 60 * 1000;
 
 export default async function CollectionsPage() {
+  const me = await requireRole("admin");
+  const isSuper = me.role === "super_admin";
   const supabase = await createClient();
   const baseUrl = await getBaseUrl();
   const today = new Date().toLocaleDateString("en-CA");
@@ -49,8 +52,12 @@ export default async function CollectionsPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Outstanding" value={formatCurrency(a.outstanding, cur)} tone={a.outstanding > 0 ? "red" : "green"} icon={<Banknote className="h-4 w-4" />} />
-        <StatCard label={`Collected · ${a.monthLabel}`} value={formatCurrency(a.collection.collected, cur)} tone="green" />
-        <StatCard label="Collection rate" value={a.collection.rate != null ? `${a.collection.rate}%` : "—"} tone={(a.collection.rate ?? 0) >= 80 ? "green" : "amber"} />
+        {isSuper && (
+          <StatCard label={`Collected · ${a.monthLabel}`} value={formatCurrency(a.collection.collected, cur)} tone="green" />
+        )}
+        {isSuper && (
+          <StatCard label="Collection rate" value={a.collection.rate != null ? `${a.collection.rate}%` : "—"} tone={(a.collection.rate ?? 0) >= 80 ? "green" : "amber"} />
+        )}
         <StatCard label="Overdue accounts" value={rows.length} tone={rows.length ? "red" : "green"} icon={<Clock className="h-4 w-4" />} />
       </div>
 

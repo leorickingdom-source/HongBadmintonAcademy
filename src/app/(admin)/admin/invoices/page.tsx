@@ -37,12 +37,16 @@ export default async function InvoicesPage({
 }) {
   const { generated, notice, status, month, q, refunded, error } = await searchParams;
   const me = await requireRole("admin");
+  const isSuper = me.role === "super_admin";
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
   const baseUrl = await getBaseUrl();
   const schedule = await getMonthlySchedule();
 
-  const statusFilter = status && (STATUSES as string[]).includes(status) ? status : "";
+  // Branch admins are limited to follow-ups (unpaid + overdue) — no paid history
+  // or revenue; super-admins see every status.
+  const allowedStatuses: InvoiceStatus[] = isSuper ? STATUSES : (["unpaid", "overdue"] as InvoiceStatus[]);
+  const statusFilter = status && (allowedStatuses as string[]).includes(status) ? status : "";
   const monthFilter = month && /^\d{4}-\d{2}-\d{2}$/.test(month) ? month : "";
   const search = (q ?? "").trim().toLowerCase();
 
@@ -53,6 +57,7 @@ export default async function InvoicesPage({
   if (statusFilter) invQuery = invQuery.eq("status", statusFilter);
   if (monthFilter) invQuery = invQuery.eq("period_month", monthFilter);
   if (bf) invQuery = invQuery.eq("branch_id", bf);
+  if (!isSuper) invQuery = invQuery.in("status", ["unpaid", "overdue"]);
 
   const [{ data: rawInvoices }, { data: payments }, { data: monthRows }] = await Promise.all([
     invQuery,
@@ -81,8 +86,10 @@ export default async function InvoicesPage({
     <div className="space-y-8">
       <div>
         <PageHeader
-          title="Invoices & Payments"
-          description={`Fees auto-raise monthly, due on the ${ordinal(schedule.dueDay)}. Reconcile payments here.`}
+          title={isSuper ? "Invoices & Payments" : "Outstanding Fees"}
+          description={isSuper
+            ? `Fees auto-raise monthly, due on the ${ordinal(schedule.dueDay)}. Reconcile payments here.`
+            : `Unpaid and overdue fees for your branch — chase, remind and mark paid. Fees are due on the ${ordinal(schedule.dueDay)}.`}
           action={
             <>
               <form action={generateMonthlyInvoices}>
@@ -124,7 +131,7 @@ export default async function InvoicesPage({
             <span className="text-xs font-medium text-slate-600">Status</span>
             <FilterSelect name="status" defaultValue={statusFilter} className="h-9 w-40">
               <option value="">All statuses</option>
-              {STATUSES.map((s) => (
+              {allowedStatuses.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </FilterSelect>
@@ -229,6 +236,7 @@ export default async function InvoicesPage({
         )}
       </div>
 
+      {isSuper && (
       <Collapsible title="Recent payments" count={payments?.length ?? 0}>
         {payments && payments.length > 0 ? (
           <Table>
@@ -257,6 +265,7 @@ export default async function InvoicesPage({
           <div className="p-5"><EmptyState message="No payments recorded yet." /></div>
         )}
       </Collapsible>
+      )}
     </div>
   );
 }

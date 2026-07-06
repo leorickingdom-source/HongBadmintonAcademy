@@ -12,7 +12,8 @@ function esc(v: string | number): string {
 
 export async function GET(req: Request) {
   const profile = await getProfile();
-  if (!profile || profile.role !== "admin" && profile.role !== "super_admin") {
+  // Academy analytics (revenue) are super-admin only.
+  if (!profile || profile.role !== "super_admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

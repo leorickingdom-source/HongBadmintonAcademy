@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
 import { getViewBranchId, listBranches } from "@/lib/branch";
 import { PageHeader, StatCard, Section, Collapsible, Table, Th, Td, EmptyState, LinkButton, Badge, cn } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
@@ -24,7 +24,9 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
-  const me = await requireRole("admin");
+  // Revenue-heavy academy analytics are super-admin only; branch admins are
+  // scoped to follow-up collections (see /admin/collections).
+  const me = await requireSuperAdmin();
   const supabase = await createClient();
   const { month } = await searchParams;
   const nowD = new Date();

@@ -60,7 +60,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Insights & Setup",
     items: [
-      { href: "/admin/analytics", label: "Analytics" },
+      { href: "/admin/analytics", label: "Analytics", superOnly: true },
       { href: "/admin/reports", label: "Reports & Export" },
       { href: "/admin/holidays", label: "Holidays" },
       { href: "/admin/settings", label: "Settings", superOnly: true },

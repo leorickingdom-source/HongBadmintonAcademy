@@ -92,6 +92,12 @@ const en = {
   attachment: "Attach a document (optional)",
   makeup_label: "Make-up",
   replacement_note: "Request leave below — the academy arranges a make-up class for you.",
+
+  // coach nav
+  coach_checkin: "Check-in & mark",
+  coach_monthly: "Monthly Marks",
+  coach_assess: "Assessments",
+  coach_payroll: "My Payroll",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -171,6 +177,11 @@ const zh: Dict = {
   attachment: "上传证明文件（可选）",
   makeup_label: "补课",
   replacement_note: "在下方申请请假 — 学院将为您安排补课。",
+
+  coach_checkin: "签到与评分",
+  coach_monthly: "每月评分",
+  coach_assess: "考核",
+  coach_payroll: "我的薪酬",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

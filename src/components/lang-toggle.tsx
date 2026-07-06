@@ -1,14 +1,20 @@
 "use client";
 
 import { Languages } from "lucide-react";
-import { toggleParentLocale } from "@/app/(parent)/parent/account/locale-actions";
 
-// Persistent EN ⇄ 中文 toggle for the parent shell. Shows the language you'd
-// switch TO. Stays on the current page (the action doesn't redirect).
-export function LangToggle({ locale }: { locale: string | null }) {
+// Persistent EN ⇄ 中文 toggle. Shows the language you'd switch TO. Stays on the
+// current page (the action doesn't redirect). Works for parent and staff — each
+// passes its own server action.
+export function LangToggle({
+  locale,
+  action,
+}: {
+  locale: string | null;
+  action: (formData: FormData) => void;
+}) {
   const isZh = locale === "zh";
   return (
-    <form action={toggleParentLocale}>
+    <form action={action}>
       <input type="hidden" name="locale" value={isZh ? "en" : "zh"} />
       <button
         type="submit"

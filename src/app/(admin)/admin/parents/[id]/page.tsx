@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, Badge, EmptyState, cn } from "@/components/ui";
+import { PageHeader, Section, Badge, EmptyState, Select, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { levelBadgeClass, levelName } from "@/lib/training";
@@ -9,6 +9,7 @@ import { PersonForm } from "../../_people/person-form";
 import {
   updatePerson,
   unlinkChild,
+  linkChild,
   generateParentLoginLink,
   sendParentPasswordReset,
 } from "../../_people/actions";
@@ -31,9 +32,11 @@ export default async function EditParentPage({
   const { id } = await params;
   const { error, saved, link, wa } = await searchParams;
   const supabase = await createClient();
-  const [{ data: person }, { data: children }] = await Promise.all([
+  const [{ data: person }, { data: children }, { data: unlinked }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
     supabase.from("students").select("id, full_name, status, level").eq("parent_id", id).order("full_name"),
+    // Students with no parent yet — RLS keeps a branch-admin to their branch.
+    supabase.from("students").select("id, full_name").is("parent_id", null).eq("status", "active").order("full_name").limit(100),
   ]);
   if (!person) notFound();
 
@@ -92,6 +95,21 @@ export default async function EditParentPage({
           </ul>
         ) : (
           <div className="p-5"><EmptyState message="No children linked to this parent yet." /></div>
+        )}
+        {unlinked && unlinked.length > 0 && (
+          <form action={linkChild} className="flex flex-wrap items-end gap-2 border-t border-slate-100 p-5">
+            <input type="hidden" name="parent_id" value={id} />
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-slate-600">Link a student to this parent</span>
+              <Select name="student_id" required className="h-9 w-64">
+                <option value="">— pick a student —</option>
+                {unlinked.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.full_name}</option>
+                ))}
+              </Select>
+            </label>
+            <SubmitButton pendingText="Linking…">Link student</SubmitButton>
+          </form>
         )}
       </Section>
 

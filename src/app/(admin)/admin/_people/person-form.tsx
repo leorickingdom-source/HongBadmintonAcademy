@@ -14,11 +14,13 @@ export function PersonForm({
   defaultBranchId,
   cancelHref,
   submitLabel,
+  allowEmailEdit,
 }: {
   action: (formData: FormData) => void;
   role: Role;
   person?: Profile;
   error?: string;
+  allowEmailEdit?: boolean;
   // When present, render a role <select name="role"> (used by the Staff page so
   // a super-admin can pick branch-admin vs super-admin vs coach).
   roleOptions?: { value: Role; label: string }[];
@@ -55,15 +57,15 @@ export function PersonForm({
         <Field
           label="Email"
           required
-          hint={person ? "Email can't be changed here." : "Used to sign in."}
+          hint={person ? (allowEmailEdit ? "Changing this changes their sign-in email." : "Email can't be changed here.") : "Used to sign in."}
         >
           <Input
             type="email"
             name="email"
             defaultValue={person?.email ?? ""}
             required
-            readOnly={!!person}
-            className={person ? "bg-slate-50 text-slate-500" : undefined}
+            readOnly={!!person && !allowEmailEdit}
+            className={person && !allowEmailEdit ? "bg-slate-50 text-slate-500" : undefined}
           />
         </Field>
 

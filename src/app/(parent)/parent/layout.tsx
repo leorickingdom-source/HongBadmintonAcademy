@@ -2,6 +2,7 @@ import { requireParent } from "@/lib/parent-auth";
 import { AppShell } from "@/components/app-shell";
 import { NotificationBellServer } from "@/components/notification-bell-server";
 import { LangToggle } from "@/components/lang-toggle";
+import { toggleParentLocale } from "./account/locale-actions";
 import { dict } from "@/lib/i18n";
 
 export default async function ParentLayout({
@@ -26,7 +27,7 @@ export default async function ParentLayout({
       name={profile.full_name ?? profile.email ?? "Parent"}
       accountHref="/parent/account"
       bell={<NotificationBellServer />}
-      langToggle={<LangToggle locale={profile.locale} />}
+      langToggle={<LangToggle locale={profile.locale} action={toggleParentLocale} />}
       labels={{ dashboard: L.dashboard, account: L.account, home: L.home }}
     >
       {children}

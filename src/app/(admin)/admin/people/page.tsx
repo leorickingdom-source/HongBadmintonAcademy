@@ -28,23 +28,28 @@ export default async function DirectoryPage({
     status?: string;
     rank?: string;
     coach?: string;
+    branch?: string;
     sort?: string;
     dir?: string;
     page?: string;
   }>;
 }) {
-  const { tab, q, status, rank, coach, sort, dir, page } = await searchParams;
+  const { tab, q, status, rank, coach, branch, sort, dir, page } = await searchParams;
   const me = await requireRole("admin");
   const isSuper = me.role === "super_admin";
   const active: Tab = TABS.some((t) => t.key === tab) ? (tab as Tab) : "students";
 
   const supabase = await createClient();
-  const { data: coaches } = await supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name");
+  const [{ data: coaches }, { data: branches }] = await Promise.all([
+    supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name"),
+    isSuper ? supabase.from("branches").select("id, name").order("name") : Promise.resolve({ data: [] as any[] }),
+  ]);
 
   const statusFilter = status === "active" || status === "inactive" ? status : "";
   const rankFilter = rank && (CLASS_RANKS as readonly string[]).includes(rank) ? rank : "";
   const coachFilter = coach && (coaches ?? []).some((c) => c.id === coach) ? coach : "";
-  const filtered = Boolean((q ?? "").trim() || statusFilter || rankFilter || coachFilter);
+  const branchFilter = isSuper && branch && (branches ?? []).some((b: any) => b.id === branch) ? branch : "";
+  const filtered = Boolean((q ?? "").trim() || statusFilter || rankFilter || coachFilter || branchFilter);
   const dirParam: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
   const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
@@ -130,6 +135,17 @@ export default async function DirectoryPage({
                 ))}
               </FilterSelect>
             </label>
+            {isSuper && (
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-slate-600">Branch</span>
+                <FilterSelect name="branch" defaultValue={branchFilter} className="h-9 w-44">
+                  <option value="">All branches</option>
+                  {(branches ?? []).map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </FilterSelect>
+              </label>
+            )}
           </>
         )}
         {filtered && <LinkButton href={`/admin/people?tab=${active}`} variant="ghost">Clear</LinkButton>}
@@ -141,6 +157,7 @@ export default async function DirectoryPage({
           status={statusFilter}
           rank={rankFilter}
           coach={coachFilter}
+          branch={branchFilter}
           sort={(sort as any) ?? undefined}
           dir={dirParam}
           page={pageNum}

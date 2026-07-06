@@ -1,5 +1,6 @@
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { PageHeader, Section, Badge, EmptyState, LinkButton, Avatar } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ROLE_LABEL } from "@/lib/constants";
@@ -49,12 +50,15 @@ export default async function StaffPage() {
                     </div>
                   </div>
                 </div>
-                {a.id !== me.id && (
-                  <form action={deletePerson.bind(null, a.role as Role)}>
-                    <input type="hidden" name="id" value={a.id} />
-                    <ConfirmButton label="Delete" confirmText={`Delete ${a.full_name ?? a.email}? This removes their login.`} />
-                  </form>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  <Link href={`/admin/staff/${a.id}/edit`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Edit</Link>
+                  {a.id !== me.id && (
+                    <form action={deletePerson.bind(null, a.role as Role)}>
+                      <input type="hidden" name="id" value={a.id} />
+                      <ConfirmButton label="Delete" confirmText={`Delete ${a.full_name ?? a.email}? This removes their login.`} />
+                    </form>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

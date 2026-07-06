@@ -97,6 +97,7 @@ export default async function EditCoachPage({
         action={updatePerson.bind(null, "coach")}
         branches={await listBranches()}
         showBranch
+        allowEmailEdit
         error={error}
       />
     </div>

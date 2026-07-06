@@ -37,6 +37,20 @@ export async function unlinkChild(formData: FormData) {
   revalidatePath("/admin/people");
 }
 
+// Assign a student to this parent (reverse of picking a parent on the student
+// form). RLS client → a branch-admin can only link students in their own branch.
+export async function linkChild(formData: FormData) {
+  await requireRole("admin");
+  const parentId = String(formData.get("parent_id"));
+  const studentId = String(formData.get("student_id"));
+  if (!parentId || !studentId) return;
+  const supabase = await createClient();
+  const { error } = await supabase.from("students").update({ parent_id: parentId }).eq("id", studentId);
+  if (error) err(`/admin/parents/${parentId}`, error.message);
+  revalidatePath(`/admin/parents/${parentId}`);
+  revalidatePath("/admin/people");
+}
+
 // Create a coach/parent = create the auth user (service role). The
 // on_auth_user_created trigger then inserts the matching profile row.
 export async function createPerson(role: Role, formData: FormData) {
@@ -108,6 +122,18 @@ export async function updatePerson(role: Role, formData: FormData) {
   // Coaches/staff can be reassigned a branch from the edit form.
   const branchRaw = formData.get("branch_id");
   if (branchRaw !== null && role !== "parent") update.branch_id = String(branchRaw).trim() || null;
+
+  // Staff (coach/admin) may also change their sign-in email from the edit form.
+  const { email } = parsed.data;
+  if (role !== "parent" && email) {
+    const { data: cur } = await db.from("profiles").select("email").eq("id", id).maybeSingle();
+    if (email !== cur?.email) {
+      const { error: emErr } = await db.auth.admin.updateUserById(id, { email, email_confirm: true });
+      if (emErr) err(`${base}/${id}`, emErr.message);
+      update.email = email;
+    }
+  }
+
   const { error } = await db.from("profiles").update(update).eq("id", id);
   if (error) err(`${base}/${id}`, error.message);
 
@@ -119,6 +145,43 @@ export async function updatePerson(role: Role, formData: FormData) {
 
   revalidatePath(base);
   redirect(base);
+}
+
+// Super-admin: edit an existing admin / branch-admin / coach — including their
+// role, branch, sign-in email and (optionally) a new password.
+export async function updateStaff(formData: FormData) {
+  const me = await requireSuperAdmin();
+  const id = String(formData.get("id"));
+  const roleRaw = String(formData.get("role") ?? "admin");
+  const role: Role = roleRaw === "super_admin" ? "super_admin" : roleRaw === "coach" ? "coach" : "admin";
+  if (id === me.id && role !== "super_admin") {
+    err(`/admin/staff/${id}/edit`, "You can't remove your own super-admin role.");
+  }
+  const parsed = profileSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) err(`/admin/staff/${id}/edit`, parsed.error.issues[0].message);
+  const { full_name, email, phone, password } = parsed.data;
+
+  const db = createAdminClient();
+  const { data: cur } = await db.from("profiles").select("email").eq("id", id).maybeSingle();
+
+  if (email && email !== cur?.email) {
+    const { error } = await db.auth.admin.updateUserById(id, { email, email_confirm: true });
+    if (error) err(`/admin/staff/${id}/edit`, error.message);
+  }
+  if (password) {
+    const { error } = await db.auth.admin.updateUserById(id, { password });
+    if (error) err(`/admin/staff/${id}/edit`, error.message);
+  }
+
+  const branchId = String(formData.get("branch_id") ?? "").trim() || null;
+  const { error } = await db
+    .from("profiles")
+    .update({ full_name, phone, email: email ?? cur?.email, role, branch_id: role === "super_admin" ? null : branchId })
+    .eq("id", id);
+  if (error) err(`/admin/staff/${id}/edit`, error.message);
+
+  revalidatePath("/admin/staff");
+  redirect("/admin/staff");
 }
 
 export async function deletePerson(role: Role, formData: FormData) {

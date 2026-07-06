@@ -55,6 +55,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/announce", label: "Announcements" },
       { href: "/admin/messages", label: "WhatsApp Log" },
       { href: "/admin/fee-plans", label: "Fee Plans", superOnly: true },
+      { href: "/admin/court-rentals", label: "Court Rentals", superOnly: true },
     ],
   },
   {

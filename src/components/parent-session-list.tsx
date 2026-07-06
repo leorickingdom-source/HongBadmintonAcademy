@@ -7,9 +7,11 @@ import { requestLeave, cancelLeave } from "@/app/(parent)/parent/schedule/leave-
 import { dict } from "@/lib/i18n";
 
 export type SessionKid = { name: string; status: string | null; tapIn: string | null; rating: number | null };
+export type MakeupOpt = { id: string; label: string; spotsLeft: number | null; full: boolean };
 // Upcoming rows can carry the parent's kids with their leave state so the row
-// can offer "Request leave" per child.
-export type UpcomingKid = { id: string; name: string; leave: "pending" | "approved" | "declined" | null; makeup?: string | null };
+// can offer "Request leave" per child. makeupOptions = same-level sessions the
+// parent may propose as a preferred makeup (admin confirms).
+export type UpcomingKid = { id: string; name: string; leave: "pending" | "approved" | "declined" | null; makeup?: string | null; makeupOptions?: MakeupOpt[] };
 export type SessionItem = {
   id: string;
   kind: "upcoming" | "past";
@@ -43,6 +45,7 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
   const [leaveFor, setLeaveFor] = useState<string | null>(null); // `${sessionId}:${kidId}`
   const [reason, setReason] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [makeupSel, setMakeupSel] = useState("");
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -62,11 +65,13 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
     patchKid(sessionId, kidId, "pending");
     setLeaveFor(null);
     const attach = file;
+    const proposed = makeupSel || null;
     startTransition(async () => {
-      const r = await requestLeave({ session_id: sessionId, student_id: kidId, reason, file: attach });
+      const r = await requestLeave({ session_id: sessionId, student_id: kidId, reason, file: attach, proposed_makeup_session_id: proposed });
       if (!r.ok) setItems(prev);
       setReason("");
       setFile(null);
+      setMakeupSel("");
       setBusy(false);
     });
   }
@@ -153,7 +158,7 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
                                   <button
                                     type="button"
                                     disabled={busy}
-                                    onClick={() => { setLeaveFor(leaveFor === key ? null : key); setReason(""); }}
+                                    onClick={() => { setLeaveFor(leaveFor === key ? null : key); setReason(""); setMakeupSel(""); }}
                                     className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
                                   >
                                     <CalendarX className="h-3.5 w-3.5" /> {L.request_leave}
@@ -162,6 +167,23 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
                               </div>
                               {leaveFor === key && (
                                 <div className="space-y-2">
+                                  {(k.makeupOptions ?? []).filter((o) => o.id !== s.id).length > 0 && (
+                                    <div>
+                                      <div className="mb-1 text-xs font-medium text-slate-500">{L.makeup_pref}</div>
+                                      <select
+                                        value={makeupSel}
+                                        onChange={(e) => setMakeupSel(e.target.value)}
+                                        className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500"
+                                      >
+                                        <option value="">{L.makeup_no_pref}</option>
+                                        {(k.makeupOptions ?? []).filter((o) => o.id !== s.id).map((o) => (
+                                          <option key={o.id} value={o.id} disabled={o.full}>
+                                            {o.label}{o.spotsLeft == null ? "" : o.full ? ` · ${L.session_full}` : ` · ${o.spotsLeft} ${L.spots_left}`}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  )}
                                   <div className="flex flex-wrap items-center gap-2">
                                     <input
                                       autoFocus

@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Section, Collapsible, EmptyState } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { ParentSessionList, type SessionItem } from "@/components/parent-session-list";
+import { getMakeupOptions, type MakeupOption } from "@/lib/makeup";
 import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function ParentSchedulePage() {
 
   const { data: enrollments } = await supabase
     .from("enrollments")
-    .select("student_id, class_id, classes(name)")
+    .select("student_id, class_id, classes(name, level, branch_id)")
     .in("student_id", childIds)
     .eq("active", true);
 
@@ -75,9 +76,11 @@ export default async function ParentSchedulePage() {
   // class_id → class name, parent's kids in it (id + name)
   const classNames = new Map<string, string>();
   const classKids = new Map<string, { id: string; name: string }[]>();
+  const childInfo = new Map<string, { level: string | null; branchId: string | null }>();
   for (const e of (enrollments ?? []) as any[]) {
     if (!e.class_id) continue;
     if (e.classes?.name) classNames.set(e.class_id, e.classes.name);
+    if (!childInfo.has(e.student_id)) childInfo.set(e.student_id, { level: e.classes?.level ?? null, branchId: e.classes?.branch_id ?? null });
     const child = (children ?? []).find((c) => c.id === e.student_id);
     if (child) {
       const arr = classKids.get(e.class_id) ?? [];
@@ -133,6 +136,14 @@ export default async function ParentSchedulePage() {
     };
   };
 
+  // Makeup options per child (same-level upcoming sessions + remaining spots) so
+  // a parent can propose a preferred makeup when requesting leave.
+  const makeupByChild = new Map<string, MakeupOption[]>();
+  await Promise.all((children ?? []).map(async (c) => {
+    const info = childInfo.get(c.id);
+    makeupByChild.set(c.id, info ? await getMakeupOptions(supabase, { level: info.level, branchId: info.branchId }) : []);
+  }));
+
   const upcomingItems: SessionItem[] = upcoming.slice(0, 8).map((s) => ({
     ...baseItem(s),
     kind: "upcoming",
@@ -142,6 +153,7 @@ export default async function ParentSchedulePage() {
       name: k.name,
       leave: (leaveBy.get(`${s.id}:${k.id}`) as any) ?? null,
       makeup: makeupBy.get(`${s.id}:${k.id}`) ?? null,
+      makeupOptions: makeupByChild.get(k.id) ?? [],
     })),
   }));
 

@@ -24,11 +24,12 @@ export default async function LeavePage() {
   let lq = supabase
     .from("leave_requests")
     .select(`
-      id, status, reason, created_at, makeup_session_id, attachment_path,
+      id, status, reason, created_at, makeup_session_id, proposed_makeup_session_id, attachment_path,
       students(id, full_name),
       parent:profiles!leave_requests_parent_id_fkey(full_name),
       session:sessions!leave_requests_session_id_fkey(id, session_date, start_time, branch_id, classes(name)),
-      makeup:sessions!leave_requests_makeup_session_id_fkey(session_date, start_time, classes(name))
+      makeup:sessions!leave_requests_makeup_session_id_fkey(session_date, start_time, classes(name)),
+      proposed:sessions!leave_requests_proposed_makeup_session_id_fkey(session_date, start_time, classes(name))
     `)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -72,8 +73,8 @@ export default async function LeavePage() {
   const mkLabel = (s: any) =>
     `${s.classes?.name ?? "Class"} — ${formatDate(s.session_date)} ${formatTime(s.start_time)}`;
 
-  const MakeupSelect = ({ name }: { name: string }) => (
-    <Select name={name} defaultValue="" className="h-9 w-64">
+  const MakeupSelect = ({ name, defaultValue = "" }: { name: string; defaultValue?: string }) => (
+    <Select name={name} defaultValue={defaultValue} className="h-9 w-64">
       <option value="">No makeup (excuse only)</option>
       {makeupOptions.map((s) => (
         <option key={s.id} value={s.id}>{mkLabel(s)}</option>
@@ -108,12 +109,17 @@ export default async function LeavePage() {
                     📎 View attachment
                   </a>
                 )}
+                {l.proposed && (
+                  <div className="text-sm text-emerald-700">
+                    Parent requested makeup: <span className="font-medium">{l.proposed.classes?.name ?? "class"} · {formatDate(l.proposed.session_date)} {formatTime(l.proposed.start_time)}</span>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-end gap-2">
                   <form action={approveLeave} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="id" value={l.id} />
                     <label className="block space-y-1">
-                      <span className="text-xs font-medium text-slate-500">Makeup class (optional)</span>
-                      <MakeupSelect name="makeup_session_id" />
+                      <span className="text-xs font-medium text-slate-500">{l.proposed ? "Makeup class (parent's pick — confirm or change)" : "Makeup class (optional)"}</span>
+                      <MakeupSelect name="makeup_session_id" defaultValue={l.proposed_makeup_session_id ?? ""} />
                     </label>
                     <SubmitButton pendingText="Approving…">Approve</SubmitButton>
                   </form>

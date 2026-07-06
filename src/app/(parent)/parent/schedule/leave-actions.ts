@@ -15,6 +15,7 @@ export async function requestLeave(input: {
   student_id: string;
   reason?: string;
   file?: File | null;
+  proposed_makeup_session_id?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const me = await requireParent();
   if (!input?.session_id || !input?.student_id) return { ok: false, error: "missing" };
@@ -51,6 +52,19 @@ export async function requestLeave(input: {
     .maybeSingle();
   if (!enrolled) return { ok: false, error: "not enrolled in this class" };
 
+  // Optional preferred makeup — must be a real, upcoming, non-canceled session
+  // (and not the one being missed). The admin still confirms it on approval.
+  let proposed_makeup_session_id: string | null = null;
+  const pref = (input.proposed_makeup_session_id ?? "").trim();
+  if (pref && pref !== session.id) {
+    const { data: mk } = await db
+      .from("sessions")
+      .select("id, session_date, status")
+      .eq("id", pref)
+      .maybeSingle();
+    if (mk && mk.status !== "canceled" && mk.session_date >= today) proposed_makeup_session_id = mk.id;
+  }
+
   // Optional attachment (medical cert etc.) → private bucket.
   let attachment_path: string | null = null;
   if (input.file instanceof File && input.file.size > 0) {
@@ -65,6 +79,7 @@ export async function requestLeave(input: {
       reason,
       status: "pending",
       attachment_path,
+      proposed_makeup_session_id,
       decided_by: null,
       decided_at: null,
     },

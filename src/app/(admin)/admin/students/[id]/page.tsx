@@ -5,7 +5,7 @@ import {
   LinkButton, Field, Input, Select, Button, cn,
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { formatDate, formatDateTime, formatCurrency } from "@/lib/format";
+import { formatDate, formatDateTime, formatCurrency, monthLabel } from "@/lib/format";
 import { levelBadgeClass } from "@/lib/training";
 import { getLevelInfoMerged } from "@/lib/syllabus";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
@@ -71,6 +71,13 @@ export default async function StudentProfilePage({
       .order("created_at", { ascending: false }),
     supabase.from("enrollments").select("classes(name, level)").eq("student_id", id).eq("active", true),
   ]);
+
+  const { data: monthly } = await supabase
+    .from("monthly_assessments")
+    .select("period_month, fitness, skills, attitude, comment, coach:profiles!monthly_assessments_coach_id_fkey(full_name)")
+    .eq("student_id", id)
+    .order("period_month", { ascending: false })
+    .limit(3);
 
   const att = attendance ?? [];
   const total = att.length;
@@ -196,6 +203,27 @@ export default async function StudentProfilePage({
             </tbody>
           </Table>
         ) : <div className="p-5"><EmptyState message="No promotion exams yet." /></div>}
+      </Section>
+
+      {/* Monthly marks (coach's 1–5 monthly assessment — the parent report source) */}
+      <Section title="Monthly marks" flush>
+        {monthly && monthly.length ? (
+          <Table>
+            <thead><tr><Th>Month</Th><Th>Fitness</Th><Th>Skills</Th><Th>Attitude</Th><Th>Comment</Th><Th>Coach</Th></tr></thead>
+            <tbody>
+              {monthly.map((m: any, i) => (
+                <tr key={i} className="hover:bg-slate-50">
+                  <Td className="font-medium text-slate-900">{monthLabel(m.period_month)}</Td>
+                  <Td className="tabular-nums">{m.fitness ?? "—"}/5</Td>
+                  <Td className="tabular-nums">{m.skills ?? "—"}/5</Td>
+                  <Td className="tabular-nums">{m.attitude ?? "—"}/5</Td>
+                  <Td className="max-w-xs truncate text-slate-500">{m.comment ?? "—"}</Td>
+                  <Td className="text-slate-500">{m.coach?.full_name ?? "—"}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        ) : <div className="p-5"><EmptyState message="No monthly marks yet — coaches grade at /coach → Monthly Marks." /></div>}
       </Section>
 
       {/* Rewards */}

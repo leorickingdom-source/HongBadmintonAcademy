@@ -79,6 +79,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
 export const COACH_NAV: NavItem[] = [
   { href: "/coach/checkin", label: "Check-in & mark" },
   { href: "/coach/schedule", label: "Schedule" },
+  { href: "/coach/assess", label: "Monthly Marks" },
   { href: "/coach/exams", label: "Assessments" },
   { href: "/coach/payroll", label: "My Payroll" },
 ];
@@ -86,6 +87,7 @@ export const COACH_NAV: NavItem[] = [
 export const PARENT_NAV: NavItem[] = [
   { href: "/parent/children", label: "My Children" },
   { href: "/parent/schedule", label: "Schedule" },
+  { href: "/parent/reports", label: "Monthly Report" },
   { href: "/parent/scorecards", label: "Progress Card" },
   { href: "/parent/invoices", label: "Fees & Payments" },
 ];

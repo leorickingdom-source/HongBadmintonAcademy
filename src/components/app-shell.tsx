@@ -29,6 +29,7 @@ function navIcon(href: string) {
   if (href.includes("people")) return Users;
   if (href.includes("classes")) return GraduationCap;
   if (href.includes("coaches")) return Users;
+  if (href.includes("assess")) return TrendingUp;
   if (href.includes("leaderboard")) return Trophy;
   if (href.includes("training")) return BookOpen;
   if (href.includes("exams")) return Medal;

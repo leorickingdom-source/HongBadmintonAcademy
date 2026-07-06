@@ -8,6 +8,8 @@ import { LevelLadder } from "@/components/level-ladder";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
 import { levelBadgeClass, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
 import { getLevelInfoMerged } from "@/lib/syllabus";
+import { dict } from "@/lib/i18n";
+import { ChildCoachPicker } from "./child-coach-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +30,21 @@ export default async function ChildDetailPage({
   const me = await requireParent();
   const { id } = await params;
   const supabase = createAdminClient();
+  const L = dict(me.locale);
 
   // Service-role bypasses RLS; restrict to this parent's child explicitly.
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, status, dob, parent_id, rank, level, created_at, photo_url, fee_plans(name, amount, currency, interval)")
+    .select("id, full_name, status, dob, parent_id, rank, level, branch_id, coach_id, created_at, photo_url, branches(name), fee_plans(name, amount, currency, interval)")
     .eq("id", id)
     .eq("parent_id", me.id)
     .maybeSingle();
   if (!student) notFound();
+
+  // Coaches the parent can assign — those at the child's branch.
+  const { data: branchCoaches } = (student as any).branch_id
+    ? await supabase.from("profiles").select("id, full_name").eq("role", "coach").eq("branch_id", (student as any).branch_id).order("full_name")
+    : { data: [] as any[] };
 
   const [
     { data: enrollment },
@@ -96,7 +104,8 @@ export default async function ChildDetailPage({
     red: "border-red-200 bg-red-50 text-red-800",
   };
 
-  const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null].filter(Boolean).join(" · ") || "No class enrolment yet";
+  const branchName = (student as any).branches?.name ?? null;
+  const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null, branchName ? `${L.branch}: ${branchName}` : null].filter(Boolean).join(" · ") || "No class enrolment yet";
 
   const LINKS = [
     { href: "/parent/scorecards", label: "View progress card", Icon: TrendingUp },
@@ -145,6 +154,14 @@ export default async function ChildDetailPage({
           <div className="mt-1 text-xs text-slate-500">Reward points</div>
         </div>
       </div>
+
+      {/* ── Assigned coach (parent-editable) ─────────────────────────────── */}
+      <ChildCoachPicker
+        studentId={student.id}
+        coaches={branchCoaches ?? []}
+        current={(student as any).coach_id ?? null}
+        labels={{ title: L.your_coach, hint: L.choose_coach_hint, none: L.none, saved: L.saved_tick }}
+      />
 
       {/* ── Training level & exams ───────────────────────────────────────── */}
       <Card className="p-5">

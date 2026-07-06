@@ -1,6 +1,7 @@
 import { requireParent } from "@/lib/parent-auth";
 import { AppShell } from "@/components/app-shell";
 import { NotificationBellServer } from "@/components/notification-bell-server";
+import { LangToggle } from "@/components/lang-toggle";
 import { dict } from "@/lib/i18n";
 
 export default async function ParentLayout({
@@ -15,7 +16,6 @@ export default async function ParentLayout({
   const items = [
     { href: "/parent/children", label: L.my_children },
     { href: "/parent/schedule", label: L.schedule },
-    { href: "/parent/reports", label: L.monthly_report },
     { href: "/parent/scorecards", label: L.progress_card },
     { href: "/parent/invoices", label: L.fees_payments },
   ];
@@ -26,6 +26,7 @@ export default async function ParentLayout({
       name={profile.full_name ?? profile.email ?? "Parent"}
       accountHref="/parent/account"
       bell={<NotificationBellServer />}
+      langToggle={<LangToggle locale={profile.locale} />}
       labels={{ dashboard: L.dashboard, account: L.account, home: L.home }}
     >
       {children}

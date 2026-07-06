@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { getViewBranchId } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Section, Badge, EmptyState, Select, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatTime } from "@/lib/format";
@@ -23,7 +24,7 @@ export default async function LeavePage() {
   let lq = supabase
     .from("leave_requests")
     .select(`
-      id, status, reason, created_at, makeup_session_id,
+      id, status, reason, created_at, makeup_session_id, attachment_path,
       students(id, full_name),
       parent:profiles!leave_requests_parent_id_fkey(full_name),
       session:sessions!leave_requests_session_id_fkey(id, session_date, start_time, branch_id, classes(name)),
@@ -55,6 +56,16 @@ export default async function LeavePage() {
 
   const pending = leaves.filter((l) => l.status === "pending");
   const decided = leaves.filter((l) => l.status !== "pending").slice(0, 20);
+
+  // Signed URLs for any attachments on pending requests (private bucket).
+  const admin = createAdminClient();
+  const signed = new Map<string, string>();
+  for (const l of pending) {
+    if (l.attachment_path) {
+      const { data } = await admin.storage.from("leave-docs").createSignedUrl(l.attachment_path, 3600);
+      if (data?.signedUrl) signed.set(l.id, data.signedUrl);
+    }
+  }
   const coachPending = coachLeaves.filter((l) => l.status === "pending");
   const coachDecided = coachLeaves.filter((l) => l.status !== "pending").slice(0, 10);
 
@@ -92,6 +103,11 @@ export default async function LeavePage() {
                   {l.parent?.full_name && <span className="text-xs text-slate-400">by {l.parent.full_name}</span>}
                 </div>
                 {l.reason && <div className="text-sm text-slate-600">“{l.reason}”</div>}
+                {signed.get(l.id) && (
+                  <a href={signed.get(l.id)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:underline">
+                    📎 View attachment
+                  </a>
+                )}
                 <div className="flex flex-wrap items-end gap-2">
                   <form action={approveLeave} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="id" value={l.id} />

@@ -1,14 +1,30 @@
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Card, Badge, EmptyState, cn } from "@/components/ui";
-import { formatDate } from "@/lib/format";
+import { formatDate, monthLabel } from "@/lib/format";
 import {
   bandFor, DECISION_LABEL, levelBadgeClass, nextExamWindow,
   type Decision,
 } from "@/lib/training";
 import { getLevelsMerged } from "@/lib/syllabus";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
+
+const MDIMS = [
+  { key: "fitness", label: "Fitness" },
+  { key: "skills", label: "Skills" },
+  { key: "attitude", label: "Attitude" },
+] as const;
+function dots(v: number | null) {
+  return (
+    <span className="inline-flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span key={n} className={cn("h-2 w-2 rounded-full", v && n <= v ? "bg-emerald-500" : "bg-slate-200")} />
+      ))}
+    </span>
+  );
+}
 
 const BAND_TONE: Record<string, "green" | "blue" | "yellow" | "red" | "slate"> = {
   excellent: "green", pass: "blue", borderline: "yellow", fail: "red",
@@ -30,6 +46,7 @@ const BAND_HERO: Record<string, string> = {
 export default async function ParentProgressPage() {
   const me = await requireParent();
   const supabase = createAdminClient();
+  const L = dict(me.locale);
 
   const { data: kids } = await supabase
     .from("students")
@@ -38,13 +55,22 @@ export default async function ParentProgressPage() {
     .order("full_name");
   const kidIds = (kids ?? []).map((k: any) => k.id);
 
-  const [{ data: exams }, levels] = await Promise.all([
+  const now = new Date(Date.now() + 8 * 3600 * 1000);
+  const windowStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1)).toISOString().slice(0, 10);
+
+  const [{ data: exams }, { data: monthly }, { data: mAtt }, levels] = await Promise.all([
     kidIds.length
       ? supabase
           .from("level_exams")
           .select("id, student_id, exam_date, window_label, from_level, to_level, technical, footwork, tactical, physical, total, band, decision, scores, coach_comment, next_target")
           .in("student_id", kidIds)
           .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as any[] }),
+    kidIds.length
+      ? supabase.from("monthly_assessments").select("student_id, period_month, fitness, skills, attitude, comment").in("student_id", kidIds).gte("period_month", windowStart)
+      : Promise.resolve({ data: [] as any[] }),
+    kidIds.length
+      ? supabase.from("attendance").select("student_id, status, sessions!inner(session_date)").in("student_id", kidIds).gte("sessions.session_date", windowStart)
       : Promise.resolve({ data: [] as any[] }),
     getLevelsMerged(),
   ]);
@@ -59,9 +85,23 @@ export default async function ParentProgressPage() {
     byKid.set(e.student_id, arr);
   }
 
+  // Monthly marks + attendance, keyed by child+month (last 3 months).
+  const months: string[] = [0, 1, 2].map((i) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)).toISOString().slice(0, 10));
+  const mKey = (sid: string, ym: string) => `${sid}:${ym}`;
+  const monthlyBy = new Map<string, any>();
+  for (const a of (monthly ?? []) as any[]) monthlyBy.set(mKey(a.student_id, a.period_month), a);
+  const attBy = new Map<string, { came: number; total: number }>();
+  for (const a of (mAtt ?? []) as any[]) {
+    const k = mKey(a.student_id, `${a.sessions.session_date.slice(0, 7)}-01`);
+    const e = attBy.get(k) ?? { came: 0, total: 0 };
+    e.total++;
+    if (a.status === "present" || a.status === "late") e.came++;
+    attBy.set(k, e);
+  }
+
   return (
     <div className="space-y-5">
-      <PageHeader title="Progress Card" description="Your child's promotion-exam results. Exams run quarterly — January, April, July, October." />
+      <PageHeader title={L.progress_card} description="Monthly marks + promotion-exam results in one place." />
 
       {!kids || kids.length === 0 ? (
         <EmptyState message="No children linked to your account yet. Contact the academy." />
@@ -154,6 +194,40 @@ export default async function ParentProgressPage() {
                   No exam taken yet. Promotion exams run quarterly — January, April, July, October.
                 </div>
               )}
+
+              {/* ── Monthly marks (merged into the progress card) ─────────── */}
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{L.monthly_marks_h}</span>
+                  <a href={`/api/monthly-card/${k.id}/pdf`} target="_blank" rel="noopener" className="text-xs font-medium text-emerald-700 hover:underline">{L.download_card} →</a>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {months.map((m) => {
+                    const a = monthlyBy.get(mKey(k.id, m));
+                    const at = attBy.get(mKey(k.id, m));
+                    const attPct = at && at.total ? Math.round((at.came / at.total) * 100) : null;
+                    return (
+                      <div key={m} className="rounded-lg border border-slate-200 p-3">
+                        <div className="text-xs font-semibold text-slate-700">{monthLabel(m)}</div>
+                        <div className="mt-1 text-xs text-slate-500">{L.attendance}: <span className="font-medium text-slate-800">{attPct == null ? "—" : `${attPct}%`}</span></div>
+                        {a ? (
+                          <div className="mt-1.5 space-y-1">
+                            {MDIMS.map((d) => (
+                              <div key={d.key} className="flex items-center justify-between">
+                                <span className="text-[11px] text-slate-500">{L[d.key]}</span>
+                                {dots(a[d.key])}
+                              </div>
+                            ))}
+                            {a.comment && <p className="mt-1 text-[11px] italic text-slate-500">“{a.comment}”</p>}
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-[11px] text-slate-400">{L.marks_not_in}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </Card>
           );
         })

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyAdmins } from "@/lib/notifications";
+import { uploadLeaveDoc } from "@/lib/storage";
 import { formatDate, formatTime } from "@/lib/format";
 
 // Parent requests leave for one child on one upcoming session. Service-role
@@ -13,6 +14,7 @@ export async function requestLeave(input: {
   session_id: string;
   student_id: string;
   reason?: string;
+  file?: File | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const me = await requireParent();
   if (!input?.session_id || !input?.student_id) return { ok: false, error: "missing" };
@@ -49,6 +51,12 @@ export async function requestLeave(input: {
     .maybeSingle();
   if (!enrolled) return { ok: false, error: "not enrolled in this class" };
 
+  // Optional attachment (medical cert etc.) → private bucket.
+  let attachment_path: string | null = null;
+  if (input.file instanceof File && input.file.size > 0) {
+    attachment_path = await uploadLeaveDoc(`${session.id}-${child.id}`, input.file);
+  }
+
   const { error } = await db.from("leave_requests").upsert(
     {
       session_id: session.id,
@@ -56,6 +64,7 @@ export async function requestLeave(input: {
       parent_id: me.id,
       reason,
       status: "pending",
+      attachment_path,
       decided_by: null,
       decided_at: null,
     },

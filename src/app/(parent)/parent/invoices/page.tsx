@@ -104,6 +104,7 @@ export default async function ParentInvoicesPage({
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Badge tone={isPastDue(i) ? "red" : TONE[i.status as InvoiceStatus]}>{isPastDue(i) ? "overdue" : i.status}</Badge>
+                      <a href={`/api/invoices/${i.id}/pdf`} target="_blank" rel="noopener" className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">PDF</a>
                       <form action={payInvoice}>
                         <input type="hidden" name="id" value={i.id} />
                         <SubmitButton pendingText="…" className="!px-3 !py-1.5">Pay</SubmitButton>
@@ -135,7 +136,10 @@ export default async function ParentInvoicesPage({
                     {i.students?.full_name ?? "Fee"}{i.due_date ? ` · ${formatDate(i.due_date)}` : ""}
                   </div>
                 </div>
-                <Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge>
+                  <a href={`/api/invoices/${i.id}/pdf`} target="_blank" rel="noopener" className="text-xs font-medium text-emerald-700 hover:underline">PDF</a>
+                </div>
               </li>
             ))}
           </ul>

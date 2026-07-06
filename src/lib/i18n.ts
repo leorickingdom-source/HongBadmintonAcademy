@@ -78,6 +78,20 @@ const en = {
   language_hint: "Applies to your app — English or 中文.",
   save: "Save",
   saved: "Saved.",
+
+  // child page
+  branch: "Branch",
+  your_coach: "Your child's coach",
+  choose_coach_hint: "Choose who coaches your child.",
+  none: "— none —",
+  saved_tick: "Saved ✓",
+  download_invoice: "Download",
+  download_card: "Download this month's card (PDF)",
+  exam_results: "Exam results",
+  monthly_marks_h: "Monthly marks",
+  attachment: "Attach a document (optional)",
+  makeup_label: "Make-up",
+  replacement_note: "Request leave below — the academy arranges a make-up class for you.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -144,6 +158,19 @@ const zh: Dict = {
   language_hint: "应用于您的界面 — English 或 中文。",
   save: "保存",
   saved: "已保存。",
+
+  branch: "分院",
+  your_coach: "孩子的教练",
+  choose_coach_hint: "选择负责您孩子的教练。",
+  none: "— 无 —",
+  saved_tick: "已保存 ✓",
+  download_invoice: "下载",
+  download_card: "下载本月成长卡（PDF）",
+  exam_results: "考试成绩",
+  monthly_marks_h: "每月评分",
+  attachment: "上传证明文件（可选）",
+  makeup_label: "补课",
+  replacement_note: "在下方申请请假 — 学院将为您安排补课。",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

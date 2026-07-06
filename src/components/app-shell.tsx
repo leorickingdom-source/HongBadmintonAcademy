@@ -64,6 +64,7 @@ export function AppShell({
   accountHref,
   bell,
   switcher,
+  langToggle,
   labels,
   children,
 }: {
@@ -73,6 +74,7 @@ export function AppShell({
   accountHref?: string;
   bell?: React.ReactNode;
   switcher?: React.ReactNode;
+  langToggle?: React.ReactNode;
   labels?: { dashboard?: string; account?: string; home?: string };
   children: React.ReactNode;
 }) {
@@ -215,6 +217,7 @@ export function AppShell({
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
         {brand}
         <div className="flex items-center gap-2">
+          {langToggle}
           {bell}
           <button
             onClick={() => setOpen((v) => !v)}
@@ -239,7 +242,10 @@ export function AppShell({
         >
           <div className="mb-6 hidden items-center justify-between px-2 md:flex">
             {brand}
-            {bell}
+            <div className="flex items-center gap-2">
+              {langToggle}
+              {bell}
+            </div>
           </div>
 
           {switcher && <div className="mb-4 px-1">{switcher}</div>}

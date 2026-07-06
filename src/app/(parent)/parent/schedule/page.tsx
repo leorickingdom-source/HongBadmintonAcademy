@@ -60,12 +60,17 @@ export default async function ParentSchedulePage() {
   const { data: leaves } = upcomingIds.length
     ? await supabase
         .from("leave_requests")
-        .select("session_id, student_id, status")
+        .select("session_id, student_id, status, makeup:sessions!leave_requests_makeup_session_id_fkey(session_date, start_time, classes(name))")
         .in("session_id", upcomingIds)
         .in("student_id", childIds)
     : { data: [] as any[] };
   const leaveBy = new Map<string, string>();
-  for (const l of (leaves ?? []) as any[]) leaveBy.set(`${l.session_id}:${l.student_id}`, l.status);
+  const makeupBy = new Map<string, string>();
+  for (const l of (leaves ?? []) as any[]) {
+    const k = `${l.session_id}:${l.student_id}`;
+    leaveBy.set(k, l.status);
+    if (l.makeup) makeupBy.set(k, `${l.makeup.classes?.name ?? "class"} ${formatDate(l.makeup.session_date)} ${formatTime(l.makeup.start_time)}`);
+  }
 
   // class_id → class name, parent's kids in it (id + name)
   const classNames = new Map<string, string>();
@@ -136,6 +141,7 @@ export default async function ParentSchedulePage() {
       id: k.id,
       name: k.name,
       leave: (leaveBy.get(`${s.id}:${k.id}`) as any) ?? null,
+      makeup: makeupBy.get(`${s.id}:${k.id}`) ?? null,
     })),
   }));
 
@@ -183,6 +189,9 @@ export default async function ParentSchedulePage() {
 
       {upcomingItems.length ? (
         <Section title={L.upcoming_sessions} description={L.tap_session_hint} flush>
+          <div className="border-b border-slate-100 bg-emerald-50/50 px-4 py-2.5 text-xs text-emerald-800">
+            {L.replacement_note}
+          </div>
           <ParentSessionList sessions={upcomingItems} locale={me.locale} />
         </Section>
       ) : (

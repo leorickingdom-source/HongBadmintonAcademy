@@ -9,7 +9,7 @@ import { dict } from "@/lib/i18n";
 export type SessionKid = { name: string; status: string | null; tapIn: string | null; rating: number | null };
 // Upcoming rows can carry the parent's kids with their leave state so the row
 // can offer "Request leave" per child.
-export type UpcomingKid = { id: string; name: string; leave: "pending" | "approved" | "declined" | null };
+export type UpcomingKid = { id: string; name: string; leave: "pending" | "approved" | "declined" | null; makeup?: string | null };
 export type SessionItem = {
   id: string;
   kind: "upcoming" | "past";
@@ -42,6 +42,7 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
   const [items, setItems] = useState(sessions);
   const [leaveFor, setLeaveFor] = useState<string | null>(null); // `${sessionId}:${kidId}`
   const [reason, setReason] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -60,10 +61,12 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
     const prev = items;
     patchKid(sessionId, kidId, "pending");
     setLeaveFor(null);
+    const attach = file;
     startTransition(async () => {
-      const r = await requestLeave({ session_id: sessionId, student_id: kidId, reason });
+      const r = await requestLeave({ session_id: sessionId, student_id: kidId, reason, file: attach });
       if (!r.ok) setItems(prev);
       setReason("");
+      setFile(null);
       setBusy(false);
     });
   }
@@ -132,6 +135,9 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
                                 {k.leave ? (
                                   <>
                                     <Badge tone={LEAVE_TONE[k.leave] ?? "slate"}>{L[`leave_${k.leave}` as "leave_pending"]}</Badge>
+                                    {k.leave === "approved" && k.makeup && (
+                                      <span className="text-xs font-medium text-emerald-700">{L.makeup_label}: {k.makeup}</span>
+                                    )}
                                     {k.leave === "pending" && (
                                       <button
                                         type="button"
@@ -155,23 +161,34 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
                                 )}
                               </div>
                               {leaveFor === key && (
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <input
-                                    autoFocus
-                                    value={reason}
-                                    onChange={(e) => setReason(e.target.value)}
-                                    placeholder={L.reason_placeholder}
-                                    maxLength={300}
-                                    className="h-9 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500"
-                                  />
-                                  <button
-                                    type="button"
-                                    disabled={busy}
-                                    onClick={() => submitLeave(s.id, k.id)}
-                                    className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
-                                  >
-                                    {L.send_request}
-                                  </button>
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <input
+                                      autoFocus
+                                      value={reason}
+                                      onChange={(e) => setReason(e.target.value)}
+                                      placeholder={L.reason_placeholder}
+                                      maxLength={300}
+                                      className="h-9 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500"
+                                    />
+                                    <button
+                                      type="button"
+                                      disabled={busy}
+                                      onClick={() => submitLeave(s.id, k.id)}
+                                      className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                                    >
+                                      {L.send_request}
+                                    </button>
+                                  </div>
+                                  <label className="flex items-center gap-2 text-xs text-slate-500">
+                                    <span className="shrink-0">{L.attachment}</span>
+                                    <input
+                                      type="file"
+                                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                                      onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                                      className="min-w-0 flex-1 text-xs text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-slate-600"
+                                    />
+                                  </label>
                                 </div>
                               )}
                             </div>

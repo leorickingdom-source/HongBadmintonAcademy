@@ -42,6 +42,7 @@ function navIcon(href: string) {
   if (href.includes("analytics")) return BarChart3;
   if (href.includes("reports")) return FileText;
   if (href.includes("holidays")) return CalendarOff;
+  if (href.includes("leave")) return CalendarOff;
   if (href.includes("branches")) return Building2;
   if (href.includes("staff")) return ShieldCheck;
   if (href.includes("settings")) return Settings;

@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Clock, MapPin, User, Users, ChevronDown, Star, CalendarCheck } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Clock, MapPin, User, Users, ChevronDown, Star, CalendarCheck, CalendarX } from "lucide-react";
 import { Badge, cn } from "@/components/ui";
+import { requestLeave, cancelLeave } from "@/app/(parent)/parent/schedule/leave-actions";
 
 export type SessionKid = { name: string; status: string | null; tapIn: string | null; rating: number | null };
+// Upcoming rows can carry the parent's kids with their leave state so the row
+// can offer "Request leave" per child.
+export type UpcomingKid = { id: string; name: string; leave: "pending" | "approved" | "declined" | null };
 export type SessionItem = {
   id: string;
   kind: "upcoming" | "past";
@@ -19,19 +23,63 @@ export type SessionItem = {
   status: string;
   who: string[];
   kids: SessionKid[];
+  upKids?: UpcomingKid[];
 };
 
 const ATT_TONE: Record<string, "green" | "yellow" | "red" | "slate"> = {
   present: "green", late: "yellow", absent: "red", excused: "slate",
 };
+const LEAVE_TONE: Record<string, "green" | "yellow" | "red"> = {
+  approved: "green", pending: "yellow", declined: "red",
+};
 
-// Tap a session row to expand it. Upcoming → logistics (coach, who, date).
-// Past → each child's attendance, tap-in time and the coach's session mark.
+// Tap a session row to expand it. Upcoming → logistics (coach, who, date) plus
+// per-child leave requests. Past → each child's attendance, tap-in and mark.
 export function ParentSessionList({ sessions }: { sessions: SessionItem[] }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [items, setItems] = useState(sessions);
+  const [leaveFor, setLeaveFor] = useState<string | null>(null); // `${sessionId}:${kidId}`
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [, startTransition] = useTransition();
+
+  function patchKid(sessionId: string, kidId: string, leave: UpcomingKid["leave"]) {
+    setItems((prev) =>
+      prev.map((s) =>
+        s.id !== sessionId
+          ? s
+          : { ...s, upKids: (s.upKids ?? []).map((k) => (k.id !== kidId ? k : { ...k, leave })) },
+      ),
+    );
+  }
+
+  function submitLeave(sessionId: string, kidId: string) {
+    setBusy(true);
+    const prev = items;
+    patchKid(sessionId, kidId, "pending");
+    setLeaveFor(null);
+    startTransition(async () => {
+      const r = await requestLeave({ session_id: sessionId, student_id: kidId, reason });
+      if (!r.ok) setItems(prev);
+      setReason("");
+      setBusy(false);
+    });
+  }
+
+  function withdraw(sessionId: string, kidId: string) {
+    setBusy(true);
+    const prev = items;
+    patchKid(sessionId, kidId, null);
+    startTransition(async () => {
+      const r = await cancelLeave({ session_id: sessionId, student_id: kidId });
+      if (!r.ok) setItems(prev);
+      setBusy(false);
+    });
+  }
+
   return (
     <ul className="divide-y divide-slate-100">
-      {sessions.map((s) => {
+      {items.map((s) => {
         const isOpen = open === s.id;
         const upcoming = s.kind === "upcoming";
         return (
@@ -53,6 +101,11 @@ export function ParentSessionList({ sessions }: { sessions: SessionItem[] }) {
                 </div>
               </div>
               {s.status === "canceled" && <Badge tone="red">canceled</Badge>}
+              {upcoming && (s.upKids ?? []).some((k) => k.leave) && (
+                <Badge tone={LEAVE_TONE[(s.upKids ?? []).find((k) => k.leave)!.leave!] ?? "slate"}>
+                  leave {(s.upKids ?? []).find((k) => k.leave)!.leave}
+                </Badge>
+              )}
               <ChevronDown className={cn("h-4 w-4 shrink-0 text-slate-400 transition-transform", isOpen && "rotate-180")} />
             </button>
 
@@ -62,9 +115,69 @@ export function ParentSessionList({ sessions }: { sessions: SessionItem[] }) {
                 {s.coach && <div className="flex items-center gap-2 text-slate-600"><User className="h-4 w-4 text-slate-400" />Coach {s.coach}</div>}
 
                 {upcoming ? (
-                  s.who.length > 0 && (
-                    <div className="flex items-center gap-2 text-slate-600"><Users className="h-4 w-4 text-slate-400" />{s.who.join(", ")}</div>
-                  )
+                  <>
+                    {s.who.length > 0 && (
+                      <div className="flex items-center gap-2 text-slate-600"><Users className="h-4 w-4 text-slate-400" />{s.who.join(", ")}</div>
+                    )}
+                    {(s.upKids ?? []).length > 0 && s.status !== "canceled" && (
+                      <div className="space-y-2 border-t border-slate-200 pt-2">
+                        {(s.upKids ?? []).map((k) => {
+                          const key = `${s.id}:${k.id}`;
+                          return (
+                            <div key={k.id} className="space-y-1.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium text-slate-900">{k.name}</span>
+                                {k.leave ? (
+                                  <>
+                                    <Badge tone={LEAVE_TONE[k.leave] ?? "slate"}>leave {k.leave}</Badge>
+                                    {k.leave === "pending" && (
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => withdraw(s.id, k.id)}
+                                        className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                                      >
+                                        withdraw
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => { setLeaveFor(leaveFor === key ? null : key); setReason(""); }}
+                                    className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                                  >
+                                    <CalendarX className="h-3.5 w-3.5" /> Request leave
+                                  </button>
+                                )}
+                              </div>
+                              {leaveFor === key && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    autoFocus
+                                    value={reason}
+                                    onChange={(e) => setReason(e.target.value)}
+                                    placeholder="Reason (optional) — e.g. fever, school event"
+                                    maxLength={300}
+                                    className="h-9 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => submitLeave(s.id, k.id)}
+                                    className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                                  >
+                                    Send request
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 ) : s.kids.length === 0 ? (
                   <div className="text-slate-400">No attendance recorded.</div>
                 ) : (

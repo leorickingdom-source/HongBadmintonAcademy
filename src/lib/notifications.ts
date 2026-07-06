@@ -56,10 +56,10 @@ export async function createNotifications(
   }
 }
 
-// Notify every admin (e.g. an online payment landed).
+// Notify every admin — includes super admins (they'd otherwise miss everything).
 export async function notifyAdmins(n: NotifInput): Promise<void> {
   const db = createAdminClient();
-  const { data } = await db.from("profiles").select("id").eq("role", "admin");
+  const { data } = await db.from("profiles").select("id").in("role", ["admin", "super_admin"]);
   await createNotifications((data ?? []).map((p: { id: string }) => p.id), n);
 }
 

@@ -53,6 +53,18 @@ export default async function ParentSchedulePage() {
   const upcoming = all.filter((s) => s.session_date >= today);
   const past = all.filter((s) => s.session_date < today).reverse().slice(0, 10); // newest first
 
+  // Leave state per (upcoming session, child) so rows can offer "Request leave".
+  const upcomingIds = upcoming.map((s) => s.id);
+  const { data: leaves } = upcomingIds.length
+    ? await supabase
+        .from("leave_requests")
+        .select("session_id, student_id, status")
+        .in("session_id", upcomingIds)
+        .in("student_id", childIds)
+    : { data: [] as any[] };
+  const leaveBy = new Map<string, string>();
+  for (const l of (leaves ?? []) as any[]) leaveBy.set(`${l.session_id}:${l.student_id}`, l.status);
+
   // class_id → class name, parent's kids in it (id + name)
   const classNames = new Map<string, string>();
   const classKids = new Map<string, { id: string; name: string }[]>();
@@ -114,7 +126,16 @@ export default async function ParentSchedulePage() {
     };
   };
 
-  const upcomingItems: SessionItem[] = upcoming.slice(0, 8).map((s) => ({ ...baseItem(s), kind: "upcoming", kids: [] }));
+  const upcomingItems: SessionItem[] = upcoming.slice(0, 8).map((s) => ({
+    ...baseItem(s),
+    kind: "upcoming",
+    kids: [],
+    upKids: (classKids.get(s.class_id) ?? []).map((k) => ({
+      id: k.id,
+      name: k.name,
+      leave: (leaveBy.get(`${s.id}:${k.id}`) as any) ?? null,
+    })),
+  }));
 
   const pastItems: SessionItem[] = past.map((s) => ({
     ...baseItem(s),

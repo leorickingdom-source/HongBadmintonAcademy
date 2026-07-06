@@ -2,11 +2,13 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, Section, Badge, Table, Th, Td, LinkButton, EmptyState, cn,
+  PageHeader, Section, Badge, Table, Th, Td, LinkButton, EmptyState, Input, cn,
 } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatTime } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
 import type { AttendanceStatus } from "@/lib/types";
+import { requestCoachLeave, withdrawCoachLeave } from "./leave-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +25,14 @@ function todayMYT(): string {
 // (cancel/delete are admin-only) with a shortcut to today's check-in board.
 export default async function CoachSessionDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string; leave?: string }>;
 }) {
   const { id } = await params;
-  await requireRole("coach");
+  const { error, leave } = await searchParams;
+  const me = await requireRole("coach");
   const supabase = await createClient();
 
   const { data: session } = await supabase
@@ -39,9 +44,10 @@ export default async function CoachSessionDetailPage({
   const s = session as any;
   const cls = s.classes;
 
-  const [{ data: enrollments }, { data: attendance }] = await Promise.all([
+  const [{ data: enrollments }, { data: attendance }, { data: myLeave }] = await Promise.all([
     supabase.from("enrollments").select("student_id, students(full_name)").eq("class_id", s.class_id).eq("active", true),
     supabase.from("attendance").select("student_id, status").eq("session_id", id),
+    supabase.from("coach_leave_requests").select("status").eq("session_id", id).eq("coach_id", me.id).maybeSingle(),
   ]);
 
   const byStudent = new Map<string, string>();
@@ -68,10 +74,42 @@ export default async function CoachSessionDetailPage({
         action={<LinkButton href="/coach/schedule" variant="ghost">← Schedule</LinkButton>}
       />
 
+      {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {leave === "sent" && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          Leave request sent — the admin will confirm.
+        </p>
+      )}
+
       {isToday && !canceled && (
         <div className="flex flex-wrap gap-2">
           <LinkButton href="/coach/checkin">Open check-in →</LinkButton>
         </div>
+      )}
+
+      {/* Coach leave — only for sessions that haven't happened yet. */}
+      {!canceled && s.session_date >= todayMYT() && (
+        <Section title="Can't make this session?">
+          {myLeave ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge tone={myLeave.status === "approved" ? "green" : myLeave.status === "declined" ? "red" : "yellow"}>
+                leave {myLeave.status}
+              </Badge>
+              {myLeave.status === "pending" && (
+                <form action={withdrawCoachLeave}>
+                  <input type="hidden" name="session_id" value={id} />
+                  <SubmitButton variant="secondary" pendingText="…">Withdraw request</SubmitButton>
+                </form>
+              )}
+            </div>
+          ) : (
+            <form action={requestCoachLeave} className="flex flex-wrap items-center gap-2">
+              <input type="hidden" name="session_id" value={id} />
+              <Input name="reason" placeholder="Reason (optional)" maxLength={300} className="w-72" />
+              <SubmitButton variant="secondary" pendingText="Sending…">Request leave</SubmitButton>
+            </form>
+          )}
+        </Section>
       )}
 
       <Section title={`Roster (${roster.length}) · ${marked} marked`} flush>

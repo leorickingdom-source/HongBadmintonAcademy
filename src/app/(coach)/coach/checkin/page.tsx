@@ -33,7 +33,7 @@ export default async function CheckinPage() {
 
   const blocks: Block[] = [];
   for (const s of sessions ?? []) {
-    const [{ data: enr }, { data: att }, { data: marks }] = await Promise.all([
+    const [{ data: enr }, { data: att }, { data: marks }, { data: makeups }] = await Promise.all([
       supabase
         .from("enrollments")
         .select("students(id, full_name, photo_url)")
@@ -47,6 +47,12 @@ export default async function CheckinPage() {
         .from("session_marks")
         .select("student_id, rating")
         .eq("session_id", s.id),
+      // Students booked into THIS session as an approved makeup for a leave.
+      supabase
+        .from("leave_requests")
+        .select("students(id, full_name, photo_url)")
+        .eq("makeup_session_id", s.id)
+        .eq("status", "approved"),
     ]);
     const attMap = new Map((att ?? []).map((a: any) => [a.student_id, a]));
     const markMap = new Map((marks ?? []).map((m: any) => [m.student_id, m.rating as number]));
@@ -57,6 +63,18 @@ export default async function CheckinPage() {
         mark: markMap.get(e.students?.id) ?? null,
       }))
       .filter((r: any) => r.student);
+    // Append makeup students not already on the roster, flagged like drop-ins.
+    const have = new Set(roster.map((r: any) => r.student.id));
+    for (const m of (makeups ?? []) as any[]) {
+      const st = m.students;
+      if (!st || have.has(st.id)) continue;
+      roster.push({
+        student: st,
+        att: attMap.get(st.id) ?? null,
+        mark: markMap.get(st.id) ?? null,
+        dropIn: true,
+      } as any);
+    }
     blocks.push({ session: s as any, roster: roster as any, coachedIn: coachedSet.has(s.id) });
   }
 

@@ -107,6 +107,13 @@ export default async function ChildDetailPage({
   const level = (student as any).level ?? 1; // every student starts at Level 1 (Starter)
   const lv = await getLevelInfoMerged(level);
   const levelLabel = lv?.name ?? "—";
+  // Kumon-style per-skill mastery: how many of this level's curriculum skills the
+  // coach has ticked off. (supabase here is the service-role client; the student
+  // is already verified to be this parent's child above.)
+  const skillTotal = (lv?.groups ?? []).reduce((a: number, g: any) => a + g.items.length, 0);
+  const { count: skillsMastered } = skillTotal
+    ? await supabase.from("skill_mastery").select("*", { count: "exact", head: true }).eq("student_id", id).eq("level", level)
+    : { count: 0 };
   const exam = lastExam as any;
   const examWin = nextExamWindow();
   const examTone: Record<string, string> = {
@@ -185,6 +192,18 @@ export default async function ChildDetailPage({
             <span className="text-xs font-medium text-slate-700">{examWin.label}</span>
           </div>
         </div>
+
+        {skillTotal > 0 && (
+          <div className="mt-4">
+            <div className="mb-1 flex items-center justify-between text-sm">
+              <span className="font-medium text-slate-700">{skillsMastered ?? 0} / {skillTotal} {L.skills_mastered}</span>
+              <span className="text-xs text-slate-400">{L.skills_title}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.round(((skillsMastered ?? 0) / skillTotal) * 100)}%` }} />
+            </div>
+          </div>
+        )}
 
         {exam ? (
           <div className={cn("mt-4 rounded-xl border p-3", examTone[bandFor(Number(exam.total)).tone])}>

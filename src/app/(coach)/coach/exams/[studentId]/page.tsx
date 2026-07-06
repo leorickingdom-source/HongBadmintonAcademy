@@ -6,6 +6,8 @@ import {
 } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import { ExamForm } from "@/components/exam-form";
+import { SkillsChecklist } from "@/components/skills-checklist";
+import { dict } from "@/lib/i18n";
 import {
   nextExamWindow, DECISION_LABEL,
   getExamEligibility, EXAM_ATTENDANCE_MIN_PCT,
@@ -26,7 +28,8 @@ export default async function CoachExamGradePage({
   params: Promise<{ studentId: string }>;
   searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
-  await requireRole("coach");
+  const me = await requireRole("coach");
+  const L = dict(me.locale);
   const { studentId } = await params;
   const { error, saved } = await searchParams;
   const supabase = await createClient();
@@ -55,6 +58,13 @@ export default async function CoachExamGradePage({
     .eq("student_id", studentId)
     .order("created_at", { ascending: false })
     .limit(20);
+
+  const { data: masteredRows } = await supabase
+    .from("skill_mastery")
+    .select("skill_key")
+    .eq("student_id", studentId)
+    .eq("level", fromLevel);
+  const masteredKeys = ((masteredRows ?? []) as any[]).map((r) => r.skill_key as string);
 
   return (
     <div className="space-y-6">
@@ -91,6 +101,12 @@ export default async function CoachExamGradePage({
           {elig.reason ? ` ${elig.reason}` : ` Minimum ${EXAM_ATTENDANCE_MIN_PCT}%.`}
         </div>
       </div>
+
+      {fromInfo && fromInfo.groups.length > 0 && (
+        <Section title={L.skills_title} description={L.skills_hint}>
+          <SkillsChecklist studentId={student.id} level={fromLevel} groups={fromInfo.groups} initial={masteredKeys} locale={me.locale} />
+        </Section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">

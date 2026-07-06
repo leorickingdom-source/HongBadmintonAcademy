@@ -1,0 +1,67 @@
+HONG BADMINTON ACADEMY — UPDATE 2026-06-30 (part 2)
+The rest of the big upgrade: students, attendance, leave & make-up,
+monthly reports, finance, and Chinese language.
+
+WHAT'S NEW
+==========
+
+1. STUDENTS
+   - Nickname field — shows next to the name everywhere.
+   - "Assigned coach" per student (the coach responsible for them) — and you
+     can filter the whole directory by coach.
+   - Admin can set a student's training level (L1–L6) directly on the edit
+     form. Any change is logged and the parent gets a notification on a
+     level-up, same as a promotion.
+
+2. ATTENDANCE & COACHES
+   - Coaches now check THEMSELVES in ("I'm here" button) — so you can see
+     who actually showed up to teach.
+   - New "Coach coverage" screen (last 30 days): per session — did the coach
+     check in, and did they mark the roster?
+   - Wrong attendance mark? It can now be fully cleared/undone (coach and
+     admin).
+   - Filter classes and students by coach across the system.
+
+3. LEAVE & MAKE-UP CLASSES
+   - Parents request leave on any upcoming session from their app (with a
+     reason), and can withdraw it while pending.
+   - New "Leave & Makeup" screen for admins: approve or decline. Approving
+     automatically marks the child EXCUSED for that day.
+   - You can book a make-up class in the same step — the child then appears
+     on the coach's check-in list for that make-up session automatically.
+   - Coaches can request leave for their own session too; you approve and
+     then cancel or re-assign the class.
+   - Parents get an app notification + push for every decision.
+
+4. MONTHLY REPORT (back, and separate from exams)
+   - Coaches grade their WHOLE class once a month in one screen:
+     Fitness / Skills / Attitude (1–5) + a short comment. Every tap saves.
+   - Parents see a new "Monthly Report" tab: month by month — attendance %,
+     average session rating, the coach's three marks, the comment, and
+     reward points earned.
+   - Exams stay on the Progress Card, untouched.
+
+5. FINANCE
+   - Invoices past their due date now automatically flip to "overdue" every
+     night (they used to stay "unpaid" forever).
+   - The admin dashboard now shows money at a glance: Collected this month,
+     Outstanding, and Overdue — respecting the branch you're viewing.
+
+6. 中文 (CHINESE LANGUAGE)
+   - Parents can switch their app to Chinese: Account → Language → 中文.
+   - Translated so far: the parent menu, home page, schedule (including the
+     whole leave-request flow) and the Monthly Report.
+   - English stays the default; each parent chooses for themselves.
+
+7. SECURITY HARDENING
+   - Branch walls extended to every day-to-day record (attendance, marks,
+     check-ins, leave, monthly marks) — a branch admin cannot reach another
+     branch's data even by talking to the server directly.
+   - Push notification setup now available to every admin (was accidentally
+     super-admin only), covering leave requests and payment alerts.
+
+STILL PARKED (say the word to build)
+====================================
+   - Reward rules engine (auto points + leaderboard) — pinned.
+   - WhatsApp community auto-add — pinned.
+   - Chinese for the coach/admin screens + remaining parent pages.

@@ -59,8 +59,8 @@ REM the launch instantly exit with "Code: 0"). Idempotent.
 echo       Ensuring Chrome for WhatsApp Web ^(one time, ~150 MB^)...
 call node "node_modules\puppeteer\install.mjs"
 if errorlevel 1 (
-  echo       First try failed - clearing any partial download and retrying...
-  rmdir /s /q "%USERPROFILE%\.cache\puppeteer\chrome" 2>nul
+  echo       First try failed - clearing partial downloads and retrying...
+  rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
   call node "node_modules\puppeteer\install.mjs"
 )
 

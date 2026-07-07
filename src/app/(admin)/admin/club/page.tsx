@@ -26,7 +26,19 @@ export default async function ClubMembersPage({
       <PageHeader
         title="Club Members"
         description="The club is a separate business arm. Dues raised here are tagged 'club' and show in Pots."
-        action={<LinkButton href="/admin/club/new">+ Add member</LinkButton>}
+        action={
+          <>
+            <a
+              href="/club"
+              target="_blank"
+              rel="noopener"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Public signup page ↗
+            </a>
+            <LinkButton href="/admin/club/new">+ Add member</LinkButton>
+          </>
+        }
       />
 
       {raised && (

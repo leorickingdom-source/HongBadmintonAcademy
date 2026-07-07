@@ -52,20 +52,12 @@ if exist "node_modules" (
   echo [4/6] Installing dependencies...
   call npm install
 )
-REM whatsapp-web.js drives a real Chrome. Prefer a system Google Chrome (most
-REM reliable — no version pinning); otherwise download the EXACT Chrome the
-REM bundled puppeteer expects (drop --yes so npx uses the LOCAL puppeteer, not
-REM a newer one that installs a mismatched Chrome build).
-set "SYSCHROME="
-if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "SYSCHROME=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
-if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" set "SYSCHROME=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
-if defined SYSCHROME (
-  echo       Using system Chrome: !SYSCHROME!
-  findstr /b /c:"CHROME_PATH=" ".env" >nul 2>&1 || echo CHROME_PATH=!SYSCHROME!>> ".env"
-) else (
-  echo       Installing Chrome for WhatsApp Web ^(one time, ~150 MB^)...
-  call npx puppeteer browsers install chrome
-)
+REM whatsapp-web.js drives a real Chrome. Use puppeteer's OWN installer, which
+REM downloads the EXACT pinned Chrome-for-Testing build this puppeteer expects
+REM (isolated — no clash with the user's browsing Chrome, which otherwise makes
+REM the launch instantly exit with "Code: 0"). Idempotent.
+echo       Ensuring Chrome for WhatsApp Web ^(one time, ~150 MB^)...
+call node "node_modules\puppeteer\install.mjs"
 
 REM ----- 5/6  autostart on login -----
 echo [5/6] Registering autostart ^(runs on every login^)...

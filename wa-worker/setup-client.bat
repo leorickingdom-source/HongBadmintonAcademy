@@ -58,6 +58,11 @@ REM (isolated — no clash with the user's browsing Chrome, which otherwise make
 REM the launch instantly exit with "Code: 0"). Idempotent.
 echo       Ensuring Chrome for WhatsApp Web ^(one time, ~150 MB^)...
 call node "node_modules\puppeteer\install.mjs"
+if errorlevel 1 (
+  echo       First try failed - clearing any partial download and retrying...
+  rmdir /s /q "%USERPROFILE%\.cache\puppeteer\chrome" 2>nul
+  call node "node_modules\puppeteer\install.mjs"
+)
 
 REM ----- 5/6  autostart on login -----
 echo [5/6] Registering autostart ^(runs on every login^)...

@@ -1,5 +1,6 @@
 import "server-only";
 import { env, isWaWorkerConfigured } from "@/lib/env";
+import { getResolvedWaWorkerUrl } from "@/lib/settings";
 import type { SendInput, SendResult, WhatsappProvider } from "./types";
 
 // whatsapp-web.js worker provider. Sends are forwarded to a separate always-on
@@ -22,8 +23,12 @@ export const wwebjsProvider: WhatsappProvider = {
     // fall back to joined body params if only those were supplied.
     const text = input.text ?? input.bodyParams?.join(" ") ?? "";
 
+    // Live URL: the worker's self-registered tunnel URL (falls back to env).
+    const workerUrl = await getResolvedWaWorkerUrl();
+    if (!workerUrl) return { status: "failed", error: "worker URL not set" };
+
     try {
-      const res = await fetch(`${env.waWorkerUrl.replace(/\/$/, "")}/send`, {
+      const res = await fetch(`${workerUrl}/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

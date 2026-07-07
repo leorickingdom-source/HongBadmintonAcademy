@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProfile } from "@/lib/auth";
 import { env, isWaWorkerConfigured } from "@/lib/env";
+import { getResolvedWaWorkerUrl } from "@/lib/settings";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,8 @@ export async function GET() {
     return NextResponse.json({ configured: false, ready: false, dataUrl: null });
   }
   try {
-    const r = await fetch(`${env.waWorkerUrl.replace(/\/$/, "")}/qr.json`, {
+    const workerUrl = await getResolvedWaWorkerUrl();
+    const r = await fetch(`${workerUrl}/qr.json`, {
       headers: { Authorization: `Bearer ${env.waWorkerSecret}` },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),

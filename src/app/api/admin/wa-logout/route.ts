@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProfile } from "@/lib/auth";
 import { env, isWaWorkerConfigured } from "@/lib/env";
+import { getResolvedWaWorkerUrl } from "@/lib/settings";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,8 @@ export async function POST() {
     return NextResponse.json({ error: "worker not configured" }, { status: 400 });
   }
   try {
-    const r = await fetch(`${env.waWorkerUrl.replace(/\/$/, "")}/logout`, {
+    const workerUrl = await getResolvedWaWorkerUrl();
+    const r = await fetch(`${workerUrl}/logout`, {
       method: "POST",
       headers: { Authorization: `Bearer ${env.waWorkerSecret}` },
       cache: "no-store",

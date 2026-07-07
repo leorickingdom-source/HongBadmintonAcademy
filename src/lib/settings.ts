@@ -1,11 +1,13 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { env } from "@/lib/env";
 
 const WORKER_PAUSED = "worker_paused";
 const FEE_REMINDERS_PAUSED = "fee_reminders_paused";
 const SEND_POLICY = "send_policy";
 const MONTHLY_SCHEDULE = "monthly_schedule";
 const REQUIRE_2FA = "require_2fa";
+const WA_WORKER_URL = "wa_worker_url";
 
 // Generic app_settings value store. Read via the service-role client so
 // worker/cron endpoints (no user session) can read it.
@@ -93,6 +95,17 @@ export const setMonthlySchedule = (s: MonthlySchedule) => setValue(MONTHLY_SCHED
 const COMMUNITY_INTRO = "community_notice_intro";
 export const getCommunityIntro = () => getValue<string>(COMMUNITY_INTRO, "");
 export const setCommunityIntro = (v: string) => setValue(COMMUNITY_INTRO, v);
+
+// Live WhatsApp-worker URL. The worker self-registers its current public tunnel
+// URL here on every boot (POST /api/worker/register-url), so an ephemeral tunnel
+// URL that changes on each restart never needs a Vercel env edit. Falls back to
+// the WA_WORKER_URL env var when nothing is registered yet. The env var still
+// gates provider selection (isWaWorkerConfigured) + acts as the fallback.
+export const setWaWorkerUrl = (v: string) => setValue(WA_WORKER_URL, v);
+export async function getResolvedWaWorkerUrl(): Promise<string> {
+  const override = await getValue<string>(WA_WORKER_URL, "");
+  return (override || env.waWorkerUrl || "").replace(/\/$/, "");
+}
 
 // Day-of-month in Malaysia time (1–31) — for cron gating against the schedule.
 export function mytDayOfMonth(): number {

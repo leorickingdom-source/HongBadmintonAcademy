@@ -45,13 +45,17 @@ if exist ".env" (
   >> ".env" echo PORT=8787
 )
 
-REM ----- 4/6  dependencies -----
+REM ----- 4/6  dependencies + Chrome for WhatsApp Web -----
 if exist "node_modules" (
   echo [4/6] Dependencies present.
 ) else (
   echo [4/6] Installing dependencies...
   call npm install
 )
+REM whatsapp-web.js drives a real Chrome; puppeteer no longer auto-downloads it
+REM on install, so fetch it explicitly (idempotent — skips if already present).
+echo       Ensuring Chrome for WhatsApp Web ^(one time, ~150 MB^)...
+call npx --yes puppeteer browsers install chrome
 
 REM ----- 5/6  autostart on login -----
 echo [5/6] Registering autostart ^(runs on every login^)...

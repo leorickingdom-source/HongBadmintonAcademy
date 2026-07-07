@@ -4,17 +4,20 @@ import { formatDateTime } from "@/lib/format";
 import { env } from "@/lib/env";
 import { AnnounceComposer } from "@/components/announce-composer";
 import { getCommunityIntro } from "@/lib/settings";
-import { logAnnouncement, postCommunityMessage, saveCommunityIntro } from "./actions";
+import { getProfile } from "@/lib/auth";
+import { logAnnouncement, postCommunityMessage, saveCommunityIntro, inviteParentsToCommunity } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnnouncePage({
   searchParams,
 }: {
-  searchParams: Promise<{ posted?: string; error?: string; intro?: string }>;
+  searchParams: Promise<{ posted?: string; error?: string; intro?: string; invited?: string; parents?: string }>;
 }) {
-  const { posted, error, intro: introSaved } = await searchParams;
+  const { posted, error, intro: introSaved, invited, parents } = await searchParams;
   const botReady = !!env.waCommunityGroupId;
+  const me = await getProfile();
+  const isSuper = me?.role === "super_admin";
   const intro = await getCommunityIntro();
   const supabase = await createClient();
   const { data: history } = await supabase
@@ -50,6 +53,35 @@ export default async function AnnouncePage({
       )}
       {introSaved === "cleared" && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">Monthly note cleared.</div>
+      )}
+      {invited !== undefined && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+          ✅ Invite sent — pushed to {invited} of {parents ?? "?"} parents. The rest have push off; they&apos;ll see it in the app.
+        </div>
+      )}
+
+      {/* Super-admin only: push all parents an invite to the WhatsApp group. */}
+      {isSuper && env.waCommunityLink && (
+        <Section
+          title="Invite parents to the WhatsApp group"
+          description="Sends a one-tap push to every parent — it lands on their phone (even if they never open the app) and the tap opens the WhatsApp group invite. Zero ban risk (push, not a WhatsApp DM)."
+        >
+          <form>
+            <button type="submit" formAction={inviteParentsToCommunity} className={buttonClass("primary")}>
+              📢 Push invite to all parents
+            </button>
+            <p className="mt-2 text-xs text-slate-500">
+              Send <b>sparingly</b> — we can&apos;t tell who already joined, so this goes to every parent each time. Once is usually enough; re-send only when you have a batch of new families.
+            </p>
+          </form>
+        </Section>
+      )}
+      {isSuper && !env.waCommunityLink && (
+        <Section title="Invite parents to the WhatsApp group">
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            Set <code>WA_COMMUNITY_LINK</code> in Vercel (your <code>chat.whatsapp.com/…</code> invite) to enable the one-tap parent invite.
+          </p>
+        </Section>
       )}
 
       {botReady ? (

@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireSuperAdmin } from "@/lib/auth";
 import { getWhatsappProvider } from "@/lib/whatsapp";
 import { setCommunityIntro } from "@/lib/settings";
+import { pushToUsers } from "@/lib/push";
+import { createNotifications } from "@/lib/notifications";
 import { env } from "@/lib/env";
 
 // No worker, no bot: the admin posts the notice into the community Announcements
@@ -65,6 +67,36 @@ export async function postCommunityMessage(formData: FormData) {
   await db.from("message_queue").insert({ kind: "community_custom", recipient_phone: env.waCommunityGroupId, body });
   revalidatePath("/admin/announce");
   redirect("/admin/announce?posted=queued");
+}
+
+// Super-admin only: one-tap web-push to every parent inviting them to the
+// WhatsApp group. This is the lazy-parent lever — it lands on their phone
+// (parents rarely open the app), and the tap deep-links straight to the
+// chat.whatsapp.com invite (the service worker opens it → WhatsApp).
+//
+// Zero ban risk: it's web push, NOT a WhatsApp DM (unlike DMs, push is opt-in,
+// free, and invisible to Meta). Send SPARINGLY — we can't detect who already
+// joined, so it goes to every parent each time.
+export async function inviteParentsToCommunity() {
+  await requireSuperAdmin();
+  if (!env.waCommunityLink) {
+    redirect(`/admin/announce?error=${encodeURIComponent("Set WA_COMMUNITY_LINK in Vercel first — no invite link to send.")}`);
+  }
+
+  const db = createAdminClient();
+  const { data: parents } = await db.from("profiles").select("id").eq("role", "parent");
+  const ids = (parents ?? []).map((p: { id: string }) => p.id);
+  if (!ids.length) {
+    redirect(`/admin/announce?error=${encodeURIComponent("No parents to invite yet.")}`);
+  }
+
+  const title = "📢 Join our parent WhatsApp group";
+  const body = "Class updates, reminders & announcements — tap to join.";
+  const res = await pushToUsers(ids, { title, body, url: env.waCommunityLink, tag: "community-invite" });
+  // In-app bell fallback for parents who don't have push enabled.
+  await createNotifications(ids, { type: "community", title, body, url: env.waCommunityLink });
+
+  redirect(`/admin/announce?invited=${res.sent}&parents=${ids.length}`);
 }
 
 // Save the free-text note prepended to the monthly Community notice (reports/fees).

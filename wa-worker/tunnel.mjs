@@ -21,8 +21,9 @@ const SECRET = process.env.WA_WORKER_SECRET || "";
 const PORT = process.env.PORT || 8787;
 // Where to register the URL — the STABLE app URL (never changes).
 const APP_URL = (process.env.APP_URL || "https://hong-badminton-academy.vercel.app").replace(/\/$/, "");
-// Path to cloudflared. Defaults to the durable location on this box.
-const CLOUDFLARED = process.env.CLOUDFLARED_PATH || "C:\\hba-worker\\cloudflared.exe";
+// Path to cloudflared. Defaults to cloudflared.exe next to the worker (where
+// setup-client.bat downloads it); override with CLOUDFLARED_PATH.
+const CLOUDFLARED = process.env.CLOUDFLARED_PATH || "cloudflared.exe";
 
 if (!SECRET) {
   console.error("FATAL: WA_WORKER_SECRET not set — can't authenticate URL registration.");

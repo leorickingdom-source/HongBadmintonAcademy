@@ -6,3 +6,7 @@ node_modules
 qr.png
 .env
 *.log
+# Downloaded by setup-client.bat — machine-specific, never commit.
+cloudflared.exe
+node.zip
+.node/

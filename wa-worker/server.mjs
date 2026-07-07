@@ -80,6 +80,22 @@ const client = new Client({
   },
 });
 
+// Guard so a re-link never runs two Chromium instances against the same
+// userDataDir (that races into an EBUSY lockfile crash). The initial boot and
+// every reconnect / logout all go through here.
+let initializing = false;
+async function safeInit() {
+  if (initializing) return;
+  initializing = true;
+  try {
+    await client.initialize();
+  } catch (e) {
+    console.error("initialize failed:", e?.message || e);
+  } finally {
+    initializing = false;
+  }
+}
+
 client.on("qr", (qr) => {
   ready = false;
   lastQr = qr; // expose to GET /qr so you can scan from a browser, no SSH
@@ -103,13 +119,14 @@ client.on("ready", () => {
 });
 client.on("disconnected", (reason) => {
   ready = false;
+  lastQr = null;
   console.log("Disconnected:", reason, "— will try to re-init.");
-  client.initialize().catch((e) => console.error("Re-init failed:", e));
+  safeInit();
 });
 
 // A launch/auth failure here must not kill the process — log it and keep the
 // HTTP server up so /health stays reachable and reports not-ready.
-client.initialize().catch((e) => console.error("Initialization failed:", e?.message || e));
+safeInit();
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -251,6 +268,24 @@ app.get("/groups", async (_req, res) => {
     return res.json({ groups });
   } catch (e) {
     return res.status(500).json({ status: "failed", error: String(e?.message || e) });
+  }
+});
+
+// Super-admin "disconnect & re-link": log the current number out (LocalAuth
+// clears the saved session) so the worker drops to not-ready and emits a fresh
+// QR for a NEW number to scan. The 'disconnected' handler re-initializes via
+// safeInit. Called by the app's Settings → "Disconnect & re-link".
+app.post("/logout", async (_req, res) => {
+  try {
+    ready = false;
+    lastQr = null;
+    await client.logout(); // fires 'disconnected' (LOGOUT) → safeInit → new QR
+    return res.json({ status: "ok" });
+  } catch (e) {
+    // logout() can throw if the session is already gone / the page closed. Force
+    // a re-init so a QR still comes back, and report ok so the UI proceeds.
+    safeInit();
+    return res.json({ status: "ok", note: String(e?.message || e) });
   }
 });
 

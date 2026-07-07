@@ -41,9 +41,19 @@ export default async function PotsPage({
       </div>
       <div className="mt-2 text-3xl font-bold text-slate-900">{cur(t.collected)}</div>
       <div className="text-xs text-slate-500">collected this month</div>
-      <div className="mt-3 flex gap-4 text-xs text-slate-500">
-        <span>Billed <span className="font-medium text-slate-700">{cur(t.billed)}</span></span>
-        <span>Outstanding <span className={cn("font-medium", t.outstanding > 0 ? "text-amber-600" : "text-slate-700")}>{cur(t.outstanding)}</span></span>
+
+      <div className="mt-3 space-y-1 border-t border-slate-100 pt-3 text-sm">
+        <div className="flex justify-between text-slate-500"><span>Court cost</span><span>− {cur(t.courtCost)}</span></div>
+        <div className="flex justify-between text-slate-500"><span>Coach salaries</span><span>− {cur(t.salaries)}</span></div>
+        <div className="flex justify-between border-t border-slate-100 pt-1 font-semibold text-slate-900">
+          <span>Available to draw</span>
+          <span className={cn(t.available < 0 && "text-red-600")}>{cur(t.available)}</span>
+        </div>
+      </div>
+
+      <div className="mt-3 flex gap-4 text-xs text-slate-400">
+        <span>Billed {cur(t.billed)}</span>
+        <span>Outstanding <span className={cn(t.outstanding > 0 && "text-amber-600")}>{cur(t.outstanding)}</span></span>
       </div>
     </Card>
   );
@@ -96,17 +106,35 @@ export default async function PotsPage({
               <Td className="text-right font-medium" label="Total">{cur(p.total.billed)}</Td>
             </tr>
             <tr>
-              <Td label="Line">Outstanding</Td>
-              <Td className="text-right" label="Academy">{cur(p.academy.outstanding)}</Td>
-              <Td className="text-right" label="Club">{cur(p.club.outstanding)}</Td>
-              <Td className="text-right font-medium" label="Total">{cur(p.total.outstanding)}</Td>
+              <Td label="Line">Court cost</Td>
+              <Td className="text-right text-slate-500" label="Academy">− {cur(p.academy.courtCost)}</Td>
+              <Td className="text-right text-slate-500" label="Club">− {cur(p.club.courtCost)}</Td>
+              <Td className="text-right font-medium text-slate-500" label="Total">− {cur(p.total.courtCost)}</Td>
+            </tr>
+            <tr>
+              <Td label="Line">Coach salaries</Td>
+              <Td className="text-right text-slate-500" label="Academy">− {cur(p.academy.salaries)}</Td>
+              <Td className="text-right text-slate-500" label="Club">− {cur(p.club.salaries)}</Td>
+              <Td className="text-right font-medium text-slate-500" label="Total">− {cur(p.total.salaries)}</Td>
+            </tr>
+            <tr className="bg-slate-50">
+              <Td label="Line" className="font-semibold text-slate-900">Available to draw</Td>
+              <Td className="text-right font-semibold text-slate-900" label="Academy">{cur(p.academy.available)}</Td>
+              <Td className="text-right font-semibold text-slate-900" label="Club">{cur(p.club.available)}</Td>
+              <Td className="text-right font-bold text-slate-900" label="Total">{cur(p.total.available)}</Td>
+            </tr>
+            <tr>
+              <Td label="Line" className="text-slate-400">Outstanding</Td>
+              <Td className="text-right text-slate-400" label="Academy">{cur(p.academy.outstanding)}</Td>
+              <Td className="text-right text-slate-400" label="Club">{cur(p.club.outstanding)}</Td>
+              <Td className="text-right text-slate-400" label="Total">{cur(p.total.outstanding)}</Td>
             </tr>
           </tbody>
         </Table>
       </Card>
 
       <p className="px-1 text-xs text-slate-400">
-        Expenses (court cost, coach salaries) aren&apos;t arm-tagged yet — the pot&apos;s spend side and the &quot;available to draw&quot; balance land in the next slice.
+        &quot;Available to draw&quot; = collected − court cost − coach salaries. Court cost + salaries are academy-only for now; the club gains its own court/staff costs when court booking ships.
       </p>
     </div>
   );

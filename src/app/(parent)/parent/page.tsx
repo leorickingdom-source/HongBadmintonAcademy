@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, MessageCircle } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
+import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   PageHeader, Card, EmptyState, Badge, Avatar, cn,
@@ -266,6 +267,27 @@ export default async function ParentDashboard() {
         </div>
       ) : (
         <EmptyState message={L.no_children} />
+      )}
+
+      {/* ─── Join the parent WhatsApp community (one tap, opt-in) ─────────── */}
+      {env.waCommunityLink && (
+        <a
+          href={env.waCommunityLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 transition-colors hover:bg-emerald-100"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-semibold text-emerald-900">{L.join_community}</div>
+              <div className="mt-0.5 text-xs text-emerald-700">{L.join_community_sub}</div>
+            </div>
+          </div>
+          <span className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">{L.join}</span>
+        </a>
       )}
 
       {/* ─── Today's schedule (else the next upcoming session) ───────────── */}

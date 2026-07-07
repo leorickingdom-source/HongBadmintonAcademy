@@ -47,6 +47,11 @@ const en = {
   all_paid_up: "You're all paid up — thank you!",
   schedule_arrow: "Schedule →",
 
+  // WhatsApp community join
+  join_community: "Join our parent WhatsApp group",
+  join_community_sub: "Class updates, reminders & announcements — one tap to join",
+  join: "Join",
+
   // schedule page
   school_holidays: "School holidays — no class",
   upcoming_sessions: "Upcoming sessions",
@@ -281,6 +286,11 @@ const zh: Dict = {
   view_and_pay: "查看并缴付",
   all_paid_up: "学费已全部缴清 — 谢谢！",
   schedule_arrow: "课程表 →",
+
+  // WhatsApp community join
+  join_community: "加入家长 WhatsApp 群",
+  join_community_sub: "课程通知、提醒与公告 — 一键加入",
+  join: "加入",
 
   school_holidays: "学校假期 — 停课",
   upcoming_sessions: "即将到来的课程",

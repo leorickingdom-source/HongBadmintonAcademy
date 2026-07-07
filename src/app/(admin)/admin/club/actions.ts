@@ -60,6 +60,25 @@ export async function generateClubDuesNow() {
   redirect(`/admin/club?dues=${generated}`);
 }
 
+// Cancel a court booking. A still-unpaid linked invoice is canceled too; a paid
+// one is left for the super-admin to refund from Invoices (money out).
+export async function cancelBooking(formData: FormData) {
+  await requireSuperAdmin();
+  const id = String(formData.get("id"));
+  const db = createAdminClient();
+  const { data: bk } = await db.from("court_bookings").select("id, invoice_id").eq("id", id).maybeSingle();
+  if (!bk) redirect(`/admin/club/bookings?error=${encodeURIComponent("Booking not found.")}`);
+  await db.from("court_bookings").update({ status: "canceled" }).eq("id", id);
+  if ((bk as any).invoice_id) {
+    const { data: inv } = await db.from("invoices").select("status").eq("id", (bk as any).invoice_id).maybeSingle();
+    if (inv && ["unpaid", "overdue", "draft"].includes((inv as any).status)) {
+      await db.from("invoices").update({ status: "canceled" }).eq("id", (bk as any).invoice_id);
+    }
+  }
+  revalidatePath("/admin/club/bookings");
+  redirect("/admin/club/bookings?canceled=1");
+}
+
 // Raise this member's membership invoice for the current month (business=club →
 // shows up in /admin/pots). Amount + currency come from their tier (a club fee
 // plan). Manual button for 2a; a recurring dues cron follows in 2c.

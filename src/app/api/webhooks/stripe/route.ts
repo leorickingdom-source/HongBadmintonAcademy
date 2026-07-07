@@ -104,6 +104,8 @@ export async function POST(req: NextRequest) {
         if (clubMemberId) {
           await db.from("club_members").update({ status: "active" }).eq("id", clubMemberId);
         }
+        // Court booking paid → confirm the reservation.
+        await db.from("court_bookings").update({ status: "confirmed" }).eq("invoice_id", invoiceId).eq("status", "pending");
         await notifyAdmins({
           type: "payment",
           title: "Payment received",

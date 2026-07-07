@@ -39,6 +39,7 @@ export default async function ClubMembersPage({
             >
               Public signup page ↗
             </a>
+            <LinkButton href="/admin/club/bookings" variant="secondary">Court bookings</LinkButton>
             <form action={generateClubDuesNow}>
               <SubmitButton variant="secondary" pendingText="Generating…">Generate dues</SubmitButton>
             </form>

@@ -1189,6 +1189,38 @@ const en = {
   cb_are_you_sure: "Are you sure?",
   wa_no_phone: "No phone",
   wa_send_default: "Send on WhatsApp",
+
+  // ── public: login ──
+  li_sign_in: "Sign in",
+  li_not_config: "Supabase is not configured yet. Add your project URL and keys to .env.local, then restart.",
+  li_signing_in: "Signing in…",
+  li_forgot: "Parent — forgot password?",
+  li_staff_reset: "Coaches & admins: contact the academy to reset.",
+  li_new_here: "New here? Try us first —",
+  li_book_trial: "Book a free trial →",
+
+  // ── public: trial ──
+  trp_title: "Book a free trial",
+  trp_desc: "Bring your child for a free trial session. Tell us a little about them and we'll be in touch to arrange a time — no payment needed.",
+  trp_child_name: "Child's name",
+  trp_optional: "(optional)",
+  trp_experience: "Experience",
+  trp_exp_unsure: "Not sure",
+  trp_your_name: "Your name",
+  trp_phone: "Phone / WhatsApp",
+  trp_pref_location: "Preferred location",
+  trp_no_pref: "No preference",
+  trp_pref_times: "Preferred days / times",
+  trp_times_ph: "e.g. weekday evenings, Sat morning",
+  trp_consent: "I agree that Hong Badminton Academy may contact me about a trial session using the details above.",
+  trp_sending: "Sending…",
+  trp_submit: "Request my free trial",
+  trp_footer: "We'll reach out by phone or WhatsApp to arrange your trial.",
+
+  // ── public: trial thanks ──
+  trt_title: "Request received!",
+  trt_body: "Thanks — we've got your details. One of our team will contact you by phone or WhatsApp to arrange your child's free trial session and answer any questions. No payment is needed for the trial.",
+  trt_again: "Submit another request",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -2359,6 +2391,38 @@ const zh: Dict = {
   cb_are_you_sure: "确定吗？",
   wa_no_phone: "无电话",
   wa_send_default: "通过 WhatsApp 发送",
+
+  // ── public: login ──
+  li_sign_in: "登录",
+  li_not_config: "Supabase 尚未配置。请将项目 URL 和密钥添加到 .env.local，然后重启。",
+  li_signing_in: "登录中…",
+  li_forgot: "家长 — 忘记密码？",
+  li_staff_reset: "教练与管理员：请联系学院重置。",
+  li_new_here: "第一次来？先试试 —",
+  li_book_trial: "预约免费试课 →",
+
+  // ── public: trial ──
+  trp_title: "预约免费试课",
+  trp_desc: "带孩子来上一节免费试课。告诉我们一些基本情况，我们会联系您安排时间 — 无需付费。",
+  trp_child_name: "孩子姓名",
+  trp_optional: "（可选）",
+  trp_experience: "经验",
+  trp_exp_unsure: "不确定",
+  trp_your_name: "您的姓名",
+  trp_phone: "电话 / WhatsApp",
+  trp_pref_location: "希望地点",
+  trp_no_pref: "无偏好",
+  trp_pref_times: "希望的日期 / 时间",
+  trp_times_ph: "如 工作日晚上、周六上午",
+  trp_consent: "我同意宏羽毛球学院使用以上信息就试课事宜联系我。",
+  trp_sending: "发送中…",
+  trp_submit: "申请我的免费试课",
+  trp_footer: "我们会通过电话或 WhatsApp 联系您安排试课。",
+
+  // ── public: trial thanks ──
+  trt_title: "已收到申请！",
+  trt_body: "谢谢 — 我们已收到您的信息。我们的团队会通过电话或 WhatsApp 联系您，安排孩子的免费试课并解答任何疑问。试课无需付费。",
+  trt_again: "再提交一份申请",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

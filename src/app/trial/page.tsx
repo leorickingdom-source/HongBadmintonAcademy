@@ -1,5 +1,8 @@
 import { listBranches } from "@/lib/branch";
 import { SubmitButton } from "@/components/submit-button";
+import { dict } from "@/lib/i18n";
+import { getPublicLocale } from "@/lib/public-locale";
+import { PublicLangToggle } from "@/components/public-lang-toggle";
 import { requestTrial } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -13,17 +16,22 @@ export default async function TrialPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const locale = await getPublicLocale();
+  const L = dict(locale);
   // Public page — branch names aren't sensitive; list active branches for the
   // optional "preferred branch" picker.
   const branches = await listBranches();
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-6 px-5 py-10">
+      <div className="flex justify-end">
+        <PublicLangToggle locale={locale} />
+      </div>
       <div className="text-center">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-lg font-bold text-white">HBA</div>
-        <h1 className="text-2xl font-bold text-slate-900">Book a free trial</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{L.trp_title}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Bring your child for a free trial session. Tell us a little about them and we&apos;ll be in touch to arrange a time — no payment needed.
+          {L.trp_desc}
         </p>
       </div>
 
@@ -37,21 +45,21 @@ export default async function TrialPage({
         {/* ── Child ── */}
         <div className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Child&apos;s name</span>
+            <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_child_name}</span>
             <input name="child_name" required className={inputCls} />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Date of birth <span className="font-normal text-slate-400">(optional)</span></span>
+              <span className="mb-1 block text-sm font-medium text-slate-700">{L.sf_dob} <span className="font-normal text-slate-400">{L.trp_optional}</span></span>
               <input type="date" name="child_dob" className={inputCls} />
             </label>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Experience</span>
+              <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_experience}</span>
               <select name="experience" defaultValue="" className={inputCls}>
-                <option value="">Not sure</option>
-                <option value="none">Brand new</option>
-                <option value="some">Played a little</option>
-                <option value="experienced">Experienced</option>
+                <option value="">{L.trp_exp_unsure}</option>
+                <option value="none">{L.exp_none}</option>
+                <option value="some">{L.exp_some}</option>
+                <option value="experienced">{L.exp_experienced}</option>
               </select>
             </label>
           </div>
@@ -60,15 +68,15 @@ export default async function TrialPage({
         {/* ── Parent / contact ── */}
         <div className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Your name</span>
+            <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_your_name}</span>
             <input name="parent_name" required className={inputCls} />
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Phone / WhatsApp</span>
+            <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_phone}</span>
             <input name="phone" inputMode="tel" required className={inputCls} />
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Email <span className="font-normal text-slate-400">(optional)</span></span>
+            <span className="mb-1 block text-sm font-medium text-slate-700">{L.email_label} <span className="font-normal text-slate-400">{L.trp_optional}</span></span>
             <input type="email" name="email" className={inputCls} />
           </label>
         </div>
@@ -77,9 +85,9 @@ export default async function TrialPage({
         <div className="space-y-3">
           {branches.length > 0 && (
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Preferred location <span className="font-normal text-slate-400">(optional)</span></span>
+              <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_pref_location} <span className="font-normal text-slate-400">{L.trp_optional}</span></span>
               <select name="branch_id" defaultValue="" className={inputCls}>
-                <option value="">No preference</option>
+                <option value="">{L.trp_no_pref}</option>
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
@@ -87,19 +95,19 @@ export default async function TrialPage({
             </label>
           )}
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Preferred days / times <span className="font-normal text-slate-400">(optional)</span></span>
-            <input name="preferred_slot" placeholder="e.g. weekday evenings, Sat morning" className={inputCls} />
+            <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_pref_times} <span className="font-normal text-slate-400">{L.trp_optional}</span></span>
+            <input name="preferred_slot" placeholder={L.trp_times_ph} className={inputCls} />
           </label>
         </div>
 
         {/* ── Consent (required) ── */}
         <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
           <input type="checkbox" name="consent" value="on" required className="mt-0.5" />
-          <span className="text-xs text-slate-600">I agree that Hong Badminton Academy may contact me about a trial session using the details above.</span>
+          <span className="text-xs text-slate-600">{L.trp_consent}</span>
         </label>
 
-        <SubmitButton pendingText="Sending…">Request my free trial</SubmitButton>
-        <p className="text-center text-xs text-slate-400">We&apos;ll reach out by phone or WhatsApp to arrange your trial.</p>
+        <SubmitButton pendingText={L.trp_sending}>{L.trp_submit}</SubmitButton>
+        <p className="text-center text-xs text-slate-400">{L.trp_footer}</p>
       </form>
     </main>
   );

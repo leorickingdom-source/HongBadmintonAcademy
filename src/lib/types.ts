@@ -120,6 +120,8 @@ export interface MarkingCriterion {
   sort_order: number;
 }
 
+export type PriceUnit = "month" | "week" | "session" | "once";
+
 export interface FeePlan {
   id: string;
   name: string;
@@ -129,6 +131,9 @@ export interface FeePlan {
   interval: FeeInterval;
   business: "academy" | "club";
   rank: string | null;
+  price_unit: PriceUnit;
+  sessions_per_week: number | null;
+  sibling_discount_pct: number;
   is_active: boolean;
   stripe_product_id: string | null;
   stripe_price_id: string | null;

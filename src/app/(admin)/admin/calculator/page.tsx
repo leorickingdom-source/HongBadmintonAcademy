@@ -12,17 +12,25 @@ export default async function CalculatorPage() {
   const me = await requireRole("admin");
   const L = dict(me.locale);
   const supabase = await createClient();
-  const { data: plans } = await supabase
-    .from("fee_plans")
-    .select("id, name, amount, currency, interval")
-    .eq("is_active", true)
-    .order("amount");
+  const [{ data: plans }, { data: students }] = await Promise.all([
+    supabase
+      .from("fee_plans")
+      .select("id, name, amount, currency, interval, price_unit, sessions_per_week, sibling_discount_pct")
+      .eq("is_active", true)
+      .order("amount"),
+    supabase
+      .from("students")
+      .select("id, full_name")
+      .eq("status", "active")
+      .order("full_name")
+      .limit(2000),
+  ]);
 
   return (
     <div className="space-y-5">
       <PageHeader title={L.cal_title} description={L.cal_desc} />
       {plans && plans.length > 0 ? (
-        <FeeCalculator plans={plans as any} />
+        <FeeCalculator plans={plans as any} students={(students ?? []) as any} />
       ) : (
         <EmptyState message={L.cal_empty} />
       )}

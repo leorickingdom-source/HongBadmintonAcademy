@@ -66,6 +66,26 @@ export function FeePlanForm({
           </Select>
         </Field>
 
+        {/* Calculator pricing — used by the fee calculator for quotes (not the
+            auto-billing engine, which uses Billing above). */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={L.fp_price_unit} hint={L.fp_price_unit_hint}>
+            <Select name="price_unit" defaultValue={plan?.price_unit ?? "month"}>
+              <option value="month">{L.fp_pu_month}</option>
+              <option value="week">{L.fp_pu_week}</option>
+              <option value="session">{L.fp_pu_session}</option>
+              <option value="once">{L.fp_pu_once}</option>
+            </Select>
+          </Field>
+          <Field label={L.fp_sessions_week} hint={L.fp_sessions_week_hint}>
+            <Input type="number" min="0" max="14" step="1" name="sessions_per_week" defaultValue={plan?.sessions_per_week ?? ""} placeholder="—" />
+          </Field>
+        </div>
+
+        <Field label={L.fp_sibling_pct} hint={L.fp_sibling_pct_hint}>
+          <Input type="number" min="0" max="100" step="1" name="sibling_discount_pct" defaultValue={plan?.sibling_discount_pct ?? 0} />
+        </Field>
+
         <Field label={L.cf_description}>
           <Textarea name="description" defaultValue={plan?.description ?? ""} />
         </Field>

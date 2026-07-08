@@ -130,6 +130,12 @@ export const feePlanSchema = z.object({
   rank: z.string().trim().optional().transform((v) =>
     v && (CLASS_RANKS as readonly string[]).includes(v) ? v : null,
   ),
+  // Calculator pricing (see migration 0051). price_unit = what `amount` means
+  // when quoting; sessions_per_week powers per-session math + proration; a single
+  // sibling discount applies to the 2nd+ child.
+  price_unit: z.enum(["month", "week", "session", "once"]).default("month"),
+  sessions_per_week: z.coerce.number().int().min(0).max(14).optional().transform((v) => (v && v > 0 ? v : null)),
+  sibling_discount_pct: z.coerce.number().min(0).max(100).default(0),
 });
 
 export const schemeSchema = z.object({

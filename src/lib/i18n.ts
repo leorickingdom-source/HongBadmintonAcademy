@@ -908,6 +908,30 @@ const en = {
   cf_description: "Description",
   cf_create_class: "Create class",
   cf_new_class_title: "New class",
+
+  // ── admin: person form (parent/coach/staff) ──
+  pf_role: "Role",
+  pf_email_hint_change: "Changing this changes their sign-in email.",
+  pf_email_hint_locked: "Email can't be changed here.",
+  pf_email_hint_new: "Used to sign in.",
+  pf_phone_wa: "Phone (WhatsApp)",
+  pf_phone_hint: "E.164 format, e.g. +60123456789",
+  pf_branch_hint: "Which location this person belongs to.",
+  pf_reset_pw: "Reset password",
+  pf_password: "Password",
+  pf_pw_hint_edit: "Leave blank to keep current password.",
+  pf_pw_hint_new: "Min 8 characters — tap Show to check it.",
+  pf_coach: "Coach",
+  pf_parent: "parent",
+  pf_staff: "staff",
+  pf_create: "Create {x}",
+  pf_new_parent: "New parent",
+  pf_new_coach: "New coach",
+  pf_new_staff: "New staff",
+  pf_new_staff_desc: "Create a branch admin, super admin or coach.",
+  pf_role_branch_admin: "Branch admin (one branch)",
+  pf_role_super: "Super admin (all branches)",
+  pf_create_staff: "Create staff",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -1797,6 +1821,30 @@ const zh: Dict = {
   cf_description: "描述",
   cf_create_class: "创建班级",
   cf_new_class_title: "新建班级",
+
+  // ── admin: person form (parent/coach/staff) ──
+  pf_role: "角色",
+  pf_email_hint_change: "更改此项会更改其登录邮箱。",
+  pf_email_hint_locked: "邮箱无法在此更改。",
+  pf_email_hint_new: "用于登录。",
+  pf_phone_wa: "电话（WhatsApp）",
+  pf_phone_hint: "E.164 格式，如 +60123456789",
+  pf_branch_hint: "此人所属的地点。",
+  pf_reset_pw: "重置密码",
+  pf_password: "密码",
+  pf_pw_hint_edit: "留空则保持当前密码。",
+  pf_pw_hint_new: "至少 8 个字符 — 点「显示」查看。",
+  pf_coach: "教练",
+  pf_parent: "家长",
+  pf_staff: "员工",
+  pf_create: "创建{x}",
+  pf_new_parent: "新建家长",
+  pf_new_coach: "新建教练",
+  pf_new_staff: "新建员工",
+  pf_new_staff_desc: "创建分院管理员、超级管理员或教练。",
+  pf_role_branch_admin: "分院管理员（单个分院）",
+  pf_role_super: "超级管理员（所有分院）",
+  pf_create_staff: "创建员工",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

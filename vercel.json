@@ -15,6 +15,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/generate-sessions",
+      "schedule": "0 2 * * *"
+    },
+    {
       "path": "/api/cron/backup",
       "schedule": "0 18 * * *"
     },

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { resolveWriteBranch } from "@/lib/branch";
 import { classSchema, scheduleSchema } from "@/lib/validation";
-import { loadHolidayMap } from "@/lib/holidays-server";
+import { materializeSessions } from "@/lib/sessions";
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -152,57 +152,23 @@ export async function unenrollStudent(formData: FormData) {
 }
 
 // ─── Generate sessions from the weekly schedule (next 4 weeks) ───────────────
+// Thin wrapper over the shared materializeSessions core (also used by the
+// auto-generate cron), scoped to this one class.
 export async function generateSessions(formData: FormData) {
   const class_id = String(formData.get("class_id"));
   const supabase = await createClient();
 
-  const [{ data: schedules }, { data: cls }] = await Promise.all([
-    supabase.from("class_schedules").select("*").eq("class_id", class_id).eq("is_active", true),
-    supabase.from("classes").select("branch_id").eq("id", class_id).maybeSingle(),
-  ]);
-  const branch_id = (cls as any)?.branch_id ?? null;
-
+  const { data: schedules } = await supabase
+    .from("class_schedules")
+    .select("id")
+    .eq("class_id", class_id)
+    .eq("is_active", true)
+    .limit(1);
   if (!schedules || schedules.length === 0) {
     err(`/admin/classes/${class_id}`, "Add a schedule first");
   }
 
-  const rows: Record<string, unknown>[] = [];
-  const start = new Date();
-  // Skip public (built-in + imported) + school holidays across the 4-week window.
-  const lastDay = new Date(start);
-  lastDay.setDate(start.getDate() + 27);
-  const holidayMap = await loadHolidayMap(supabase, start.toLocaleDateString("en-CA"), lastDay.toLocaleDateString("en-CA"));
-  const isHoliday = (ymd: string) => Boolean(holidayMap[ymd]);
-  for (let i = 0; i < 28; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    const dow = d.getDay();
-    const dateStr = d.toLocaleDateString("en-CA");
-    if (isHoliday(dateStr)) continue; // no classes on holidays
-    for (const s of schedules!) {
-      if (s.day_of_week === dow) {
-        rows.push({
-          class_id,
-          schedule_id: s.id,
-          session_date: dateStr,
-          start_time: s.start_time,
-          end_time: s.end_time,
-          location: s.location,
-          grace_minutes: s.grace_minutes,
-          branch_id,
-          status: "scheduled",
-        });
-      }
-    }
-  }
-
-  if (rows.length) {
-    // Ignore duplicates (unique on class_id, session_date, start_time)
-    await supabase.from("sessions").upsert(rows, {
-      onConflict: "class_id,session_date,start_time",
-      ignoreDuplicates: true,
-    });
-  }
+  await materializeSessions(supabase, { classIds: [class_id] });
   revalidateSchedule(class_id);
 }
 

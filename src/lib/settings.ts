@@ -8,6 +8,7 @@ const SEND_POLICY = "send_policy";
 const MONTHLY_SCHEDULE = "monthly_schedule";
 const REQUIRE_2FA = "require_2fa";
 const WA_WORKER_URL = "wa_worker_url";
+const AUTO_SESSIONS = "auto_sessions";
 
 // Generic app_settings value store. Read via the service-role client so
 // worker/cron endpoints (no user session) can read it.
@@ -89,6 +90,20 @@ export async function getMonthlySchedule(): Promise<MonthlySchedule> {
 }
 
 export const setMonthlySchedule = (s: MonthlySchedule) => setValue(MONTHLY_SCHEDULE, s);
+
+// Auto-generate sessions: when enabled, a daily cron keeps every active class's
+// sessions filled `horizonDays` ahead from its weekly schedule, so admins never
+// have to click "Generate" per class. Off by default (manual generation).
+export type AutoSessions = { enabled: boolean; horizonDays: number };
+export const DEFAULT_AUTO_SESSIONS: AutoSessions = { enabled: false, horizonDays: 28 };
+export async function getAutoSessions(): Promise<AutoSessions> {
+  const v = await getValue<Partial<AutoSessions>>(AUTO_SESSIONS, {});
+  return {
+    enabled: v.enabled ?? DEFAULT_AUTO_SESSIONS.enabled,
+    horizonDays: Math.min(90, Math.max(7, Number(v.horizonDays) || DEFAULT_AUTO_SESSIONS.horizonDays)),
+  };
+}
+export const setAutoSessions = (s: AutoSessions) => setValue(AUTO_SESSIONS, s);
 
 // Admin's free-text line prepended to the monthly Community notice (reports/fees),
 // so it goes out as one personalised post. Empty = just the auto summary.

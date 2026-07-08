@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth";
-import { setWorkerPaused, setSendPolicy, setMonthlySchedule, set2faRequired } from "@/lib/settings";
+import { setWorkerPaused, setSendPolicy, setMonthlySchedule, set2faRequired, getAutoSessions, setAutoSessions } from "@/lib/settings";
 
 // Pause/resume the WhatsApp drip worker. The desired new state arrives as a
 // hidden "paused" field ("true"/"false"). Super-admin only.
@@ -39,6 +39,21 @@ export async function saveSendPolicy(formData: FormData) {
   const minGapMinutes = clamp(int("minGapMinutes", 10), 0, 240);
 
   await setSendPolicy({ windowStartHour, windowEndHour, dailyCap, minGapMinutes });
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?saved=1");
+}
+
+// Toggle auto-session generation and/or set its rolling horizon. Either field
+// may be omitted (two separate forms in the UI) — merge with current settings.
+export async function saveAutoSessions(formData: FormData) {
+  await requireSuperAdmin();
+  const cur = await getAutoSessions();
+  const enabledRaw = formData.get("enabled");
+  const horizonRaw = formData.get("horizonDays");
+  await setAutoSessions({
+    enabled: enabledRaw != null ? enabledRaw === "true" : cur.enabled,
+    horizonDays: horizonRaw != null ? Math.min(90, Math.max(7, Math.round(Number(horizonRaw)) || cur.horizonDays)) : cur.horizonDays,
+  });
   revalidatePath("/admin/settings");
   redirect("/admin/settings?saved=1");
 }

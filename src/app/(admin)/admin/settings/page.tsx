@@ -1,12 +1,12 @@
 import { requireSuperAdmin } from "@/lib/auth";
 import { PageHeader, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { isWorkerPaused, getMonthlySchedule, is2faRequired } from "@/lib/settings";
+import { isWorkerPaused, getMonthlySchedule, is2faRequired, getAutoSessions } from "@/lib/settings";
 import { WaLinkPanel } from "@/components/wa-link-panel";
 import { PushPanel } from "@/components/push-panel";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
 import { dict } from "@/lib/i18n";
-import { toggleWorker, saveMonthlySchedule, toggle2fa } from "./actions";
+import { toggleWorker, saveMonthlySchedule, toggle2fa, saveAutoSessions } from "./actions";
 import { savePushSubscription, removePushSubscription, sendTestPushToSelf } from "./push-actions";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +22,7 @@ export default async function SettingsPage({
   const paused = await isWorkerPaused();
   const schedule = await getMonthlySchedule();
   const require2fa = await is2faRequired();
+  const auto = await getAutoSessions();
 
   return (
     <div className="space-y-6">
@@ -63,6 +64,32 @@ export default async function SettingsPage({
             <SubmitButton variant={paused ? "primary" : "secondary"} pendingText={L.cr_saving}>
               {paused ? L.set_resume : L.set_pause}
             </SubmitButton>
+          </form>
+        </div>
+      </Section>
+
+      <Section title={L.set_autosessions_title}>
+        <div className="space-y-4 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="text-sm text-slate-600">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="font-medium text-slate-800">{L.set_autosessions_title}</span>
+                <Badge tone={auto.enabled ? "green" : "slate"}>{auto.enabled ? L.set_autosessions_enabled : L.set_autosessions_disabled}</Badge>
+              </div>
+              {auto.enabled ? L.set_autosessions_on : L.set_autosessions_off}
+            </div>
+            <form action={saveAutoSessions}>
+              <input type="hidden" name="enabled" value={auto.enabled ? "false" : "true"} />
+              <SubmitButton variant={auto.enabled ? "secondary" : "primary"} pendingText={L.cr_saving}>
+                {auto.enabled ? L.set_autosessions_disable : L.set_autosessions_enable}
+              </SubmitButton>
+            </form>
+          </div>
+          <form action={saveAutoSessions} className="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
+            <Field label={L.set_horizon_label} hint={L.set_horizon_hint}>
+              <Input type="number" name="horizonDays" min={7} max={90} defaultValue={auto.horizonDays} className="w-32" />
+            </Field>
+            <SubmitButton variant="secondary" pendingText={L.cr_saving}>{L.br_save_changes}</SubmitButton>
           </form>
         </div>
       </Section>

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { PageHeader, LinkButton, EmptyState, cn } from "@/components/ui";
-import { levelBadgeClass, levelNameBadgeClass } from "@/lib/training";
+import { FilterSelect } from "@/components/filter-controls";
+import { levelBadgeClass } from "@/lib/training";
 import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -98,21 +99,14 @@ export default async function MatrixPage({
       </div>
 
       {classes && classes.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {classes.map((c: any) => (
-            <LinkButton
-              key={c.id}
-              href={`/admin/attendance/matrix?class=${c.id}`}
-              variant={c.id === classId ? "primary" : "secondary"}
-              className="!px-3 !py-1.5 text-xs"
-            >
-              {c.name}
-              {c.level && (
-                <span className={cn("ml-1.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase", levelNameBadgeClass(c.level))}>{c.level}</span>
-              )}
-            </LinkButton>
-          ))}
-        </div>
+        <label className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600">
+          {L.class_word}
+          <FilterSelect name="class" defaultValue={classId ?? ""} className="h-9 w-56">
+            {classes.map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name}{c.level ? ` · ${c.level}` : ""}</option>
+            ))}
+          </FilterSelect>
+        </label>
       )}
 
       {rows.length === 0 || sessions.length === 0 ? (

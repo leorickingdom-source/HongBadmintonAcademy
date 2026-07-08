@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import { getViewBranchId } from "@/lib/branch";
+import { getViewBranchId, listBranches } from "@/lib/branch";
 import { PageHeader, LinkButton } from "@/components/ui";
 import { MonthCalendar } from "@/components/month-calendar";
 import { AddSessionModal } from "@/components/add-session-modal";
@@ -19,13 +19,20 @@ function todayMYT(): string {
 export default async function SessionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; class?: string; error?: string; created?: string }>;
+  searchParams: Promise<{ month?: string; class?: string; coach?: string; branch?: string; error?: string; created?: string }>;
 }) {
-  const { month, class: classParam, error, created } = await searchParams;
+  const { month, class: classParam, coach: coachParam, branch: branchParam, error, created } = await searchParams;
   const me = await requireRole("admin");
   const L = dict(me.locale);
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
+  const isSuper = me.role === "super_admin";
+  const isUuid = (v?: string) => /^[0-9a-f-]{36}$/i.test(v ?? "");
+  // Branch filter is super-admin only (a branch-admin is already RLS-scoped to
+  // one branch). Falls back to the global branch-switcher cookie.
+  const branchFilter = isSuper && isUuid(branchParam) ? branchParam! : "";
+  const effBranch = branchFilter || bf;
+  const coachFilter = isUuid(coachParam) ? coachParam! : "";
 
   // Displayed month (YYYY-MM), defaulting to the current MYT month.
   const monthStr = /^\d{4}-\d{2}$/.test(month ?? "") ? month! : todayMYT().slice(0, 7);
@@ -33,7 +40,19 @@ export default async function SessionsPage({
   const start = `${monthStr}-01`;
   const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 
-  const classFilter = classParam && /^[0-9a-f-]{36}$/i.test(classParam) ? classParam : "";
+  const classFilter = isUuid(classParam) ? classParam! : "";
+
+  // Coach filter → resolve to that coach's class ids (primary + co-coach), then
+  // narrow sessions to those classes.
+  let coachClassIds: string[] | null = null;
+  if (coachFilter) {
+    const [{ data: pc }, { data: cc }] = await Promise.all([
+      supabase.from("classes").select("id").eq("coach_id", coachFilter),
+      supabase.from("class_coaches").select("class_id").eq("coach_id", coachFilter),
+    ]);
+    coachClassIds = [...new Set([...(pc ?? []).map((x: any) => x.id), ...(cc ?? []).map((x: any) => x.class_id)])];
+    if (!coachClassIds.length) coachClassIds = ["00000000-0000-0000-0000-000000000000"]; // no classes → no rows
+  }
 
   let sessQuery = supabase
     .from("sessions")
@@ -44,16 +63,22 @@ export default async function SessionsPage({
     .order("start_time")
     .limit(400);
   if (classFilter) sessQuery = sessQuery.eq("class_id", classFilter);
-  if (bf) sessQuery = sessQuery.eq("branch_id", bf);
+  if (coachClassIds) sessQuery = sessQuery.in("class_id", coachClassIds);
+  if (effBranch) sessQuery = sessQuery.eq("branch_id", effBranch);
 
   let classQuery = supabase.from("classes").select("id, name").eq("is_active", true).order("name");
-  if (bf) classQuery = classQuery.eq("branch_id", bf);
+  if (effBranch) classQuery = classQuery.eq("branch_id", effBranch);
 
-  const [{ data: sessions }, { data: classes }, holidays] = await Promise.all([
+  let coachQuery = supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name");
+  if (effBranch) coachQuery = coachQuery.eq("branch_id", effBranch);
+
+  const [{ data: sessions }, { data: classes }, { data: coaches }, holidays] = await Promise.all([
     sessQuery,
     classQuery,
+    coachQuery,
     loadHolidayMap(supabase, start, end),
   ]);
+  const branches = isSuper ? await listBranches(false) : [];
 
   const list = (sessions ?? []) as any[];
 
@@ -82,20 +107,39 @@ export default async function SessionsPage({
         </p>
       )}
 
-      {/* Class filter — keep one knob so a single noisy class doesn't drown the
-       *  month view. Status filter + bulk-action table were dropped — single
-       *  sessions are managed on the session detail page now. */}
+      {/* Filters — class, coach, and (super-admin) branch. Each narrows the
+       *  month view; a single noisy class/coach no longer drowns everything. */}
       <div className="mb-6 flex flex-wrap items-end gap-3">
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-slate-600">{L.class_word}</span>
-          <FilterSelect name="class" defaultValue={classFilter} className="h-9 w-48">
+          <FilterSelect name="class" defaultValue={classFilter} className="h-9 w-44">
             <option value="">{L.adm_all_classes}</option>
             {(classes ?? []).map((c: any) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </FilterSelect>
         </label>
-        {classFilter && (
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-slate-600">{L.flt_coach}</span>
+          <FilterSelect name="coach" defaultValue={coachFilter} className="h-9 w-44">
+            <option value="">{L.flt_all_coaches}</option>
+            {(coaches ?? []).map((c: any) => (
+              <option key={c.id} value={c.id}>{c.full_name ?? "—"}</option>
+            ))}
+          </FilterSelect>
+        </label>
+        {isSuper && (
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-slate-600">{L.branch}</span>
+            <FilterSelect name="branch" defaultValue={branchFilter} className="h-9 w-44">
+              <option value="">{L.flt_all_branches}</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </FilterSelect>
+          </label>
+        )}
+        {(classFilter || coachFilter || branchFilter) && (
           <LinkButton href={`/admin/sessions?month=${monthStr}`} variant="ghost">{L.clear_word}</LinkButton>
         )}
       </div>

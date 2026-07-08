@@ -1,7 +1,7 @@
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, Card, Section, Field, Input, Badge, EmptyState, cn,
+  PageHeader, Collapsible, Section, Field, Input, Badge, EmptyState, cn,
 } from "@/components/ui";
 import { BranchDot, BranchColorPicker } from "@/components/branch-chip";
 import { SubmitButton } from "@/components/submit-button";
@@ -45,9 +45,9 @@ export default async function BranchesPage({
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {saved && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{L.saved}</p>}
 
-      <Card className="max-w-2xl p-6">
-        <form action={createBranch} className="space-y-4">
-          <h2 className="text-base font-semibold text-slate-900">{L.br_add}</h2>
+      <div className="max-w-2xl">
+        <Collapsible title={L.br_add} defaultOpen={false}>
+        <form action={createBranch} className="space-y-4 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={L.br_name} required>
               <Input name="name" required placeholder="e.g. Petaling Jaya" />
@@ -69,7 +69,8 @@ export default async function BranchesPage({
           </div>
           <SubmitButton pendingText={L.cr_adding}>{L.br_add_btn}</SubmitButton>
         </form>
-      </Card>
+        </Collapsible>
+      </div>
 
       <Section title={`${L.dir_all_branches} (${branches?.length ?? 0})`} flush>
         {branches && branches.length > 0 ? (

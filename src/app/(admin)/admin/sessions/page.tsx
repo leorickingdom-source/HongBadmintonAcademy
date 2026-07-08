@@ -89,7 +89,7 @@ export default async function SessionsPage({
         description={L.sess_desc}
         action={
           <>
-            <AddSessionModal classes={classes ?? []} monthStr={monthStr} today={todayMYT()} />
+            <AddSessionModal classes={classes ?? []} monthStr={monthStr} today={todayMYT()} locale={me.locale} />
             <LinkButton href="/admin/attendance/coverage" variant="secondary">
               {L.sess_coach_coverage}
             </LinkButton>

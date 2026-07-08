@@ -1132,6 +1132,16 @@ const en = {
   bulk_selected: "{n} {label} selected",
   bulk_del_default: "Delete {n} selected {label}?",
   bulk_delete_sel: "Delete selected",
+
+  // ── admin: add-session modal ──
+  asm_add_btn: "+ Add session",
+  asm_title: "Add a session",
+  asm_desc: "A one-off or makeup class on a specific date.",
+  asm_close: "Close",
+  asm_pick_class: "— pick a class —",
+  asm_location: "Location (optional)",
+  asm_add_session: "Add session",
+  asm_no_classes: "No active classes yet — create a class first.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -2245,6 +2255,16 @@ const zh: Dict = {
   bulk_selected: "已选 {n} {label}",
   bulk_del_default: "删除所选的 {n} {label}？",
   bulk_delete_sel: "删除所选",
+
+  // ── admin: add-session modal ──
+  asm_add_btn: "+ 添加课程",
+  asm_title: "添加一节课程",
+  asm_desc: "指定日期的一次性或补课。",
+  asm_close: "关闭",
+  asm_pick_class: "— 选择班级 —",
+  asm_location: "地点（可选）",
+  asm_add_session: "添加课程",
+  asm_no_classes: "暂无开班班级 — 请先创建班级。",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

@@ -30,7 +30,7 @@ export default async function CalculatorPage() {
     <div className="space-y-5">
       <PageHeader title={L.cal_title} description={L.cal_desc} />
       {plans && plans.length > 0 ? (
-        <FeeCalculator plans={plans as any} students={(students ?? []) as any} />
+        <FeeCalculator plans={plans as any} students={(students ?? []) as any} locale={me.locale} />
       ) : (
         <EmptyState message={L.cal_empty} />
       )}

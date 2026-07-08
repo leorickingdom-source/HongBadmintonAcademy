@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Calculator, Check, FileText } from "lucide-react";
 import { createQuoteInvoice } from "@/app/(admin)/admin/calculator/actions";
+import { dict } from "@/lib/i18n";
 
 type Plan = {
   id: string;
@@ -22,7 +23,8 @@ const UNIT_SUFFIX: Record<string, string> = { month: "/mo", week: "/wk", session
 // Fee estimator: pick a plan, family size and term; it applies the plan's
 // per-session/weekly/monthly pricing, sibling discount and (optional) session-
 // based proration for a mid-month start — then can raise a real invoice.
-export function FeeCalculator({ plans, students }: { plans: Plan[]; students: StudentOpt[] }) {
+export function FeeCalculator({ plans, students, locale }: { plans: Plan[]; students: StudentOpt[]; locale?: string | null }) {
+  const L = dict(locale);
   const [planId, setPlanId] = useState(plans[0]?.id ?? "");
   const plan = plans.find((p) => p.id === planId) ?? null;
 
@@ -100,7 +102,7 @@ export function FeeCalculator({ plans, students }: { plans: Plan[]; students: St
     start(async () => {
       const r = await createQuoteInvoice({ student_id: studentId, amount: invoiceAmount, description: desc, due_date: dueDate || null, currency });
       if (r.ok) setSaved(true);
-      else setMsg(r.error ?? "Could not create invoice.");
+      else setMsg(r.error ?? L.fc_could_not);
     });
   }
 
@@ -109,13 +111,13 @@ export function FeeCalculator({ plans, students }: { plans: Plan[]; students: St
       {/* ── Inputs ─────────────────────────────────────────────────────────── */}
       <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">Fee plan</span>
+          <span className="text-xs font-medium text-slate-600">{L.fc_fee_plan}</span>
           <select
             value={planId}
             onChange={(e) => setPlanId(e.target.value)}
             className="h-9 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 focus:border-green-500 focus:outline-none"
           >
-            {plans.length === 0 && <option value="">No active fee plans</option>}
+            {plans.length === 0 && <option value="">{L.fc_no_plans}</option>}
             {plans.map((p) => (
               <option key={p.id} value={p.id}>{p.name} — {fmt(Number(p.amount))}{UNIT_SUFFIX[p.price_unit] ?? ""}</option>
             ))}
@@ -124,24 +126,24 @@ export function FeeCalculator({ plans, students }: { plans: Plan[]; students: St
 
         {plan && (
           <p className="text-xs text-slate-400">
-            {fmt(Number(plan.amount))} per {plan.price_unit === "once" ? "one-off" : plan.price_unit}
-            {plan.sessions_per_week ? ` · ${plan.sessions_per_week} session${plan.sessions_per_week > 1 ? "s" : ""}/week` : ""}
-            {plan.sibling_discount_pct ? ` · ${plan.sibling_discount_pct}% sibling discount` : ""}
+            {fmt(Number(plan.amount))} {L.fc_per}{plan.price_unit === "once" ? L.fc_unit_once : plan.price_unit === "week" ? L.fc_unit_week : plan.price_unit === "session" ? L.fc_unit_session : L.fc_unit_month}
+            {plan.sessions_per_week ? ` · ${L.fc_sessions_week.replace("{n}", String(plan.sessions_per_week))}` : ""}
+            {plan.sibling_discount_pct ? ` · ${L.fc_sibling_disc.replace("{n}", String(plan.sibling_discount_pct))}` : ""}
           </p>
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Num label="Children" value={children} set={setChildren} min={1} max={20} />
-          {!calc?.isOnce && <Num label="Months" value={months} set={setMonths} min={1} max={36} />}
-          <Num label="Sibling discount" value={siblingPct} set={setSiblingPct} min={0} max={100} suffix="%" />
-          <Num label="Joining fee (each)" value={joiningFee} set={setJoiningFee} min={0} step={10} />
+          <Num label={L.fc_children} value={children} set={setChildren} min={1} max={20} />
+          {!calc?.isOnce && <Num label={L.fc_months} value={months} set={setMonths} min={1} max={36} />}
+          <Num label={L.fc_sibling} value={siblingPct} set={setSiblingPct} min={0} max={100} suffix="%" />
+          <Num label={L.fc_joining} value={joiningFee} set={setJoiningFee} min={0} step={10} />
         </div>
 
         {!calc?.isOnce && (
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <input type="checkbox" checked={prorate} onChange={(e) => setProrate(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-green-600 focus:ring-green-500" />
-              Prorate first month from a start date
+              {L.fc_prorate}
             </label>
             {prorate && (
               <div className="mt-2 flex items-center gap-2">
@@ -153,8 +155,8 @@ export function FeeCalculator({ plans, students }: { plans: Plan[]; students: St
                 />
                 {calc && (
                   <span className="text-xs text-slate-500">
-                    first month ≈ {Math.round(calc.firstFactor * 100)}%
-                    {calc.sessionsPerMonth > 0 ? " (by sessions)" : " (by days)"}
+                    {L.fc_first_month.replace("{n}", String(Math.round(calc.firstFactor * 100)))}
+                    {calc.sessionsPerMonth > 0 ? ` ${L.fc_by_sessions}` : ` ${L.fc_by_days}`}
                   </span>
                 )}
               </div>
@@ -167,37 +169,37 @@ export function FeeCalculator({ plans, students }: { plans: Plan[]; students: St
       <div className="space-y-3 rounded-xl border-2 border-green-100 bg-green-50/50 p-5">
         <div className="flex items-center gap-2 text-green-700">
           <Calculator className="h-4 w-4" />
-          <span className="text-sm font-semibold">Estimate</span>
+          <span className="text-sm font-semibold">{L.fc_estimate}</span>
         </div>
 
         {calc ? (
           <>
-            <Row label={`${fmt(calc.perChild)} × ${children} child${children > 1 ? "ren" : ""}`} value={fmt(calc.gross)} />
-            {calc.sibDisc > 0 && <Row label={`Sibling discount (${siblingPct}%)`} value={`− ${fmt(calc.sibDisc)}`} muted />}
-            {calc.joining > 0 && <Row label={`Joining fee × ${children}`} value={fmt(calc.joining)} />}
+            <Row label={`${fmt(calc.perChild)} × ${L.fc_child_row.replace("{n}", String(children))}`} value={fmt(calc.gross)} />
+            {calc.sibDisc > 0 && <Row label={L.fc_sib_row.replace("{n}", String(siblingPct))} value={`− ${fmt(calc.sibDisc)}`} muted />}
+            {calc.joining > 0 && <Row label={L.fc_join_row.replace("{n}", String(children))} value={fmt(calc.joining)} />}
             <div className="border-t border-green-200 pt-3">
               <div className="flex items-end justify-between">
-                <span className="text-sm font-medium text-slate-600">Total estimate</span>
+                <span className="text-sm font-medium text-slate-600">{L.fc_total}</span>
                 <span className="text-3xl font-bold text-green-700">{fmt(calc.net)}</span>
               </div>
-              {!calc.isOnce && <div className="mt-1 text-right text-xs text-slate-500">≈ {fmt(calc.perMonth)} / month</div>}
+              {!calc.isOnce && <div className="mt-1 text-right text-xs text-slate-500">≈ {L.fc_per_month.replace("{amt}", fmt(calc.perMonth))}</div>}
             </div>
           </>
         ) : (
-          <p className="text-sm text-slate-500">Pick a fee plan to see an estimate.</p>
+          <p className="text-sm text-slate-500">{L.fc_pick_plan}</p>
         )}
 
         {/* Quote → invoice */}
         <div className="mt-2 space-y-2 border-t border-green-200 pt-3">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-            <FileText className="h-3.5 w-3.5" /> Create invoice for a student
+            <FileText className="h-3.5 w-3.5" /> {L.fc_create_inv}
           </div>
           <select
             value={studentId}
             onChange={(e) => { setStudentId(e.target.value); setSaved(false); setMsg(null); }}
             className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-900 focus:border-green-500 focus:outline-none"
           >
-            <option value="">Select a student…</option>
+            <option value="">{L.fc_select_student}</option>
             {students.map((s) => (
               <option key={s.id} value={s.id}>{s.full_name}</option>
             ))}
@@ -207,7 +209,7 @@ export function FeeCalculator({ plans, students }: { plans: Plan[]; students: St
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              aria-label="Due date"
+              aria-label={L.ivf_due_date}
               className="h-9 flex-1 rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 focus:border-green-500 focus:outline-none"
             />
             <button
@@ -216,11 +218,11 @@ export function FeeCalculator({ plans, students }: { plans: Plan[]; students: St
               disabled={pending || !studentId || invoiceAmount <= 0}
               className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-green-600 px-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-40"
             >
-              {saved ? <><Check className="h-4 w-4" /> Created</> : `Invoice ${fmt(invoiceAmount)}`}
+              {saved ? <><Check className="h-4 w-4" /> {L.fc_created}</> : L.fc_invoice_btn.replace("{amt}", fmt(invoiceAmount))}
             </button>
           </div>
           {msg && <p className="text-xs font-medium text-red-600">{msg}</p>}
-          <p className="text-xs text-slate-400">Bills the selected student the total above as an unpaid invoice. For siblings, invoice each child.</p>
+          <p className="text-xs text-slate-400">{L.fc_footer}</p>
         </div>
       </div>
     </div>

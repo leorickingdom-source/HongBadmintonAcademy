@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/auth";
 import { PageHeader } from "@/components/ui";
+import { dict } from "@/lib/i18n";
 import { ClubMemberForm } from "../club-member-form";
 import { createClubMember } from "../actions";
 
@@ -11,7 +12,8 @@ export default async function NewClubMemberPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requireSuperAdmin();
+  const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const { error } = await searchParams;
   const supabase = await createClient();
   const { data: tiers } = await supabase
@@ -23,8 +25,8 @@ export default async function NewClubMemberPage({
 
   return (
     <div>
-      <PageHeader title="Add club member" description="Register a club member and assign a membership tier." />
-      <ClubMemberForm action={createClubMember} tiers={tiers ?? []} error={error} />
+      <PageHeader title={L.cmf_new_title} description={L.cmf_new_desc} />
+      <ClubMemberForm action={createClubMember} tiers={tiers ?? []} error={error} locale={me.locale} />
     </div>
   );
 }

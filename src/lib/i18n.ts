@@ -722,6 +722,7 @@ const en = {
   br_code: "Short code",
   br_code_hint: "Optional, e.g. PJ.",
   br_address: "Address",
+  br_color: "Colour",
   br_add_btn: "Add branch",
   br_students_w: "students",
   br_classes_w: "classes",
@@ -732,6 +733,7 @@ const en = {
   br_edit_details: "Edit details",
   br_save_changes: "Save changes",
   br_empty: "No branches yet — add your first above.",
+  br_color: "Colour",
 
   // ── admin: account ──
   acc_phone_updated: "Phone updated.",
@@ -1052,6 +1054,26 @@ const en = {
   cm_session_word: "session",
   cm_bulk_del_sessions: "Delete {n} selected session(s)?",
   cm_no_upcoming: "No upcoming sessions. Add a schedule slot, then Generate.",
+
+  // ── admin: club member form ──
+  cmf_tier: "Membership tier",
+  cmf_tier_hint: "Club fee plans (Fee Plans → Arm: Club).",
+  cmf_add_member: "Add member",
+  cmf_new_title: "Add club member",
+  cmf_new_desc: "Register a club member and assign a membership tier.",
+  cmf_edit_title: "Edit club member",
+
+  // ── admin: court bookings ──
+  cb_desc: "Member court reservations. Paid bookings are club revenue (see Pots).",
+  cb_back: "← Club Members",
+  cb_canceled: "Booking canceled.",
+  cb_section: "Bookings",
+  cb_member: "Member",
+  cb_cancel_confirm: "Cancel this booking?",
+  cb_empty: "No court bookings yet.",
+  cb_st_confirmed: "confirmed",
+  cb_st_canceled: "canceled",
+  cb_st_pending: "pending",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -1755,6 +1777,7 @@ const zh: Dict = {
   br_code: "简码",
   br_code_hint: "可选，如 PJ。",
   br_address: "地址",
+  br_color: "颜色",
   br_add_btn: "添加分院",
   br_students_w: "学员",
   br_classes_w: "班级",
@@ -1765,6 +1788,7 @@ const zh: Dict = {
   br_edit_details: "编辑详情",
   br_save_changes: "保存更改",
   br_empty: "暂无分院 — 在上方添加第一个。",
+  br_color: "颜色",
 
   // ── admin: account ──
   acc_phone_updated: "电话已更新。",
@@ -2085,6 +2109,26 @@ const zh: Dict = {
   cm_session_word: "课程",
   cm_bulk_del_sessions: "删除所选的 {n} 节课程？",
   cm_no_upcoming: "暂无即将到来的课程。先添加课表时段，再生成。",
+
+  // ── admin: club member form ──
+  cmf_tier: "会员等级",
+  cmf_tier_hint: "俱乐部收费方案（收费方案 → 业务：俱乐部）。",
+  cmf_add_member: "添加会员",
+  cmf_new_title: "添加俱乐部会员",
+  cmf_new_desc: "登记俱乐部会员并分配会员等级。",
+  cmf_edit_title: "编辑俱乐部会员",
+
+  // ── admin: court bookings ──
+  cb_desc: "会员场地预订。已付款的预订计入俱乐部收入（见分账）。",
+  cb_back: "← 俱乐部会员",
+  cb_canceled: "预订已取消。",
+  cb_section: "预订",
+  cb_member: "会员",
+  cb_cancel_confirm: "取消此预订？",
+  cb_empty: "暂无场地预订。",
+  cb_st_confirmed: "已确认",
+  cb_st_canceled: "已取消",
+  cb_st_pending: "待处理",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

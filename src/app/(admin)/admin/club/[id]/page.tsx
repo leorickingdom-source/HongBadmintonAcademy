@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/auth";
 import { PageHeader } from "@/components/ui";
+import { dict } from "@/lib/i18n";
 import { ClubMemberForm } from "../club-member-form";
 import { updateClubMember } from "../actions";
 
@@ -14,7 +15,8 @@ export default async function EditClubMemberPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requireSuperAdmin();
+  const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const { id } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
@@ -26,8 +28,8 @@ export default async function EditClubMemberPage({
 
   return (
     <div>
-      <PageHeader title="Edit club member" description={member.full_name} />
-      <ClubMemberForm action={updateClubMember} member={member as any} tiers={tiers ?? []} error={error} />
+      <PageHeader title={L.cmf_edit_title} description={member.full_name} />
+      <ClubMemberForm action={updateClubMember} member={member as any} tiers={tiers ?? []} error={error} locale={me.locale} />
     </div>
   );
 }

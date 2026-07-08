@@ -48,6 +48,36 @@ export const clubJoinSchema = z.object({
   tier_id: requiredId,
 });
 
+// Public "book a free trial" funnel (Phase 1) — no login, no payment. Phone is
+// required (parents here are WhatsApp-first); email is optional. Consent must be
+// ticked before we may contact them. Branch is optional and re-validated
+// server-side. No student/parent row is created here — this is a lead.
+const requiredPhoneMY = z
+  .string()
+  .trim()
+  .min(1, "Phone number is required")
+  .transform((v) => normalizePhoneMY(v))
+  .refine((v): v is string => !!v, "Enter a valid phone number");
+
+export const trialLeadSchema = z.object({
+  child_name: z.string().trim().min(1, "The child's name is required"),
+  child_dob: optionalStr,
+  // Whitelist the three self-report options; anything else (incl. "") → null.
+  experience: z.string().trim().optional().transform((v) =>
+    v && ["none", "some", "experienced"].includes(v) ? v : null,
+  ),
+  parent_name: z.string().trim().min(1, "Your name is required"),
+  phone: requiredPhoneMY,
+  email: z.union([z.string().trim().email("Enter a valid email"), z.literal("")])
+    .optional()
+    .transform((v) => (v ? v : null)),
+  branch_id: optionalId,
+  preferred_slot: optionalStr,
+  // Unticked checkbox → the key is absent → fails the refine with our message.
+  consent: z.string().optional().transform((v) => v === "on")
+    .refine((v) => v === true, "Please tick the box so we can contact you"),
+});
+
 export const profileSchema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email required"),

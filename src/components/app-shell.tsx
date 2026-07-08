@@ -62,6 +62,7 @@ function shortLabel(label: string): string {
 export function AppShell({
   groups,
   role,
+  roleLabel,
   name,
   accountHref,
   bell,
@@ -72,6 +73,7 @@ export function AppShell({
 }: {
   groups: NavGroup[];
   role: string;
+  roleLabel?: string;
   name: string;
   accountHref?: string;
   bell?: React.ReactNode;
@@ -208,7 +210,7 @@ export function AppShell({
       </span>
       <div>
         <div className="text-sm font-bold text-slate-900">{APP_SHORT}</div>
-        <div className="text-[11px] text-slate-400">{ROLE_LABEL[role] ?? role}</div>
+        <div className="text-[11px] text-slate-400">{roleLabel ?? ROLE_LABEL[role] ?? role}</div>
       </div>
     </Link>
   );
@@ -262,7 +264,7 @@ export function AppShell({
               <Avatar name={name} size={36} />
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-slate-800">{name}</div>
-                <div className="text-[11px] text-slate-400">{ROLE_LABEL[role] ?? role}</div>
+                <div className="text-[11px] text-slate-400">{roleLabel ?? ROLE_LABEL[role] ?? role}</div>
               </div>
             </div>
             {accountHref && (

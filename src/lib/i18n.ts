@@ -488,3 +488,60 @@ const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };
 export function dict(locale: string | null | undefined): Dict {
   return DICTS[normalizeLocale(locale)];
 }
+
+// ─── Admin sidebar labels ────────────────────────────────────────────────────
+// Kept as side maps (not the typed Dict) so the whole nav + role chip translate
+// in bulk without threading dozens of keys. The English label IS the key and the
+// fallback for any unmapped string, so ADMIN_NAV stays the source of truth.
+const ZH_NAV: Record<string, string> = {
+  // group titles
+  Daily: "日常",
+  Teaching: "教学",
+  "Finance & Comms": "财务与通讯",
+  "Insights & Setup": "分析与设置",
+  Organization: "机构",
+  // items
+  Attendance: "出勤",
+  Sessions: "课程节次",
+  "Leave & Makeup": "请假与补课",
+  "Trial Leads": "试课名单",
+  Directory: "通讯录",
+  "Classes & Schedule": "班级与课表",
+  "Coaches & Payroll": "教练与薪酬",
+  "At-risk": "流失预警",
+  Leaderboard: "排行榜",
+  "Exams & Progress": "考试与进度",
+  "Training Syllabus": "训练大纲",
+  "Reward Rules": "奖励规则",
+  "Invoices & Payments": "账单与缴费",
+  Collections: "催收",
+  Club: "俱乐部",
+  "Fee Calculator": "费用计算器",
+  Announcements: "公告",
+  "WhatsApp Log": "WhatsApp 记录",
+  "Fee Plans": "收费方案",
+  "Court Rentals": "场地租赁",
+  Analytics: "数据分析",
+  "Reports & Export": "报表与导出",
+  Holidays: "假期",
+  Settings: "设置",
+  Branches: "分院",
+  "Staff & Admins": "员工与管理员",
+};
+
+const ZH_ROLE: Record<string, string> = {
+  super_admin: "超级管理员",
+  admin: "分院管理员",
+  coach: "教练",
+  parent: "家长",
+};
+
+// Translate an admin nav group/item label; English passes through unchanged.
+export function navLabel(locale: string | null | undefined, en: string): string {
+  return normalizeLocale(locale) === "zh" ? ZH_NAV[en] ?? en : en;
+}
+
+// Translate a role chip; `fallback` is the English ROLE_LABEL for that role.
+export function roleLabel(locale: string | null | undefined, role: string, fallback: string): string {
+  return normalizeLocale(locale) === "zh" ? ZH_ROLE[role] ?? fallback : fallback;
+}

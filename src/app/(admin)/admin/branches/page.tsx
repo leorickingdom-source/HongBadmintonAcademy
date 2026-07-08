@@ -7,7 +7,7 @@ import { BranchDot, BranchColorPicker } from "@/components/branch-chip";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { dict } from "@/lib/i18n";
-import { createBranch, updateBranch, toggleBranch, deleteBranch } from "./actions";
+import { createBranch, updateBranch, toggleBranch, deleteBranch, seedBranchStudents } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +91,12 @@ export default async function BranchesPage({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {(stCount.get(b.id) ?? 0) === 0 && (
+                      <form action={seedBranchStudents}>
+                        <input type="hidden" name="id" value={b.id} />
+                        <SubmitButton variant="secondary" pendingText="…">{L.br_seed_students}</SubmitButton>
+                      </form>
+                    )}
                     <form action={toggleBranch}>
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="active" value={(!b.is_active).toString()} />

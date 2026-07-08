@@ -32,6 +32,8 @@ export interface Analytics {
   classOccupancy: { id: string; name: string; enrolled: number; capacity: number; pct: number }[];
   avgOccupancyPct: number | null;
   feeAging: { d0: number; d30: number; d60: number; d90: number };
+  // Trial-lead funnel for the month (public /trial intake → enrolment).
+  trialFunnel: { new: number; contacted: number; trial_booked: number; trialed: number; enrolled: number; lost: number; total: number; convRate: number | null };
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -79,6 +81,7 @@ export async function computeAnalytics(supabase: any, month: Date = new Date(), 
     { data: classCoaches },
     { data: coachRows },
     { data: rentalRows },
+    { data: leadRows },
   ] = await Promise.all([
     head("profiles", (q: any) => B(q.eq("role", "coach"))),
     head("profiles", (q: any) => q.eq("role", "parent")),
@@ -115,6 +118,8 @@ export async function computeAnalytics(supabase: any, month: Date = new Date(), 
     // Court rental cost for the month (super-admin only via RLS — non-super
     // callers just get 0 rows, so this stays 0 for them).
     B(supabase.from("court_rentals").select("amount, branch_id").gte("rental_date", ymd(mStart)).lt("rental_date", ymd(mEnd))),
+    // Trial leads created this month, for the intake→enrolment funnel.
+    B(supabase.from("trial_leads").select("status, branch_id").gte("created_at", monthStartISO).lt("created_at", mEnd.toISOString()).limit(10000)),
   ]);
 
   const activeStudentIds = new Set<string>((activeStudents ?? []).map((s: any) => String(s.id)));
@@ -298,6 +303,15 @@ export async function computeAnalytics(supabase: any, month: Date = new Date(), 
   const courtRentalCost = Math.round((rentalRows ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0));
   const netRevenue = Math.round(collection.collected - courtRentalCost);
 
+  // Trial-lead funnel (leads created this month, by ladder status).
+  const funnel = { new: 0, contacted: 0, trial_booked: 0, trialed: 0, enrolled: 0, lost: 0 };
+  for (const l of leadRows ?? []) {
+    const st = (l as any).status as string;
+    if (st in funnel) (funnel as any)[st]++;
+  }
+  const funnelTotal = funnel.new + funnel.contacted + funnel.trial_booked + funnel.trialed + funnel.enrolled + funnel.lost;
+  const trialFunnel = { ...funnel, total: funnelTotal, convRate: funnelTotal ? Math.round((funnel.enrolled / funnelTotal) * 100) : null };
+
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
     return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString("en-MY", { month: "short" }), amount: 0, count: 0 };
@@ -350,5 +364,6 @@ export async function computeAnalytics(supabase: any, month: Date = new Date(), 
     classOccupancy,
     avgOccupancyPct,
     feeAging,
+    trialFunnel,
   };
 }

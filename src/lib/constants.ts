@@ -58,13 +58,18 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/announce", label: "Announcements" },
       { href: "/admin/messages", label: "WhatsApp Log" },
       { href: "/admin/fee-plans", label: "Fee Plans", superOnly: true },
+    ],
+  },
+  {
+    group: "Costs",
+    items: [
       { href: "/admin/court-rentals", label: "Court Rentals", superOnly: true },
     ],
   },
   {
     group: "Insights & Setup",
     items: [
-      { href: "/admin/analytics", label: "Analytics", superOnly: true },
+      { href: "/admin/analytics", label: "Analytics" },
       { href: "/admin/reports", label: "Reports & Export" },
       { href: "/admin/holidays", label: "Holidays" },
       { href: "/admin/settings", label: "Settings", superOnly: true },

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { getViewBranchId, listBranches } from "@/lib/branch";
 import { PageHeader, StatCard, Section, Collapsible, Table, Th, Td, EmptyState, LinkButton, Badge, cn } from "@/components/ui";
 import { FilterSelect } from "@/components/filter-controls";
@@ -26,20 +26,23 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ month?: string; branch?: string }>;
 }) {
-  // Revenue-heavy academy analytics are super-admin only; branch admins are
-  // scoped to follow-up collections (see /admin/collections).
-  const me = await requireSuperAdmin();
+  // Super-admins get the full picture (incl. money) across any branch. Branch
+  // admins get a scoped, NON-FINANCE view (attendance/retention/occupancy/exams/
+  // funnel) of their own branch — money stays super-admin only (collections is
+  // their finance surface).
+  const me = await requireRole("admin");
+  const isSuper = me.role === "super_admin";
   const L = dict(me.locale);
   const supabase = await createClient();
   const { month, branch } = await searchParams;
   const nowD = new Date();
   const monthStr = /^\d{4}-\d{2}$/.test(month ?? "") ? month! : `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
   const [my, mm] = monthStr.split("-").map(Number);
-  // Branch filter: an explicit ?branch= wins, else the super-admin's global
-  // branch-view switcher (null = all branches).
+  // Branch filter: super-admin picks (explicit ?branch= wins, else global
+  // switcher); a branch-admin is pinned to their own branch.
   const branches = await listBranches(false);
-  const branchParam = branch && branch !== "all" && branches.some((b) => b.id === branch) ? branch : null;
-  const bf = branchParam ?? await getViewBranchId(me);
+  const branchParam = isSuper && branch && branch !== "all" && branches.some((b) => b.id === branch) ? branch : null;
+  const bf = isSuper ? (branchParam ?? await getViewBranchId(me)) : (me.branch_id ?? null);
   const branchLabel = bf ? branches.find((b) => b.id === bf)?.name ?? null : null;
   const bq = branchParam ? `&branch=${branchParam}` : "";
   const a = await computeAnalytics(supabase, new Date(my, mm - 1, 1), bf);
@@ -59,16 +62,16 @@ export default async function AnalyticsPage({
       <PageHeader
         title={L.ana_title}
         description={branchLabel ? `${branchLabel} — ${L.ana_desc_branch}` : L.ana_desc_all}
-        action={
+        action={isSuper ? (
           <div className="flex flex-wrap items-center gap-1.5">
             <LinkButton href={`/api/analytics/pdf?month=${monthStr}`} target="_blank" rel="noopener" variant="secondary">PDF</LinkButton>
             <LinkButton href={`/api/analytics/csv?month=${monthStr}`} target="_blank" rel="noopener" variant="secondary">CSV</LinkButton>
           </div>
-        }
+        ) : undefined}
       />
 
       {/* Branch filter (super-admin) — pick one branch or all. */}
-      {branches.length > 1 && (
+      {isSuper && branches.length > 1 && (
         <label className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-slate-600">{L.branch}</span>
           <FilterSelect name="branch" defaultValue={branchParam ?? ""} className="h-9 w-52">
@@ -96,20 +99,70 @@ export default async function AnalyticsPage({
         </Link>
       </div>
 
-      {/* Headline KPIs — health of the academy at a glance. Colour = look here. */}
+      {/* Headline KPIs — health of the academy at a glance. Colour = look here.
+          Money cards are super-admin only; branch admins see growth/quality KPIs. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label={L.ana_revenue_month} value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />
-        <StatCard
-          label={L.coll_rate}
-          value={a.collection.rate != null ? `${a.collection.rate}%` : "—"}
-          sub={a.outstanding > 0 ? `${formatCurrency(a.outstanding, a.currency)} ${L.ana_outstanding_sub}` : L.ana_all_collected}
-          tone={collTone}
-        />
+        {isSuper && <StatCard label={L.ana_revenue_month} value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />}
+        {isSuper && (
+          <StatCard
+            label={L.coll_rate}
+            value={a.collection.rate != null ? `${a.collection.rate}%` : "—"}
+            sub={a.outstanding > 0 ? `${formatCurrency(a.outstanding, a.currency)} ${L.ana_outstanding_sub}` : L.ana_all_collected}
+            tone={collTone}
+          />
+        )}
         <StatCard label={L.adm_active_students} value={a.counts.students} sub={a.newStudentsThisMonth ? L.ana_new_sub.replace("{n}", String(a.newStudentsThisMonth)) : undefined} tone="blue" />
         <StatCard label={L.ana_att_rate} value={a.attendanceRate != null ? `${a.attendanceRate}%` : "—"} sub={L.ana_this_month} tone={attTone} />
+        {!isSuper && (
+          <StatCard
+            label={L.ana_retention}
+            value={a.retention.rate != null ? `${a.retention.rate}%` : "—"}
+            sub={L.ana_retention_sub2}
+            tone={a.retention.rate == null ? "slate" : a.retention.rate >= 80 ? "green" : a.retention.rate >= 60 ? "amber" : "red"}
+          />
+        )}
+        {!isSuper && <StatCard label={L.ana_occupancy} value={a.avgOccupancyPct != null ? `${a.avgOccupancyPct}%` : "—"} sub={L.ana_occupancy_sub} tone="blue" />}
       </div>
 
-      {/* ── Money ─────────────────────────────────────────────────────────── */}
+      {/* ── Trial funnel (all admins — a growth metric, not finance) ─────────── */}
+      <Collapsible title={L.ana_funnel} defaultOpen={false}>
+        <div className="space-y-6 p-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <StatCard label={L.lead_st_new} value={a.trialFunnel.new} />
+            <StatCard label={L.lead_st_contacted} value={a.trialFunnel.contacted} />
+            <StatCard label={L.lead_st_trial_booked} value={a.trialFunnel.trial_booked} tone="blue" />
+            <StatCard label={L.lead_st_trialed} value={a.trialFunnel.trialed} tone="amber" />
+            <StatCard label={L.lead_st_enrolled} value={a.trialFunnel.enrolled} tone="green" />
+            <StatCard label={L.lead_st_lost} value={a.trialFunnel.lost} tone={a.trialFunnel.lost ? "red" : "slate"} />
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <StatCard
+              label={L.ana_funnel_conv}
+              value={a.trialFunnel.convRate != null ? `${a.trialFunnel.convRate}%` : "—"}
+              sub={L.ana_funnel_conv_sub.replace("{n}", String(a.trialFunnel.total))}
+              tone={a.trialFunnel.convRate != null && a.trialFunnel.convRate >= 30 ? "green" : "amber"}
+            />
+            <Section title={L.ana_funnel} description={L.ana_funnel_desc}>
+              {a.trialFunnel.total ? (
+                <CategoryBarChart
+                  data={[
+                    { name: L.lead_st_new, value: a.trialFunnel.new, color: "#94a3b8" },
+                    { name: L.lead_st_contacted, value: a.trialFunnel.contacted, color: "#3b82f6" },
+                    { name: L.lead_st_trial_booked, value: a.trialFunnel.trial_booked, color: "#6366f1" },
+                    { name: L.lead_st_trialed, value: a.trialFunnel.trialed, color: "#f59e0b" },
+                    { name: L.lead_st_enrolled, value: a.trialFunnel.enrolled, color: "#16a34a" },
+                    { name: L.lead_st_lost, value: a.trialFunnel.lost, color: "#ef4444" },
+                  ]}
+                />
+              ) : <EmptyState message={L.ana_funnel_empty} />}
+            </Section>
+          </div>
+          <LinkButton href="/admin/leads" variant="secondary">{L.ana_funnel_manage}</LinkButton>
+        </div>
+      </Collapsible>
+
+      {/* ── Money (super-admin only) ──────────────────────────────────────── */}
+      {isSuper && (
       <Collapsible title={L.ana_money} defaultOpen={false}>
         <div className="space-y-6 p-5">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -152,6 +205,7 @@ export default async function AnalyticsPage({
           </Section>
         </div>
       </Collapsible>
+      )}
 
       {/* ── Students & attendance ─────────────────────────────────────────── */}
       <Collapsible title={L.ana_students_att} defaultOpen={false}>

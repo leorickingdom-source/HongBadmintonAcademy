@@ -69,6 +69,33 @@ export async function updateBranch(formData: FormData) {
   redirect("/admin/branches?saved=1");
 }
 
+// Seed a handful of sample students into a branch so a fresh/demo branch isn't a
+// blank roster. Super-admin only, and idempotent — no-op if the branch already
+// has students, so it can't pile up duplicates on repeat clicks.
+export async function seedBranchStudents(formData: FormData) {
+  await requireSuperAdmin();
+  const branch_id = String(formData.get("id"));
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("students")
+    .select("*", { count: "exact", head: true })
+    .eq("branch_id", branch_id);
+  if ((count ?? 0) > 0) redirect("/admin/branches?saved=1");
+
+  const names = ["Aiman Tan", "Mei Ling Wong", "Arjun Nair", "Siti Nur Adlina", "Daniel Lee", "Kavya Raman"];
+  const rows = names.map((full_name, i) => ({
+    full_name,
+    branch_id,
+    level: (i % 6) + 1,
+    status: "active" as const,
+  }));
+  const { error } = await supabase.from("students").insert(rows);
+  if (error) err(error.message);
+  revalidatePath("/admin/branches");
+  revalidatePath("/admin/people");
+  redirect("/admin/branches?saved=1");
+}
+
 export async function toggleBranch(formData: FormData) {
   await requireSuperAdmin();
   const id = String(formData.get("id"));

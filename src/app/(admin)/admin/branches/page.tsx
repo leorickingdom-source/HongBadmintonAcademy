@@ -5,6 +5,7 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
+import { dict } from "@/lib/i18n";
 import { createBranch, updateBranch, toggleBranch, deleteBranch } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,8 @@ export default async function BranchesPage({
 }: {
   searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
-  await requireSuperAdmin();
+  const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const { error, saved } = await searchParams;
   const supabase = await createClient();
 
@@ -37,33 +39,33 @@ export default async function BranchesPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Branches" description="Locations across the academy. Students, classes, staff and invoices each belong to one branch." />
+      <PageHeader title={L.br_title} description={L.br_desc} />
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      {saved && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
+      {saved && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{L.saved}</p>}
 
       <Card className="max-w-2xl p-6">
         <form action={createBranch} className="space-y-4">
-          <h2 className="text-base font-semibold text-slate-900">Add a branch</h2>
+          <h2 className="text-base font-semibold text-slate-900">{L.br_add}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Branch name" required>
+            <Field label={L.br_name} required>
               <Input name="name" required placeholder="e.g. Petaling Jaya" />
             </Field>
-            <Field label="Short code" hint="Optional, e.g. PJ.">
+            <Field label={L.br_code} hint={L.br_code_hint}>
               <Input name="code" placeholder="PJ" />
             </Field>
-            <Field label="Phone">
+            <Field label={L.phone_label}>
               <Input name="phone" placeholder="+60…" />
             </Field>
-            <Field label="Address">
+            <Field label={L.br_address}>
               <Input name="address" />
             </Field>
           </div>
-          <SubmitButton pendingText="Adding…">Add branch</SubmitButton>
+          <SubmitButton pendingText={L.cr_adding}>{L.br_add_btn}</SubmitButton>
         </form>
       </Card>
 
-      <Section title={`All branches (${branches?.length ?? 0})`} flush>
+      <Section title={`${L.dir_all_branches} (${branches?.length ?? 0})`} flush>
         {branches && branches.length > 0 ? (
           <ul className="divide-y divide-slate-100">
             {branches.map((b: any) => (
@@ -73,10 +75,10 @@ export default async function BranchesPage({
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-slate-900">{b.name}</span>
                       {b.code && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">{b.code}</span>}
-                      <Badge tone={b.is_active ? "green" : "slate"}>{b.is_active ? "active" : "inactive"}</Badge>
+                      <Badge tone={b.is_active ? "green" : "slate"}>{b.is_active ? L.adm_active : L.adm_inactive}</Badge>
                     </div>
                     <div className="mt-1 text-sm text-slate-500">
-                      {stCount.get(b.id) ?? 0} students · {clCount.get(b.id) ?? 0} classes · {staffCount.get(b.id) ?? 0} staff
+                      {stCount.get(b.id) ?? 0} {L.br_students_w} · {clCount.get(b.id) ?? 0} {L.br_classes_w} · {staffCount.get(b.id) ?? 0} {L.br_staff_w}
                       {b.phone ? ` · ${b.phone}` : ""}
                     </div>
                   </div>
@@ -84,33 +86,33 @@ export default async function BranchesPage({
                     <form action={toggleBranch}>
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="active" value={(!b.is_active).toString()} />
-                      <SubmitButton variant="secondary" pendingText="…">{b.is_active ? "Deactivate" : "Activate"}</SubmitButton>
+                      <SubmitButton variant="secondary" pendingText="…">{b.is_active ? L.br_deactivate : L.br_activate}</SubmitButton>
                     </form>
                     <form action={deleteBranch}>
                       <input type="hidden" name="id" value={b.id} />
-                      <ConfirmButton label="Delete" confirmText={`Delete branch "${b.name}"? Only works if it has no members.`} />
+                      <ConfirmButton label={L.del_word} confirmText={L.br_del_confirm.replace("{name}", b.name)} />
                     </form>
                   </div>
                 </div>
 
                 <details className="mt-3">
-                  <summary className={cn("cursor-pointer text-sm font-medium text-slate-500 hover:text-slate-700")}>Edit details</summary>
+                  <summary className={cn("cursor-pointer text-sm font-medium text-slate-500 hover:text-slate-700")}>{L.br_edit_details}</summary>
                   <form action={updateBranch} className="mt-3 grid max-w-2xl gap-3 sm:grid-cols-2">
                     <input type="hidden" name="id" value={b.id} />
-                    <Field label="Name" required>
+                    <Field label={L.col_name} required>
                       <Input name="name" defaultValue={b.name} required />
                     </Field>
-                    <Field label="Short code">
+                    <Field label={L.br_code}>
                       <Input name="code" defaultValue={b.code ?? ""} />
                     </Field>
-                    <Field label="Phone">
+                    <Field label={L.phone_label}>
                       <Input name="phone" defaultValue={b.phone ?? ""} />
                     </Field>
-                    <Field label="Address">
+                    <Field label={L.br_address}>
                       <Input name="address" defaultValue={b.address ?? ""} />
                     </Field>
                     <div className="sm:col-span-2">
-                      <SubmitButton pendingText="Saving…">Save changes</SubmitButton>
+                      <SubmitButton pendingText={L.cr_saving}>{L.br_save_changes}</SubmitButton>
                     </div>
                   </form>
                 </details>
@@ -118,7 +120,7 @@ export default async function BranchesPage({
             ))}
           </ul>
         ) : (
-          <div className="p-5"><EmptyState message="No branches yet — add your first above." /></div>
+          <div className="p-5"><EmptyState message={L.br_empty} /></div>
         )}
       </Section>
     </div>

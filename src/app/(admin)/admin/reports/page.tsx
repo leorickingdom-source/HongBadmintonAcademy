@@ -1,25 +1,26 @@
 import { GraduationCap, ClipboardList, FileText, Wallet } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { PageHeader, Card, LinkButton, ICON_TINT, cn } from "@/components/ui";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
-
-const EXPORTS = [
-  { type: "students", label: "Students", desc: "Profiles, NFC tags and parent links.", Icon: GraduationCap, tone: "blue", superOnly: false },
-  { type: "attendance", label: "Attendance", desc: "Tap-in / tap-out records per session.", Icon: ClipboardList, tone: "green", superOnly: false },
-  { type: "invoices", label: "Invoices", desc: "All fees with status and due dates.", Icon: FileText, tone: "amber", superOnly: true },
-  { type: "payments", label: "Payments", desc: "Reconciliation log of transactions.", Icon: Wallet, tone: "teal", superOnly: true },
-];
 
 export default async function ReportsPage() {
   // Financial extracts (invoices, payments) are super-admin only.
   const me = await requireRole("admin");
+  const L = dict(me.locale);
+  const EXPORTS = [
+    { type: "students", label: L.rep_students, desc: L.rep_students_desc, Icon: GraduationCap, tone: "blue", superOnly: false },
+    { type: "attendance", label: L.rep_attendance, desc: L.rep_attendance_desc, Icon: ClipboardList, tone: "green", superOnly: false },
+    { type: "invoices", label: L.rep_invoices, desc: L.rep_invoices_desc, Icon: FileText, tone: "amber", superOnly: true },
+    { type: "payments", label: L.rep_payments, desc: L.rep_payments_desc, Icon: Wallet, tone: "teal", superOnly: true },
+  ];
   const exports = EXPORTS.filter((e) => me.role === "super_admin" || !e.superOnly);
   return (
     <div>
       <PageHeader
-        title="Reports & Export"
-        description="Download CSV, Excel or PDF extracts for accounting and analysis."
+        title={L.rep_title}
+        description={L.rep_desc}
       />
       <div className="grid gap-4 sm:grid-cols-2">
         {exports.map((e) => (

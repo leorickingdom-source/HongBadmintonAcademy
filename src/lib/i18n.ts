@@ -932,6 +932,34 @@ const en = {
   pf_role_branch_admin: "Branch admin (one branch)",
   pf_role_super: "Super admin (all branches)",
   pf_create_staff: "Create staff",
+
+  // ── admin: fee plan form ──
+  fpf_plan_name: "Plan name",
+  fpf_arm_hint: "Which business this plan bills for.",
+  fpf_currency: "Currency",
+  fpf_level_hint: "Optional — tag this plan to a training level.",
+  fpf_create_plan: "Create plan",
+  fpf_new_title: "New fee plan",
+  fpf_edit_title: "Edit fee plan",
+
+  // ── admin: reward form ──
+  rwf_rule_name: "Rule name",
+  rwf_points_hint: "Points awarded when this rule is met.",
+  rwf_config: "Config (JSON)",
+  rwf_config_hint: 'Client-provided logic, e.g. {"type":"attendance","threshold":1.0}',
+  rwf_create_rule: "Create rule",
+  rwf_new_title: "New reward rule",
+  rwf_edit_title: "Edit reward rule",
+
+  // ── admin: invoice form ──
+  ivf_new_title: "New invoice",
+  ivf_all: "← All invoices",
+  ivf_details: "Invoice details",
+  ivf_student_hint: "Parent is linked automatically from the student.",
+  ivf_select_student: "— select student —",
+  ivf_fee_plan: "Fee plan (optional)",
+  ivf_due_date: "Due date",
+  ivf_create: "Create invoice",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -1845,6 +1873,34 @@ const zh: Dict = {
   pf_role_branch_admin: "分院管理员（单个分院）",
   pf_role_super: "超级管理员（所有分院）",
   pf_create_staff: "创建员工",
+
+  // ── admin: fee plan form ──
+  fpf_plan_name: "方案名称",
+  fpf_arm_hint: "此方案计费所属的业务。",
+  fpf_currency: "货币",
+  fpf_level_hint: "可选 — 将此方案标记到某训练等级。",
+  fpf_create_plan: "创建方案",
+  fpf_new_title: "新建收费方案",
+  fpf_edit_title: "编辑收费方案",
+
+  // ── admin: reward form ──
+  rwf_rule_name: "规则名称",
+  rwf_points_hint: "满足此规则时授予的积分。",
+  rwf_config: "配置（JSON）",
+  rwf_config_hint: '客户提供的逻辑，如 {"type":"attendance","threshold":1.0}',
+  rwf_create_rule: "创建规则",
+  rwf_new_title: "新建奖励规则",
+  rwf_edit_title: "编辑奖励规则",
+
+  // ── admin: invoice form ──
+  ivf_new_title: "新建账单",
+  ivf_all: "← 所有账单",
+  ivf_details: "账单详情",
+  ivf_student_hint: "家长会自动从学员关联。",
+  ivf_select_student: "— 选择学员 —",
+  ivf_fee_plan: "收费方案（可选）",
+  ivf_due_date: "到期日",
+  ivf_create: "创建账单",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

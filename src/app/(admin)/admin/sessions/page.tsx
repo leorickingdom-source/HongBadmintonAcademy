@@ -146,6 +146,7 @@ export default async function SessionsPage({
 
       <MonthCalendar
         monthStr={monthStr}
+        locale={me.locale}
         holidays={holidays}
         sessions={list.map((s) => ({
           id: s.id,

@@ -2,10 +2,12 @@ import Link from "next/link";
 import { SessionTile, type CalendarSession } from "@/components/session-tile";
 import { rankBadgeClass, rankCardClass } from "@/lib/ranks";
 import { formatTime } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 
 export type { CalendarSession };
 
-const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DOW_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DOW_ZH = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -52,6 +54,7 @@ export function MonthCalendar({
   holidays = {},
   interactive = true,
   detailBase,
+  locale,
 }: {
   sessions: CalendarSession[];
   monthStr: string;
@@ -59,7 +62,10 @@ export function MonthCalendar({
   holidays?: Record<string, string>; // ymd -> holiday name
   interactive?: boolean; // false = read-only tiles (no modal), e.g. coach view
   detailBase?: string; // when set, read-only tiles link to `${detailBase}/${id}`
+  locale?: string | null;
 }) {
+  const L = dict(locale);
+  const DOW = locale === "zh" ? DOW_ZH : DOW_EN;
   const [yStr, mStr] = monthStr.split("-");
   const year = Number(yStr);
   const month = Number(mStr) - 1; // 0-based
@@ -93,9 +99,9 @@ export function MonthCalendar({
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5">
         <div className="text-sm font-semibold text-slate-800">{label}</div>
         <div className="flex items-center gap-1.5">
-          <Link href={`${basePath}?month=${prev}`} className={navBtn} aria-label="Previous month">←</Link>
-          <Link href={`${basePath}?month=${thisMonth}`} className={navBtn}>Today</Link>
-          <Link href={`${basePath}?month=${next}`} className={navBtn} aria-label="Next month">→</Link>
+          <Link href={`${basePath}?month=${prev}`} className={navBtn} aria-label={L.cs_prev_month}>←</Link>
+          <Link href={`${basePath}?month=${thisMonth}`} className={navBtn}>{L.cs_today}</Link>
+          <Link href={`${basePath}?month=${next}`} className={navBtn} aria-label={L.cs_next_month}>→</Link>
         </div>
       </div>
       <div className="overflow-x-auto">

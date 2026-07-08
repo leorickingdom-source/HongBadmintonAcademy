@@ -46,7 +46,7 @@ npm run lint            # next lint
 npm run build           # next build — what Vercel runs
 ```
 
-**Database:** migrations in `supabase/migrations/*` (50 files, `0001`→`0048`).
+**Database:** migrations in `supabase/migrations/*` (51 files, `0001`→`0049`).
 
 - Hosted: `npx supabase link --project-ref njxrxpdxttwuawsqvkku` then
   `npx supabase db push`.
@@ -73,6 +73,7 @@ src/
     (coach)/coach/…      Coach portal. requireRole("coach").
     (parent)/parent/…    Parent portal. requireParent() (cookie, no Supabase session).
     club/…               Public club signup + passwordless member portal.
+    trial/…              Public free-trial funnel → admin lead inbox (/admin/leads).
     api/
       cron/*             5 cron routes, CRON_SECRET-gated.
       webhooks/stripe    Payment reconciliation (signature-verified).

@@ -25,8 +25,9 @@ Three user portals, one codebase:
 - **Coach** (`/coach`) — check-in, marking, assessments, exams, own payroll.
 - **Parent** (`/parent`) — child progress, schedule, leave requests, fee payment.
 
-Plus a public **Club** surface (`/club`) with no login, and a passwordless club
-**member portal** (`/club/me/[token]`).
+Plus a public **Club** surface (`/club`) with no login, a passwordless club
+**member portal** (`/club/me/[token]`), and a public **free-trial funnel**
+(`/trial`) that feeds an admin lead inbox (`/admin/leads`).
 
 ---
 
@@ -123,8 +124,8 @@ The Bash tool has no Node — use PowerShell for anything Node-related.
 Common scripts: `npm run dev`, `npm run build`, `npm run typecheck`
 (`tsc --noEmit`), `npm run lint`.
 
-**Database:** migrations are in `supabase/migrations/*` (currently **50 files**,
-`0001`→`0048`). Apply to a hosted project with `npx supabase link --project-ref
+**Database:** migrations are in `supabase/migrations/*` (currently **51 files**,
+`0001`→`0049`). Apply to a hosted project with `npx supabase link --project-ref
 <ref>` then `npx supabase db push`, or run a local stack with `npx supabase start`
 + `npx supabase db reset` (which also loads `supabase/seed.sql` demo data).
 
@@ -303,6 +304,14 @@ audit log), `scorecards` (**legacy** monthly PDF, retired).
 *pays* to rent courts; has a `business` tag), `court_bookings` (what club members
 *book*).
 
+**Growth / intake**
+`trial_leads` (migration `0049`) — the public free-trial funnel. A prospect
+submits `/trial` (no login, no payment) → a lead lands in the admin inbox in
+status `new` → an admin works the status ladder (`new` → `contacted` →
+`trial_booked` → `trialed` → `enrolled`/`lost`) and converts a trialed lead into
+a real student. Branch-scoped via `admin_branch_ok`. **The student record is born
+last — after the trial — the inverse of the admin-only create flow.**
+
 **Generated TypeScript types:** `npm run db:types` →
 `src/lib/types/database.ts`. App-facing types are hand-maintained in
 `src/lib/types.ts`.
@@ -318,8 +327,9 @@ audit log), `scorecards` (**legacy** monthly PDF, retired).
 
 - **Daily:** Attendance (live board, matrix, per-session roster, coverage),
   Sessions (calendar, generate next 4 weeks skipping holidays), Leave & Makeup
-  (approve/decline, assign makeup), Directory (students + parents + coaches,
-  paginated, filters), Classes & Schedule.
+  (approve/decline, assign makeup), **Trial Leads** (inbox for the public
+  `/trial` funnel — status ladder, assign, notes, convert to student), Directory
+  (students + parents + coaches, paginated, filters), Classes & Schedule.
 - **Teaching:** Coaches & Payroll, At-risk (attendance-drop win-back), Leaderboard
   (by level), Exams & Progress, Training Syllabus (editable), Reward Rules.
 - **Finance & Comms** (several **super-only**): Invoices & Payments, Collections
@@ -620,7 +630,8 @@ only — extend `src/lib/i18n.ts` when asked).
 | `src/app/api/webhooks/stripe/route.ts` | Payment reconciliation |
 | `src/app/api/worker/*` | Queue polling (`next`/`result`) + URL self-register |
 | `wa-worker/server.mjs` / `tunnel.mjs` | The WhatsApp worker + tunnel self-registration |
-| `supabase/migrations/*` | 50 migrations, `0001`→`0048` |
+| `src/app/trial/*` · `src/app/(admin)/admin/leads/*` | Public free-trial funnel + admin lead inbox (convert lead → student) |
+| `supabase/migrations/*` | 51 migrations, `0001`→`0049` |
 
 ---
 

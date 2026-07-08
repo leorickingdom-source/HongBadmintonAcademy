@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { listBranches } from "@/lib/branch";
 import { PageHeader, LinkButton, Card, Badge, Select, Button, Input, EmptyState, cn } from "@/components/ui";
 import { waLink } from "@/lib/wa";
-import { updateLeadStatus, assignLead, addLeadNote } from "./actions";
+import { levelName } from "@/lib/training";
+import { updateLeadStatus, assignLead, addLeadNote, convertLead } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ type Lead = {
   status: string;
   assigned_to: string | null;
   notes: string | null;
+  converted_student_id: string | null;
   created_at: string;
 };
 
@@ -57,6 +59,12 @@ function ageFromDob(dob: string | null): string | null {
   return age >= 0 && age < 100 ? `${age} yrs` : null;
 }
 
+// A gentle starting-level default from the self-reported experience; the admin
+// can override it in the Convert dropdown.
+function suggestLevel(experience: string | null): number {
+  return experience === "experienced" ? 3 : experience === "some" ? 2 : 1;
+}
+
 function fmtMYT(iso: string): string {
   return new Date(iso).toLocaleString("en-MY", {
     timeZone: "Asia/Kuala_Lumpur",
@@ -78,7 +86,7 @@ export default async function LeadsPage({
   const [{ data: leadsRaw }, { data: admins }, branches] = await Promise.all([
     db
       .from("trial_leads")
-      .select("id, branch_id, child_name, child_dob, experience, parent_name, phone, email, preferred_slot, status, assigned_to, notes, created_at")
+      .select("id, branch_id, child_name, child_dob, experience, parent_name, phone, email, preferred_slot, status, assigned_to, notes, converted_student_id, created_at")
       .order("created_at", { ascending: false }),
     db.from("profiles").select("id, full_name").in("role", ["admin", "super_admin"]).order("full_name"),
     listBranches(false),
@@ -201,6 +209,33 @@ export default async function LeadsPage({
                     <Button type="submit" variant="ghost" className="h-9">Add</Button>
                   </form>
                 </div>
+
+                {/* Convert → real student (Phase 2), or a link once enrolled */}
+                {l.converted_student_id ? (
+                  <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-sm">
+                    <Badge tone="green">Enrolled</Badge>
+                    <LinkButton href={`/admin/students/${l.converted_student_id}`} variant="ghost" className="h-8">View student →</LinkButton>
+                  </div>
+                ) : (
+                  <form action={convertLead} className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3">
+                    <input type="hidden" name="id" value={l.id} />
+                    <label className="text-xs font-medium text-slate-600">
+                      Starting level
+                      <Select name="level" defaultValue={String(suggestLevel(l.experience))} className="mt-1 h-9 w-48">
+                        {[1, 2, 3, 4, 5, 6].map((n) => (
+                          <option key={n} value={n}>{n} · {levelName(n)}</option>
+                        ))}
+                      </Select>
+                    </label>
+                    {l.email && (
+                      <label className="flex items-center gap-1.5 pb-2 text-xs text-slate-600">
+                        <input type="checkbox" name="create_parent" value="on" defaultChecked />
+                        Create parent login
+                      </label>
+                    )}
+                    <Button type="submit" className="h-9">Convert to student →</Button>
+                  </form>
+                )}
               </Card>
             );
           })}

@@ -4,6 +4,7 @@ import { listBranches } from "@/lib/branch";
 import { PageHeader, LinkButton, Card, Badge, Select, Button, Input, EmptyState, cn } from "@/components/ui";
 import { waLink } from "@/lib/wa";
 import { levelName } from "@/lib/training";
+import { dict } from "@/lib/i18n";
 import { updateLeadStatus, assignLead, addLeadNote, convertLead } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -26,14 +27,6 @@ type Lead = {
 };
 
 const STATUSES = ["new", "contacted", "trial_booked", "trialed", "enrolled", "lost"] as const;
-const STATUS_LABEL: Record<string, string> = {
-  new: "New",
-  contacted: "Contacted",
-  trial_booked: "Trial booked",
-  trialed: "Trialed",
-  enrolled: "Enrolled",
-  lost: "Lost",
-};
 const STATUS_TONE: Record<string, "blue" | "yellow" | "green" | "slate"> = {
   new: "blue",
   contacted: "yellow",
@@ -42,13 +35,8 @@ const STATUS_TONE: Record<string, "blue" | "yellow" | "green" | "slate"> = {
   enrolled: "green",
   lost: "slate",
 };
-const EXPERIENCE_LABEL: Record<string, string> = {
-  none: "Brand new",
-  some: "Played a little",
-  experienced: "Experienced",
-};
 
-function ageFromDob(dob: string | null): string | null {
+function ageFromDob(dob: string | null, suffix: string): string | null {
   if (!dob) return null;
   const d = new Date(dob);
   if (Number.isNaN(d.getTime())) return null;
@@ -56,7 +44,7 @@ function ageFromDob(dob: string | null): string | null {
   let age = now.getFullYear() - d.getFullYear();
   const m = now.getMonth() - d.getMonth();
   if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
-  return age >= 0 && age < 100 ? `${age} yrs` : null;
+  return age >= 0 && age < 100 ? `${age} ${suffix}` : null;
 }
 
 // A gentle starting-level default from the self-reported experience; the admin
@@ -79,8 +67,23 @@ export default async function LeadsPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
-  await requireRole("admin");
+  const me = await requireRole("admin");
+  const L = dict(me.locale);
   const active = (STATUSES as readonly string[]).includes(status ?? "") ? status! : "all";
+
+  const statusLabel: Record<string, string> = {
+    new: L.lead_st_new,
+    contacted: L.lead_st_contacted,
+    trial_booked: L.lead_st_trial_booked,
+    trialed: L.lead_st_trialed,
+    enrolled: L.lead_st_enrolled,
+    lost: L.lead_st_lost,
+  };
+  const expLabel: Record<string, string> = {
+    none: L.exp_none,
+    some: L.exp_some,
+    experienced: L.exp_experienced,
+  };
 
   const db = await createClient();
   const [{ data: leadsRaw }, { data: admins }, branches] = await Promise.all([
@@ -94,7 +97,7 @@ export default async function LeadsPage({
 
   const leads = (leadsRaw ?? []) as Lead[];
   const branchName = new Map(branches.map((b) => [b.id, b.name]));
-  const adminName = new Map((admins ?? []).map((a) => [a.id, a.full_name ?? "Admin"]));
+  const adminName = new Map((admins ?? []).map((a) => [a.id, a.full_name ?? L.adm_admin]));
 
   const counts: Record<string, number> = { all: leads.length };
   for (const s of STATUSES) counts[s] = 0;
@@ -102,14 +105,14 @@ export default async function LeadsPage({
 
   const shown = active === "all" ? leads : leads.filter((l) => l.status === active);
 
-  const tabs = [{ key: "all", label: "All" }, ...STATUSES.map((s) => ({ key: s, label: STATUS_LABEL[s] }))];
+  const tabs = [{ key: "all", label: L.filter_all }, ...STATUSES.map((s) => ({ key: s, label: statusLabel[s] }))];
 
   return (
     <div>
       <PageHeader
-        title="Trial Leads"
-        description="Free-trial requests from the public sign-up page. Work each one through to enrolment."
-        action={<LinkButton href="/trial" variant="secondary" target="_blank" rel="noopener">↗ Public form</LinkButton>}
+        title={L.lead_title}
+        description={L.lead_desc}
+        action={<LinkButton href="/trial" variant="secondary" target="_blank" rel="noopener">↗ {L.lead_public_form}</LinkButton>}
       />
 
       {/* Status filter tabs with live counts */}
@@ -134,22 +137,22 @@ export default async function LeadsPage({
 
       {shown.length === 0 ? (
         <EmptyState
-          message={active === "all" ? "No trial requests yet." : `No leads in “${STATUS_LABEL[active] ?? active}”.`}
-          hint="New requests from the public /trial page will appear here."
+          message={active === "all" ? L.lead_empty : `${L.lead_none_in}“${statusLabel[active] ?? active}”`}
+          hint={L.lead_empty_hint}
         />
       ) : (
         <div className="space-y-3">
           {shown.map((l) => {
-            const age = ageFromDob(l.child_dob);
-            const exp = l.experience ? EXPERIENCE_LABEL[l.experience] ?? l.experience : null;
-            const wa = l.phone ? waLink(l.phone, `Hi ${l.parent_name}, thanks for your interest in a free trial at Hong Badminton Academy!`) : null;
+            const age = ageFromDob(l.child_dob, L.yrs_suffix);
+            const exp = l.experience ? expLabel[l.experience] ?? l.experience : null;
+            const wa = l.phone ? waLink(l.phone, L.lead_wa_msg.replace("{name}", l.parent_name)) : null;
             return (
               <Card key={l.id} className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-slate-900">{l.child_name}</span>
-                      <Badge tone={STATUS_TONE[l.status] ?? "slate"}>{STATUS_LABEL[l.status] ?? l.status}</Badge>
+                      <Badge tone={STATUS_TONE[l.status] ?? "slate"}>{statusLabel[l.status] ?? l.status}</Badge>
                     </div>
                     <div className="mt-0.5 text-xs text-slate-500">
                       {[age, exp, l.branch_id ? branchName.get(l.branch_id) : null].filter(Boolean).join(" · ") || "—"}
@@ -168,11 +171,11 @@ export default async function LeadsPage({
                       )}
                       {l.email && <> · <a href={`mailto:${l.email}`} className="text-slate-600 hover:underline">{l.email}</a></>}
                     </div>
-                    {l.preferred_slot && <div className="mt-0.5 text-xs text-slate-500">Prefers: {l.preferred_slot}</div>}
+                    {l.preferred_slot && <div className="mt-0.5 text-xs text-slate-500">{L.lead_prefers}{l.preferred_slot}</div>}
                   </div>
                   <div className="text-right text-xs text-slate-400">
                     <div>{fmtMYT(l.created_at)}</div>
-                    <div className="mt-0.5">{l.assigned_to ? `→ ${adminName.get(l.assigned_to) ?? "Assigned"}` : "Unassigned"}</div>
+                    <div className="mt-0.5">{l.assigned_to ? `→ ${adminName.get(l.assigned_to) ?? L.adm_admin}` : L.lead_unassigned}</div>
                   </div>
                 </div>
 
@@ -186,41 +189,41 @@ export default async function LeadsPage({
                     <input type="hidden" name="id" value={l.id} />
                     <Select name="status" defaultValue={l.status} className="h-9 w-36">
                       {STATUSES.map((s) => (
-                        <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                        <option key={s} value={s}>{statusLabel[s]}</option>
                       ))}
                     </Select>
-                    <Button type="submit" variant="secondary" className="h-9">Update</Button>
+                    <Button type="submit" variant="secondary" className="h-9">{L.update_btn}</Button>
                   </form>
 
                   <form action={assignLead} className="flex items-end gap-1.5">
                     <input type="hidden" name="id" value={l.id} />
                     <Select name="assigned_to" defaultValue={l.assigned_to ?? ""} className="h-9 w-40">
-                      <option value="">Unassigned</option>
+                      <option value="">{L.lead_unassigned}</option>
                       {(admins ?? []).map((a) => (
-                        <option key={a.id} value={a.id}>{a.full_name ?? "Admin"}</option>
+                        <option key={a.id} value={a.id}>{a.full_name ?? L.adm_admin}</option>
                       ))}
                     </Select>
-                    <Button type="submit" variant="secondary" className="h-9">Assign</Button>
+                    <Button type="submit" variant="secondary" className="h-9">{L.lead_assign_btn}</Button>
                   </form>
 
                   <form action={addLeadNote} className="flex flex-1 items-end gap-1.5">
                     <input type="hidden" name="id" value={l.id} />
-                    <Input name="note" placeholder="Add a note…" className="h-9 min-w-40 flex-1" />
-                    <Button type="submit" variant="ghost" className="h-9">Add</Button>
+                    <Input name="note" placeholder={L.lead_note_ph} className="h-9 min-w-40 flex-1" />
+                    <Button type="submit" variant="ghost" className="h-9">{L.lead_add_note_btn}</Button>
                   </form>
                 </div>
 
                 {/* Convert → real student (Phase 2), or a link once enrolled */}
                 {l.converted_student_id ? (
                   <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-sm">
-                    <Badge tone="green">Enrolled</Badge>
-                    <LinkButton href={`/admin/students/${l.converted_student_id}`} variant="ghost" className="h-8">View student →</LinkButton>
+                    <Badge tone="green">{L.lead_st_enrolled}</Badge>
+                    <LinkButton href={`/admin/students/${l.converted_student_id}`} variant="ghost" className="h-8">{L.lead_view_student}</LinkButton>
                   </div>
                 ) : (
                   <form action={convertLead} className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3">
                     <input type="hidden" name="id" value={l.id} />
                     <label className="text-xs font-medium text-slate-600">
-                      Starting level
+                      {L.lead_starting_level}
                       <Select name="level" defaultValue={String(suggestLevel(l.experience))} className="mt-1 h-9 w-48">
                         {[1, 2, 3, 4, 5, 6].map((n) => (
                           <option key={n} value={n}>{n} · {levelName(n)}</option>
@@ -230,10 +233,10 @@ export default async function LeadsPage({
                     {l.email && (
                       <label className="flex items-center gap-1.5 pb-2 text-xs text-slate-600">
                         <input type="checkbox" name="create_parent" value="on" defaultChecked />
-                        Create parent login
+                        {L.lead_create_parent}
                       </label>
                     )}
-                    <Button type="submit" className="h-9">Convert to student →</Button>
+                    <Button type="submit" className="h-9">{L.lead_convert_btn}</Button>
                   </form>
                 )}
               </Card>

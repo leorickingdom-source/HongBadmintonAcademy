@@ -6,6 +6,7 @@ import { MonthCalendar } from "@/components/month-calendar";
 import { AddSessionModal } from "@/components/add-session-modal";
 import { FilterSelect } from "@/components/filter-controls";
 import { loadHolidayMap } from "@/lib/holidays-server";
+import { dict } from "@/lib/i18n";
 import { createSession } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default async function SessionsPage({
 }) {
   const { month, class: classParam, error, created } = await searchParams;
   const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
 
@@ -58,16 +60,16 @@ export default async function SessionsPage({
   return (
     <div>
       <PageHeader
-        title="Sessions"
-        description="Sessions by month — tap a date to see details, cancel or delete."
+        title={L.sessions_title}
+        description={L.sess_desc}
         action={
           <>
             <AddSessionModal classes={classes ?? []} monthStr={monthStr} today={todayMYT()} />
             <LinkButton href="/admin/attendance/coverage" variant="secondary">
-              Coach coverage
+              {L.sess_coach_coverage}
             </LinkButton>
             <LinkButton href="/admin/classes" variant="secondary">
-              Generate (per class) →
+              {L.sess_generate}
             </LinkButton>
           </>
         }
@@ -76,7 +78,7 @@ export default async function SessionsPage({
       {error && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {created && (
         <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          Session added.
+          {L.sess_added}
         </p>
       )}
 
@@ -85,16 +87,16 @@ export default async function SessionsPage({
        *  sessions are managed on the session detail page now. */}
       <div className="mb-6 flex flex-wrap items-end gap-3">
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-slate-600">Class</span>
+          <span className="text-xs font-medium text-slate-600">{L.class_word}</span>
           <FilterSelect name="class" defaultValue={classFilter} className="h-9 w-48">
-            <option value="">All classes</option>
+            <option value="">{L.adm_all_classes}</option>
             {(classes ?? []).map((c: any) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </FilterSelect>
         </label>
         {classFilter && (
-          <LinkButton href={`/admin/sessions?month=${monthStr}`} variant="ghost">Clear</LinkButton>
+          <LinkButton href={`/admin/sessions?month=${monthStr}`} variant="ghost">{L.clear_word}</LinkButton>
         )}
       </div>
 

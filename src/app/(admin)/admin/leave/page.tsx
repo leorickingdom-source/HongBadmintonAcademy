@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Section, Badge, EmptyState, Select, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatTime } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { approveLeave, declineLeave, assignMakeup, decideCoachLeave } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -16,9 +17,15 @@ const TONE: Record<string, "green" | "yellow" | "red"> = {
 
 export default async function LeavePage() {
   const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
   const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+  const stLabel: Record<string, string> = {
+    approved: L.lv_st_approved,
+    pending: L.lv_st_pending,
+    declined: L.lv_st_declined,
+  };
 
   // Student leave — pending first, then the recent decided tail.
   let lq = supabase
@@ -71,11 +78,11 @@ export default async function LeavePage() {
   const coachDecided = coachLeaves.filter((l) => l.status !== "pending").slice(0, 10);
 
   const mkLabel = (s: any) =>
-    `${s.classes?.name ?? "Class"} — ${formatDate(s.session_date)} ${formatTime(s.start_time)}`;
+    `${s.classes?.name ?? L.class_word} — ${formatDate(s.session_date)} ${formatTime(s.start_time)}`;
 
   const MakeupSelect = ({ name, defaultValue = "" }: { name: string; defaultValue?: string }) => (
     <Select name={name} defaultValue={defaultValue} className="h-9 w-64">
-      <option value="">No makeup (excuse only)</option>
+      <option value="">{L.lv_no_makeup_excuse}</option>
       {makeupOptions.map((s) => (
         <option key={s.id} value={s.id}>{mkLabel(s)}</option>
       ))}
@@ -85,11 +92,11 @@ export default async function LeavePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Leave & Makeup"
-        description="Parent leave requests, coach leave, and makeup class bookings. Approving a leave marks the student excused."
+        title={L.lv_title}
+        description={L.lv_desc}
       />
 
-      <Section title={`Pending student leave (${pending.length})`} flush>
+      <Section title={`${L.lv_pending_student} (${pending.length})`} flush>
         {pending.length ? (
           <ul className="divide-y divide-slate-100">
             {pending.map((l) => (
@@ -101,48 +108,48 @@ export default async function LeavePage() {
                   <span className="text-sm text-slate-500">
                     {l.session?.classes?.name ?? "—"} · {formatDate(l.session?.session_date)} {formatTime(l.session?.start_time)}
                   </span>
-                  {l.parent?.full_name && <span className="text-xs text-slate-400">by {l.parent.full_name}</span>}
+                  {l.parent?.full_name && <span className="text-xs text-slate-400">{L.lv_by}{l.parent.full_name}</span>}
                 </div>
                 {l.reason && <div className="text-sm text-slate-600">“{l.reason}”</div>}
                 {signed.get(l.id) && (
                   <a href={signed.get(l.id)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:underline">
-                    📎 View attachment
+                    📎 {L.lv_view_attach}
                   </a>
                 )}
                 {l.proposed && (
                   <div className="text-sm text-emerald-700">
-                    Parent requested makeup: <span className="font-medium">{l.proposed.classes?.name ?? "class"} · {formatDate(l.proposed.session_date)} {formatTime(l.proposed.start_time)}</span>
+                    {L.lv_parent_requested}<span className="font-medium">{l.proposed.classes?.name ?? L.class_word} · {formatDate(l.proposed.session_date)} {formatTime(l.proposed.start_time)}</span>
                   </div>
                 )}
                 <div className="flex flex-wrap items-end gap-2">
                   <form action={approveLeave} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="id" value={l.id} />
                     <label className="block space-y-1">
-                      <span className="text-xs font-medium text-slate-500">{l.proposed ? "Makeup class (parent's pick — confirm or change)" : "Makeup class (optional)"}</span>
+                      <span className="text-xs font-medium text-slate-500">{l.proposed ? L.lv_makeup_confirm : L.lv_makeup_optional}</span>
                       <MakeupSelect name="makeup_session_id" defaultValue={l.proposed_makeup_session_id ?? ""} />
                     </label>
-                    <SubmitButton pendingText="Approving…">Approve</SubmitButton>
+                    <SubmitButton pendingText={L.lv_approving}>{L.lv_approve}</SubmitButton>
                   </form>
                   <form action={declineLeave}>
                     <input type="hidden" name="id" value={l.id} />
-                    <SubmitButton variant="secondary" pendingText="…">Decline</SubmitButton>
+                    <SubmitButton variant="secondary" pendingText="…">{L.lv_decline}</SubmitButton>
                   </form>
                 </div>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="p-5"><EmptyState message="No pending leave requests." /></div>
+          <div className="p-5"><EmptyState message={L.lv_empty_student} /></div>
         )}
       </Section>
 
-      <Section title={`Pending coach leave (${coachPending.length})`} flush>
+      <Section title={`${L.lv_pending_coach} (${coachPending.length})`} flush>
         {coachPending.length ? (
           <ul className="divide-y divide-slate-100">
             {coachPending.map((l) => (
               <li key={l.id} className="space-y-2 px-5 py-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-slate-900">{l.coach?.full_name ?? "Coach"}</span>
+                  <span className="font-semibold text-slate-900">{l.coach?.full_name ?? L.adm_coach}</span>
                   <span className="text-sm text-slate-500">
                     {l.sessions?.classes?.name ?? "—"} · {formatDate(l.sessions?.session_date)} {formatTime(l.sessions?.start_time)}
                   </span>
@@ -152,37 +159,37 @@ export default async function LeavePage() {
                   <form action={decideCoachLeave}>
                     <input type="hidden" name="id" value={l.id} />
                     <input type="hidden" name="decision" value="approved" />
-                    <SubmitButton pendingText="…">Approve</SubmitButton>
+                    <SubmitButton pendingText="…">{L.lv_approve}</SubmitButton>
                   </form>
                   <form action={decideCoachLeave}>
                     <input type="hidden" name="id" value={l.id} />
                     <input type="hidden" name="decision" value="declined" />
-                    <SubmitButton variant="secondary" pendingText="…">Decline</SubmitButton>
+                    <SubmitButton variant="secondary" pendingText="…">{L.lv_decline}</SubmitButton>
                   </form>
                   {l.sessions?.id && (
                     <Link
                       href={`/admin/attendance/${l.sessions.id}`}
                       className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
                     >
-                      Session →
+                      {L.lv_session_arrow}
                     </Link>
                   )}
                 </div>
-                <p className="text-xs text-slate-400">Approving records the leave — then cancel the session or assign a cover coach on the class page.</p>
+                <p className="text-xs text-slate-400">{L.lv_coach_note}</p>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="p-5"><EmptyState message="No pending coach leave." /></div>
+          <div className="p-5"><EmptyState message={L.lv_empty_coach} /></div>
         )}
       </Section>
 
       {(decided.length > 0 || coachDecided.length > 0) && (
-        <Section title="Recently decided" flush>
+        <Section title={L.lv_recent} flush>
           <ul className="divide-y divide-slate-100">
             {decided.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center gap-2 px-5 py-3">
-                <Badge tone={TONE[l.status] ?? "yellow"}>{l.status}</Badge>
+                <Badge tone={TONE[l.status] ?? "yellow"}>{stLabel[l.status] ?? l.status}</Badge>
                 <span className="font-medium text-slate-900">{l.students?.full_name ?? "—"}</span>
                 <span className="text-sm text-slate-500">
                   {l.session?.classes?.name ?? "—"} · {formatDate(l.session?.session_date)} {formatTime(l.session?.start_time)}
@@ -190,25 +197,25 @@ export default async function LeavePage() {
                 {l.status === "approved" && (
                   <span className={cn("text-sm", l.makeup ? "text-emerald-700" : "text-slate-400")}>
                     {l.makeup
-                      ? `Makeup: ${l.makeup.classes?.name ?? "class"} ${formatDate(l.makeup.session_date)} ${formatTime(l.makeup.start_time)}`
-                      : "no makeup"}
+                      ? `${L.lv_makeup_prefix}${l.makeup.classes?.name ?? L.class_word} ${formatDate(l.makeup.session_date)} ${formatTime(l.makeup.start_time)}`
+                      : L.lv_no_makeup}
                   </span>
                 )}
                 {l.status === "approved" && (
                   <form action={assignMakeup} className="ml-auto flex items-center gap-2">
                     <input type="hidden" name="id" value={l.id} />
                     <MakeupSelect name="makeup_session_id" />
-                    <SubmitButton variant="secondary" pendingText="…">Set makeup</SubmitButton>
+                    <SubmitButton variant="secondary" pendingText="…">{L.lv_set_makeup}</SubmitButton>
                   </form>
                 )}
               </li>
             ))}
             {coachDecided.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center gap-2 px-5 py-3">
-                <Badge tone={TONE[l.status] ?? "yellow"}>{l.status}</Badge>
-                <span className="font-medium text-slate-900">{l.coach?.full_name ?? "Coach"}</span>
+                <Badge tone={TONE[l.status] ?? "yellow"}>{stLabel[l.status] ?? l.status}</Badge>
+                <span className="font-medium text-slate-900">{l.coach?.full_name ?? L.adm_coach}</span>
                 <span className="text-sm text-slate-500">
-                  coach leave · {l.sessions?.classes?.name ?? "—"} · {formatDate(l.sessions?.session_date)} {formatTime(l.sessions?.start_time)}
+                  {L.lv_coach_leave_tag} · {l.sessions?.classes?.name ?? "—"} · {formatDate(l.sessions?.session_date)} {formatTime(l.sessions?.start_time)}
                 </span>
               </li>
             ))}

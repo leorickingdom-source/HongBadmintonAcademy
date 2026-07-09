@@ -19,6 +19,7 @@ type Lead = {
   phone: string | null;
   email: string | null;
   preferred_slot: string | null;
+  preferred_session_id: string | null;
   status: string;
   assigned_to: string | null;
   notes: string | null;
@@ -89,7 +90,7 @@ export default async function LeadsPage({
   const [{ data: leadsRaw }, { data: admins }, branches] = await Promise.all([
     db
       .from("trial_leads")
-      .select("id, branch_id, child_name, child_dob, experience, parent_name, phone, email, preferred_slot, status, assigned_to, notes, converted_student_id, created_at")
+      .select("id, branch_id, child_name, child_dob, experience, parent_name, phone, email, preferred_slot, preferred_session_id, status, assigned_to, notes, converted_student_id, created_at")
       .order("created_at", { ascending: false }),
     db.from("profiles").select("id, full_name").in("role", ["admin", "super_admin"]).order("full_name"),
     listBranches(false),
@@ -171,7 +172,21 @@ export default async function LeadsPage({
                       )}
                       {l.email && <> · <a href={`mailto:${l.email}`} className="text-slate-600 hover:underline">{l.email}</a></>}
                     </div>
-                    {l.preferred_slot && <div className="mt-0.5 text-xs text-slate-500">{L.lead_prefers}{l.preferred_slot}</div>}
+                    {l.preferred_slot && (
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        {L.lead_prefers}
+                        {l.preferred_session_id ? (
+                          <a
+                            href={`/admin/sessions/${l.preferred_session_id}`}
+                            className="font-medium text-emerald-700 hover:underline"
+                          >
+                            {l.preferred_slot}
+                          </a>
+                        ) : (
+                          l.preferred_slot
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right text-xs text-slate-400">
                     <div>{fmtMYT(l.created_at)}</div>

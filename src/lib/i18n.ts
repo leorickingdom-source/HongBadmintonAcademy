@@ -1213,10 +1213,10 @@ const en = {
   trp_exp_unsure: "Not sure",
   trp_your_name: "Your name",
   trp_phone: "Phone / WhatsApp",
-  trp_pref_location: "Preferred location",
-  trp_no_pref: "No preference",
-  trp_pref_times: "Preferred days / times",
-  trp_times_ph: "e.g. weekday evenings, Sat morning",
+  trp_pref_session: "Pick a trial session",
+  trp_session_none: "Not sure yet — please contact me",
+  trp_session_empty: "No upcoming sessions listed right now — leave your details and our team will reach out to arrange a time.",
+  trp_no_branch: "Other",
   trp_consent: "I agree that Hong Badminton Academy may contact me about a trial session using the details above.",
   trp_sending: "Sending…",
   trp_submit: "Request my free trial",
@@ -1225,6 +1225,8 @@ const en = {
   // ── public: trial thanks ──
   trt_title: "Request received!",
   trt_body: "Thanks — we've got your details. One of our team will contact you by phone or WhatsApp to arrange your child's free trial session and answer any questions. No payment is needed for the trial.",
+  trt_booked_title: "Trial booked!",
+  trt_booked_body: "Thanks — your trial is on the calendar. We've just sent a confirmation by WhatsApp and will remind you 24 hours before. Reply to that message if you need to reschedule.",
   trt_again: "Submit another request",
 } as const;
 
@@ -2420,10 +2422,10 @@ const zh: Dict = {
   trp_exp_unsure: "不确定",
   trp_your_name: "您的姓名",
   trp_phone: "电话 / WhatsApp",
-  trp_pref_location: "希望地点",
-  trp_no_pref: "无偏好",
-  trp_pref_times: "希望的日期 / 时间",
-  trp_times_ph: "如 工作日晚上、周六上午",
+  trp_pref_session: "选择试课时段",
+  trp_session_none: "还不确定 — 请联系我",
+  trp_session_empty: "暂无可选时段 — 留下您的资料，我们会联系您安排。",
+  trp_no_branch: "其他",
   trp_consent: "我同意宏羽毛球学院使用以上信息就试课事宜联系我。",
   trp_sending: "发送中…",
   trp_submit: "申请我的免费试课",
@@ -2432,6 +2434,8 @@ const zh: Dict = {
   // ── public: trial thanks ──
   trt_title: "已收到申请！",
   trt_body: "谢谢 — 我们已收到您的信息。我们的团队会通过电话或 WhatsApp 联系您，安排孩子的免费试课并解答任何疑问。试课无需付费。",
+  trt_booked_title: "已成功预约试课！",
+  trt_booked_body: "谢谢 — 试课已排入日程。我们已通过 WhatsApp 发送确认，并会在课前 24 小时再次提醒。如需改期，请直接回复该讯息。",
   trt_again: "再提交一份申请",
 };
 

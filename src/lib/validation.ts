@@ -71,8 +71,11 @@ export const trialLeadSchema = z.object({
   email: z.union([z.string().trim().email("Enter a valid email"), z.literal("")])
     .optional()
     .transform((v) => (v ? v : null)),
-  branch_id: optionalId,
-  preferred_slot: optionalStr,
+  // Parents pick a real upcoming session on the public form. Optional (still
+  // supported: "Not sure yet — please contact me"). Server re-validates that
+  // the id belongs to an active, in-horizon session before it is stamped, and
+  // derives branch + human-readable slot label from it.
+  session_id: optionalId,
   // Unticked checkbox → the key is absent → fails the refine with our message.
   consent: z.string().optional().transform((v) => v === "on")
     .refine((v) => v === true, "Please tick the box so we can contact you"),

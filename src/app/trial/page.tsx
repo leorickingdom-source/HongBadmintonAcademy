@@ -1,8 +1,8 @@
-import { listBranches } from "@/lib/branch";
 import { SubmitButton } from "@/components/submit-button";
 import { dict } from "@/lib/i18n";
 import { getPublicLocale } from "@/lib/public-locale";
 import { PublicLangToggle } from "@/components/public-lang-toggle";
+import { listPublicTrialSessions } from "@/lib/trial-sessions";
 import { requestTrial } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -18,9 +18,19 @@ export default async function TrialPage({
   const { error } = await searchParams;
   const locale = await getPublicLocale();
   const L = dict(locale);
-  // Public page — branch names aren't sensitive; list active branches for the
-  // optional "preferred branch" picker.
-  const branches = await listBranches();
+  // One dropdown of REAL upcoming sessions replaces the old branch picker + the
+  // free-text "preferred days/times". Branch is derived from the picked session
+  // server-side (see actions.ts) so the parent only has to say "this slot".
+  const sessions = await listPublicTrialSessions();
+
+  // Group options by branch for a scannable dropdown ("Puchong · Sat 12 Jul · …").
+  const groups = new Map<string, typeof sessions>();
+  for (const s of sessions) {
+    const key = s.branch_name ?? L.trp_no_branch;
+    const arr = groups.get(key) ?? [];
+    arr.push(s);
+    groups.set(key, arr);
+  }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-6 px-5 py-10">
@@ -81,22 +91,27 @@ export default async function TrialPage({
           </label>
         </div>
 
-        {/* ── Preferences ── */}
+        {/* ── Pick a real session ── */}
         <div className="space-y-3">
-          {branches.length > 0 && (
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_pref_location} <span className="font-normal text-slate-400">{L.trp_optional}</span></span>
-              <select name="branch_id" defaultValue="" className={inputCls}>
-                <option value="">{L.trp_no_pref}</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_pref_session}</span>
+            {sessions.length === 0 ? (
+              <>
+                <input type="hidden" name="session_id" value="" />
+                <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">{L.trp_session_empty}</p>
+              </>
+            ) : (
+              <select name="session_id" defaultValue="" className={inputCls}>
+                <option value="">{L.trp_session_none}</option>
+                {[...groups.entries()].map(([branch, list]) => (
+                  <optgroup key={branch} label={branch}>
+                    {list.map((s) => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
-            </label>
-          )}
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_pref_times} <span className="font-normal text-slate-400">{L.trp_optional}</span></span>
-            <input name="preferred_slot" placeholder={L.trp_times_ph} className={inputCls} />
+            )}
           </label>
         </div>
 

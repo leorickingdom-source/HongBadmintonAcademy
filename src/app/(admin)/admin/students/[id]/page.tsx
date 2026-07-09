@@ -11,6 +11,7 @@ import { levelBadgeClass } from "@/lib/training";
 import { getLevelInfoMerged } from "@/lib/syllabus";
 import { dict } from "@/lib/i18n";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
+import type { ReactNode } from "react";
 import { awardReward, promoteStudent } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,29 @@ const ATT_TONE: Record<AttendanceStatus, "green" | "yellow" | "red" | "slate"> =
 const INV_TONE: Record<InvoiceStatus, "green" | "yellow" | "red" | "slate"> = {
   draft: "slate", unpaid: "yellow", paid: "green", overdue: "red", canceled: "slate", refunded: "slate",
 };
+
+// Collapsible card matching Section's chrome — the secondary history blocks on a
+// student profile are dense, so they fold away (native <details>, no client JS;
+// forms inside still post). `count` shows in the header so you can gauge a
+// section without opening it; the most-used one (attendance) starts open.
+function Collapsible({
+  title, count, defaultOpen, children,
+}: { title: string; count?: number; defaultOpen?: boolean; children: ReactNode }) {
+  return (
+    <details open={defaultOpen} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
+        <h2 className="text-sm font-semibold text-slate-900">
+          {title}
+          {count != null && <span className="ml-2 text-xs font-normal text-slate-400">{count}</span>}
+        </h2>
+        <svg viewBox="0 0 12 12" className="h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M4.5 2.5 8 6l-3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </summary>
+      <div className="border-t border-slate-100">{children}</div>
+    </details>
+  );
+}
 
 export default async function StudentProfilePage({
   params,
@@ -156,7 +180,7 @@ export default async function StudentProfilePage({
       </Section>
 
       {/* Attendance history */}
-      <Section title={L.sd_att_history} flush>
+      <Collapsible title={L.sd_att_history} count={att.length} defaultOpen>
         {att.length ? (
           <>
             <Table>
@@ -197,10 +221,10 @@ export default async function StudentProfilePage({
             )}
           </>
         ) : <div className="p-5"><EmptyState message={L.sd_no_att} /></div>}
-      </Section>
+      </Collapsible>
 
       {/* Promotion exams */}
-      <Section title={L.sd_promo_exams} flush>
+      <Collapsible title={L.sd_promo_exams} count={(exams ?? []).length}>
         {exams && exams.length ? (
           <Table>
             <thead><tr><Th>{L.col_date}</Th><Th>{L.level_word}</Th><Th>{L.ex_score}</Th><Th>{L.ex_result}</Th><Th>PDF</Th></tr></thead>
@@ -217,10 +241,10 @@ export default async function StudentProfilePage({
             </tbody>
           </Table>
         ) : <div className="p-5"><EmptyState message={L.sd_no_exams} /></div>}
-      </Section>
+      </Collapsible>
 
       {/* Monthly marks (coach's 1–5 monthly assessment — the parent report source) */}
-      <Section title={L.sd_monthly} flush>
+      <Collapsible title={L.sd_monthly} count={(monthly ?? []).length}>
         {monthly && monthly.length ? (
           <Table>
             <thead><tr><Th>{L.sd_month}</Th><Th>{L.fitness}</Th><Th>{L.skills}</Th><Th>{L.attitude}</Th><Th>{L.sd_comment}</Th><Th>{L.adm_coach}</Th></tr></thead>
@@ -238,12 +262,12 @@ export default async function StudentProfilePage({
             </tbody>
           </Table>
         ) : <div className="p-5"><EmptyState message={L.sd_no_monthly} /></div>}
-      </Section>
+      </Collapsible>
 
       {/* Rewards */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Section title={L.sd_rewards_ledger} flush>
+      <Collapsible title={L.sd_rewards_ledger} count={(ledger ?? []).length}>
+        <div className="grid gap-6 p-5 lg:grid-cols-3">
+          <div className="lg:col-span-2">
             {ledger && ledger.length ? (
               <Table>
                 <thead><tr><Th>{L.col_date}</Th><Th>{L.sd_rule}</Th><Th>{L.sd_reason}</Th><Th className="text-right">{L.rw_points}</Th></tr></thead>
@@ -258,33 +282,34 @@ export default async function StudentProfilePage({
                   ))}
                 </tbody>
               </Table>
-            ) : <div className="p-5"><EmptyState message={L.sd_no_rewards} /></div>}
-          </Section>
+            ) : <EmptyState message={L.sd_no_rewards} />}
+          </div>
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">{L.sd_award}</h3>
+            <form action={awardReward} className="space-y-3">
+              <input type="hidden" name="student_id" value={id} />
+              <Field label={L.sd_rule_optional}>
+                <Select name="rule_id" defaultValue="">
+                  <option value="">{L.sd_custom}</option>
+                  {(rules ?? []).map((r: any) => (
+                    <option key={r.id} value={r.id}>{r.name} (+{r.points})</option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label={L.rw_points}>
+                <Input type="number" name="points" defaultValue={10} required />
+              </Field>
+              <Field label={L.sd_reason}>
+                <Input name="reason" placeholder="e.g. Perfect attendance" />
+              </Field>
+              <SubmitButton className="w-full" pendingText={L.sd_awarding}>{L.sd_award_btn}</SubmitButton>
+            </form>
+          </div>
         </div>
-        <Section title={L.sd_award}>
-          <form action={awardReward} className="space-y-3">
-            <input type="hidden" name="student_id" value={id} />
-            <Field label={L.sd_rule_optional}>
-              <Select name="rule_id" defaultValue="">
-                <option value="">{L.sd_custom}</option>
-                {(rules ?? []).map((r: any) => (
-                  <option key={r.id} value={r.id}>{r.name} (+{r.points})</option>
-                ))}
-              </Select>
-            </Field>
-            <Field label={L.rw_points}>
-              <Input type="number" name="points" defaultValue={10} required />
-            </Field>
-            <Field label={L.sd_reason}>
-              <Input name="reason" placeholder="e.g. Perfect attendance" />
-            </Field>
-            <SubmitButton className="w-full" pendingText={L.sd_awarding}>{L.sd_award_btn}</SubmitButton>
-          </form>
-        </Section>
-      </div>
+      </Collapsible>
 
       {/* Invoices */}
-      <Section title={L.sd_fees} flush>
+      <Collapsible title={L.sd_fees} count={(invoices ?? []).length}>
         {invoices && invoices.length ? (
           <Table>
             <thead><tr><Th>{L.inv_invoice}</Th><Th>{L.fp_amount}</Th><Th>{L.inv_due}</Th><Th>{L.col_status}</Th></tr></thead>
@@ -300,7 +325,7 @@ export default async function StudentProfilePage({
             </tbody>
           </Table>
         ) : <div className="p-5"><EmptyState message={L.inv_empty} /></div>}
-      </Section>
+      </Collapsible>
     </div>
   );
 }

@@ -24,5 +24,8 @@ export default async function Home({
   const parentId = await getParentIdFromCookie();
   if (parentId) redirect("/parent");
 
-  redirect("/login");
+  // Anonymous visitors land on the public marketing homepage (static file in
+  // /public, served at /welcome via a rewrite). Staff/parents reach the login
+  // forms from there, or directly at /login and /parent-login.
+  redirect("/welcome");
 }

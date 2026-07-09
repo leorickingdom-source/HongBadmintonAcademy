@@ -14,6 +14,11 @@ const nextConfig = {
       { protocol: "https", hostname: "*.supabase.in" },
     ],
   },
+  // Public marketing homepage lives as a static file in /public. Serve it at a
+  // clean /welcome URL (root "/" forwards anonymous visitors here).
+  async rewrites() {
+    return [{ source: "/welcome", destination: "/welcome.html" }];
+  },
 };
 
 export default nextConfig;

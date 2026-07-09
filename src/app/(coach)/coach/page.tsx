@@ -10,7 +10,7 @@ import { formatDate, formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
 import { isEligibleCover } from "@/lib/cover";
 import { coachClassIds, coachCoverSessionIds } from "./_data";
-import { makeCoverOffer, withdrawCoverOffer } from "./cover-actions";
+import { makeCoverOffer, withdrawCoverOffer, acceptAssignedCover, declineAssignedCover } from "./cover-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -66,13 +66,21 @@ export default async function CoachDashboard() {
   // Open cover requests this coach can pick up (broadcast by an admin). RLS
   // (coach_leave_open_read) lets a coach read open leaves; we then keep only the
   // ones they're actually free for, plus any they've already offered on.
-  const [{ data: openLeaves }, { data: myOffers }] = await Promise.all([
+  const [{ data: openLeaves }, { data: myOffers }, { data: assignedPending }] = await Promise.all([
     supabase
       .from("coach_leave_requests")
       .select("id, coach_id, session_id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), sessions(session_date, start_time, end_time, branch_id, classes(name))")
       .eq("cover_status", "open"),
     supabase.from("coach_cover_offers").select("leave_id").eq("coach_id", me.id).eq("status", "offered"),
+    // Covers an admin assigned directly to me, awaiting my Accept/Decline.
+    supabase
+      .from("coach_leave_requests")
+      .select("id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), sessions(session_date, start_time, end_time, classes(name))")
+      .eq("replacement_coach_id", me.id)
+      .eq("cover_status", "filled")
+      .is("replacement_accepted", null),
   ]);
+  const assigned = (assignedPending ?? []) as any[];
   const offeredSet = new Set(((myOffers ?? []) as any[]).map((o) => o.leave_id));
   const coverRequests: any[] = [];
   for (const l of (openLeaves ?? []) as any[]) {
@@ -172,6 +180,34 @@ export default async function CoachDashboard() {
         </Link>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">{L.no_class_today}</div>
+      )}
+
+      {assigned.length > 0 && (
+        <div className="mt-6">
+          <Section title={`${L.cover_assigned} (${assigned.length})`} flush>
+            <ul className="divide-y divide-slate-100">
+              {assigned.map((l) => (
+                <li key={l.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-900">{l.sessions?.classes?.name ?? "Class"}</div>
+                    <div className="mt-0.5 text-sm text-slate-500">
+                      {formatDate(l.sessions?.session_date)} · {formatTime(l.sessions?.start_time)}–{formatTime(l.sessions?.end_time)}
+                      {" · "}{L.cover_for}{l.coach?.full_name ?? L.adm_coach}
+                    </div>
+                  </div>
+                  <form action={acceptAssignedCover}>
+                    <input type="hidden" name="leave_id" value={l.id} />
+                    <SubmitButton pendingText="…">{L.cover_accept}</SubmitButton>
+                  </form>
+                  <form action={declineAssignedCover}>
+                    <input type="hidden" name="leave_id" value={l.id} />
+                    <SubmitButton variant="ghost" pendingText="…">{L.cover_decline}</SubmitButton>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        </div>
       )}
 
       {coverRequests.length > 0 && (

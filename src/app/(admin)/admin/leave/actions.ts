@@ -181,6 +181,8 @@ export async function decideCoachLeave(formData: FormData) {
       decided_at: new Date().toISOString(),
       replacement_coach_id: finalReplacement,
       cover_status,
+      // Directly-assigned cover starts null = "awaiting the coach's Accept".
+      replacement_accepted: null,
     })
     .eq("id", id);
   if (error) return;
@@ -200,17 +202,18 @@ export async function decideCoachLeave(formData: FormData) {
     url: "/coach/schedule",
   });
 
-  // Assign path: tell the chosen sub they're covering (in-app + push).
+  // Assign path: ask the chosen sub to accept the cover (in-app + push). They
+  // Accept/Decline on their dashboard — a decline reopens the slot to offers.
   if (finalReplacement && decision === "approved") {
     const { data: onLeaveP } = await db.from("profiles").select("full_name").eq("id", (leave as any).coach_id).maybeSingle();
-    const covBody = `You're covering ${className} on ${when} for ${(onLeaveP as any)?.full_name ?? "a colleague"}.`;
+    const covBody = `Please accept: cover ${className} on ${when} for ${(onLeaveP as any)?.full_name ?? "a colleague"}.`;
     await createNotifications([finalReplacement], {
       type: "coach_cover",
-      title: "Covering a class",
+      title: "Cover request",
       body: covBody,
-      url: "/coach/schedule",
+      url: "/coach",
     });
-    try { await pushToUsers([finalReplacement], { title: "Covering a class", body: covBody, url: "/coach/schedule", tag: "cover" }); } catch { /* best-effort */ }
+    try { await pushToUsers([finalReplacement], { title: "Cover request", body: covBody, url: "/coach", tag: "cover" }); } catch { /* best-effort */ }
   }
 
   // Open path: broadcast to every FREE coach so they can offer to cover.
@@ -262,10 +265,10 @@ export async function confirmCoverOffer(formData: FormData) {
   const className = s?.classes?.name ?? "class";
   const chosen = (offer as any).coach_id as string;
 
-  // Lock the cover in.
+  // Lock the cover in. The coach claimed it themselves, so it's already accepted.
   await db
     .from("coach_leave_requests")
-    .update({ replacement_coach_id: chosen, cover_status: "filled" })
+    .update({ replacement_coach_id: chosen, cover_status: "filled", replacement_accepted: true })
     .eq("id", (leave as any).id);
 
   // This offer confirmed; every other offer on the leave declined.
@@ -333,7 +336,7 @@ export async function reopenCover(formData: FormData) {
 
   await db
     .from("coach_leave_requests")
-    .update({ replacement_coach_id: null, cover_status: "open" })
+    .update({ replacement_coach_id: null, cover_status: "open", replacement_accepted: null })
     .eq("id", id);
   await db.from("coach_cover_offers").delete().eq("leave_id", id);
 
@@ -377,6 +380,82 @@ export async function cancelCoverSearch(formData: FormData) {
     .from("coach_leave_requests")
     .update({ cover_status: "none", replacement_coach_id: null })
     .eq("id", id);
+
+  revalidate();
+}
+
+// ── Undo a decided leave (send it back to Pending) ───────────────────────────
+// Student leave: revert to pending, drop the auto-excusal + any makeup, tell the
+// parent it's back under review.
+export async function reopenStudentLeave(formData: FormData) {
+  await requireRole("admin");
+  const id = String(formData.get("id"));
+  if (!UUID_RE.test(id)) return;
+
+  const leave = await loadLeave(id);
+  if (!leave) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("leave_requests")
+    .update({ status: "pending", decided_by: null, decided_at: null, makeup_session_id: null })
+    .eq("id", id);
+  if (error) return;
+
+  // Remove the "excused" attendance the approval wrote, so the child isn't left
+  // excused for a session whose leave is no longer decided.
+  await supabase
+    .from("attendance")
+    .delete()
+    .eq("session_id", leave.session_id)
+    .eq("student_id", leave.student_id)
+    .eq("status", "excused");
+
+  const when = `${formatDate(leave.sessions?.session_date)} ${formatTime(leave.sessions?.start_time)}`;
+  const body = `The leave for ${leave.students?.full_name ?? "your child"} (${leave.sessions?.classes?.name ?? "class"}, ${when}) is being reviewed again.`;
+  await createNotifications([leave.parent_id], { type: "leave_decision", title: "Leave reopened", body, url: "/parent/schedule" });
+  try { await pushToUsers([leave.parent_id], { title: "Leave reopened", body, url: "/parent/schedule", tag: "leave" }); } catch { /* best-effort */ }
+
+  revalidate();
+}
+
+// Coach leave: revert to pending, tear down any cover (replacement + offers),
+// and tell the coach + any removed sub.
+export async function reopenCoachLeave(formData: FormData) {
+  await requireRole("admin");
+  const id = String(formData.get("id"));
+  if (!UUID_RE.test(id)) return;
+
+  const db = createAdminClient();
+  const { data: leave } = await db
+    .from("coach_leave_requests")
+    .select("id, coach_id, replacement_coach_id, sessions(session_date, start_time, classes(name))")
+    .eq("id", id)
+    .maybeSingle();
+  if (!leave) return;
+
+  const removed = (leave as any).replacement_coach_id as string | null;
+  await db.from("coach_cover_offers").delete().eq("leave_id", id);
+  await db
+    .from("coach_leave_requests")
+    .update({ status: "pending", decided_by: null, decided_at: null, replacement_coach_id: null, cover_status: "none", replacement_accepted: null })
+    .eq("id", id);
+
+  const s = (leave as any).sessions;
+  const when = `${formatDate(s?.session_date)} ${formatTime(s?.start_time)}`;
+  const className = s?.classes?.name ?? "class";
+
+  await createNotifications([(leave as any).coach_id], {
+    type: "leave_decision",
+    title: "Leave reopened",
+    body: `Your leave for ${className} on ${when} is being reviewed again.`,
+    url: "/coach/schedule",
+  });
+  if (removed) {
+    const body = `You're no longer covering ${className} on ${when}.`;
+    await createNotifications([removed], { type: "coach_cover", title: "Cover removed", body, url: "/coach" });
+    try { await pushToUsers([removed], { title: "Cover removed", body, url: "/coach", tag: "cover" }); } catch { /* best-effort */ }
+  }
 
   revalidate();
 }

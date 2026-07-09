@@ -7,7 +7,7 @@ import { PageHeader, Section, Badge, EmptyState, Select, cn } from "@/components
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
-import { approveLeave, declineLeave, assignMakeup, decideCoachLeave, confirmCoverOffer, reopenCover, cancelCoverSearch } from "./actions";
+import { approveLeave, declineLeave, assignMakeup, decideCoachLeave, confirmCoverOffer, reopenCover, cancelCoverSearch, reopenStudentLeave, reopenCoachLeave } from "./actions";
 import { eligibleCoverCoaches, type EligibleCoach } from "@/lib/cover";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export default async function LeavePage() {
     lq,
     supabase
       .from("coach_leave_requests")
-      .select("id, status, reason, created_at, replacement_coach_id, cover_status, coach_id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), replacement:profiles!coach_leave_requests_replacement_coach_id_fkey(full_name), sessions(id, session_date, start_time, end_time, branch_id, classes(name))")
+      .select("id, status, reason, created_at, replacement_coach_id, cover_status, replacement_accepted, coach_id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), replacement:profiles!coach_leave_requests_replacement_coach_id_fkey(full_name), sessions(id, session_date, start_time, end_time, branch_id, classes(name))")
       .order("created_at", { ascending: false })
       .limit(50),
     supabase
@@ -307,13 +307,19 @@ export default async function LeavePage() {
                       : L.lv_no_makeup}
                   </span>
                 )}
-                {l.status === "approved" && (
-                  <form action={assignMakeup} className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  {l.status === "approved" && (
+                    <form action={assignMakeup} className="flex items-center gap-2">
+                      <input type="hidden" name="id" value={l.id} />
+                      <MakeupSelect name="makeup_session_id" />
+                      <SubmitButton variant="secondary" pendingText="…">{L.lv_set_makeup}</SubmitButton>
+                    </form>
+                  )}
+                  <form action={reopenStudentLeave}>
                     <input type="hidden" name="id" value={l.id} />
-                    <MakeupSelect name="makeup_session_id" />
-                    <SubmitButton variant="secondary" pendingText="…">{L.lv_set_makeup}</SubmitButton>
+                    <SubmitButton variant="ghost" pendingText="…">{L.lv_undo_decision}</SubmitButton>
                   </form>
-                )}
+                </div>
               </li>
             ))}
             {coachDecided.map((l) => (
@@ -324,14 +330,23 @@ export default async function LeavePage() {
                   {L.lv_coach_leave_tag} · {l.sessions?.classes?.name ?? "—"} · {formatDate(l.sessions?.session_date)} {formatTime(l.sessions?.start_time)}
                 </span>
                 {l.status === "approved" && l.replacement?.full_name && (
-                  <span className="text-sm text-emerald-700">{L.lv_cover_by}{l.replacement.full_name}</span>
+                  <span className="text-sm text-emerald-700">
+                    {L.lv_cover_by}{l.replacement.full_name}
+                    {l.replacement_accepted === true ? ` ✓` : l.replacement_accepted == null ? ` · ${L.lv_awaiting_accept}` : ""}
+                  </span>
                 )}
-                {l.status === "approved" && l.replacement_coach_id && (
-                  <form action={reopenCover} className="ml-auto">
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  {l.status === "approved" && l.replacement_coach_id && (
+                    <form action={reopenCover}>
+                      <input type="hidden" name="id" value={l.id} />
+                      <SubmitButton variant="ghost" pendingText="…">{L.lv_undo_cover}</SubmitButton>
+                    </form>
+                  )}
+                  <form action={reopenCoachLeave}>
                     <input type="hidden" name="id" value={l.id} />
-                    <SubmitButton variant="ghost" pendingText="…">{L.lv_undo_cover}</SubmitButton>
+                    <SubmitButton variant="ghost" pendingText="…">{L.lv_undo_decision}</SubmitButton>
                   </form>
-                )}
+                </div>
               </li>
             ))}
           </ul>

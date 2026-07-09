@@ -5,13 +5,13 @@ import type { Branch, Profile } from "@/lib/types";
 
 export const BRANCH_VIEW_COOKIE = "hba_branch";
 
-// The super-admin's chosen "viewing" branch — an app-layer convenience that
-// narrows list/dashboard reads to one branch. Returns a branch id, or null for
-// "all branches". Branch-admins are already RLS-scoped to their own branch, so
-// this returns null for them (no extra filter needed). NEVER a security
-// boundary — RLS is — so a missed page just shows all, never another branch.
+// An admin's chosen "viewing" branch — an app-layer convenience that narrows
+// list/dashboard reads to one branch. Returns a branch id, or null for "all
+// branches". Every admin now sees all branches (the branch-admin wall is gone),
+// so this focus switcher is available to all of them. NEVER a security boundary
+// — RLS is — so a missed page just shows all branches, never hides one.
 export async function getViewBranchId(me: Profile): Promise<string | null> {
-  if (me.role !== "super_admin") return null;
+  if (me.role !== "admin" && me.role !== "super_admin") return null;
   const v = (await cookies()).get(BRANCH_VIEW_COOKIE)?.value;
   return v && v !== "all" ? v : null;
 }
@@ -26,16 +26,15 @@ export async function listBranches(activeOnly = true): Promise<Branch[]> {
   return (data as Branch[]) ?? [];
 }
 
-// Only super-admins may choose which branch a record belongs to; a branch-admin
-// is always pinned to their own branch.
+// Any admin may now choose which branch a record belongs to (they manage all
+// branches). Non-admins never reach these forms.
 export function canChooseBranch(me: Profile): boolean {
-  return me.role === "super_admin";
+  return me.role === "admin" || me.role === "super_admin";
 }
 
-// The authoritative branch_id to stamp on a write by `me`. Never trust the
-// submitted value for a branch-admin — force their own branch. A super-admin may
-// pick any branch; falls back to their own when none is chosen.
+// The authoritative branch_id to stamp on a write by `me`. Any admin may pick a
+// branch; falls back to their own home branch when none is chosen.
 export function resolveWriteBranch(me: Profile, chosen?: string | null): string | null {
-  if (me.role === "super_admin") return (chosen && chosen.trim()) || me.branch_id || null;
+  if (me.role === "admin" || me.role === "super_admin") return (chosen && chosen.trim()) || me.branch_id || null;
   return me.branch_id ?? null;
 }

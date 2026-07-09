@@ -4,13 +4,14 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requireRole, requireSuperAdmin } from "@/lib/auth";
 import { BRANCH_VIEW_COOKIE } from "@/lib/branch";
 
-// Super-admin "viewing branch" switcher — narrows list/dashboard views to one
+// Any admin's "viewing branch" switcher — narrows list/dashboard views to one
 // branch (or "all"). Stored in a cookie; app-layer only (RLS is the boundary).
+// (Branch CREATE/rename/delete below stays super-admin only.)
 export async function setBranchView(formData: FormData) {
-  await requireSuperAdmin();
+  await requireRole("admin");
   const id = String(formData.get("branch_id") ?? "all");
   (await cookies()).set(BRANCH_VIEW_COOKIE, id, { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
   revalidatePath("/admin", "layout");

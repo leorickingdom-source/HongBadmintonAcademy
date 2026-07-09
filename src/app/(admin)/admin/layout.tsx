@@ -29,10 +29,9 @@ export default async function AdminLayout({
     }))
     .filter((g) => g.items.length > 0);
 
-  // Super-admins get a branch focus switcher; branch-admins are locked to theirs.
-  const switcher = isSuper
-    ? <BranchSwitcher branches={await listBranches()} current={await getViewBranchId(profile)} action={setBranchView} />
-    : undefined;
+  // Every admin now sees all branches, so all admins get the branch focus
+  // switcher. (Branch CREATE/rename/delete stays super-only via the nav filter.)
+  const switcher = <BranchSwitcher branches={await listBranches()} current={await getViewBranchId(profile)} action={setBranchView} />;
 
   return (
     <AppShell

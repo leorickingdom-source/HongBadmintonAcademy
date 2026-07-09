@@ -41,8 +41,8 @@ export default async function AnalyticsPage({
   // Branch filter: super-admin picks (explicit ?branch= wins, else global
   // switcher); a branch-admin is pinned to their own branch.
   const branches = await listBranches(false);
-  const branchParam = isSuper && branch && branch !== "all" && branches.some((b) => b.id === branch) ? branch : null;
-  const bf = isSuper ? (branchParam ?? await getViewBranchId(me)) : (me.branch_id ?? null);
+  const branchParam = branch && branch !== "all" && branches.some((b) => b.id === branch) ? branch : null;
+  const bf = branchParam ?? await getViewBranchId(me);
   const branchLabel = bf ? branches.find((b) => b.id === bf)?.name ?? null : null;
   const bq = branchParam ? `&branch=${branchParam}` : "";
   const a = await computeAnalytics(supabase, new Date(my, mm - 1, 1), bf);
@@ -71,7 +71,7 @@ export default async function AnalyticsPage({
       />
 
       {/* Branch filter (super-admin) — pick one branch or all. */}
-      {isSuper && branches.length > 1 && (
+      {branches.length > 1 && (
         <label className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-slate-600">{L.branch}</span>
           <FilterSelect name="branch" defaultValue={branchParam ?? ""} className="h-9 w-52">

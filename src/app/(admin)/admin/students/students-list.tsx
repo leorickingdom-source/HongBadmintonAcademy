@@ -52,9 +52,8 @@ export async function StudentsList({
   const supabase = await createClient();
   const me = await getProfile();
   const bf = me ? await getViewBranchId(me) : null;
-  // Show which branch each student is in when a super-admin is viewing across
-  // branches (a branch-admin only ever sees one branch, so the column is noise).
-  const showBranch = me?.role === "super_admin";
+  // Every admin now sees all branches, so show which branch each student is in.
+  const showBranch = me?.role === "admin" || me?.role === "super_admin";
   const branchInfo = new Map<string, { name: string; color: string | null }>(
     showBranch ? (await listBranches(false)).map((b) => [b.id, { name: b.name, color: b.color }]) : [],
   );

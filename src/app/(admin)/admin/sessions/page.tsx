@@ -26,11 +26,10 @@ export default async function SessionsPage({
   const L = dict(me.locale);
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
-  const isSuper = me.role === "super_admin";
   const isUuid = (v?: string) => /^[0-9a-f-]{36}$/i.test(v ?? "");
-  // Branch filter is super-admin only (a branch-admin is already RLS-scoped to
-  // one branch). Falls back to the global branch-switcher cookie.
-  const branchFilter = isSuper && isUuid(branchParam) ? branchParam! : "";
+  // Branch filter is open to every admin now (all admins see all branches).
+  // Falls back to the global branch-switcher cookie.
+  const branchFilter = isUuid(branchParam) ? branchParam! : "";
   const effBranch = branchFilter || bf;
   const coachFilter = isUuid(coachParam) ? coachParam! : "";
 
@@ -78,7 +77,7 @@ export default async function SessionsPage({
     coachQuery,
     loadHolidayMap(supabase, start, end),
   ]);
-  const branches = isSuper ? await listBranches(false) : [];
+  const branches = await listBranches(false);
 
   const list = (sessions ?? []) as any[];
 
@@ -128,7 +127,7 @@ export default async function SessionsPage({
             ))}
           </FilterSelect>
         </label>
-        {isSuper && (
+        {branches.length > 1 && (
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-slate-600">{L.branch}</span>
             <FilterSelect name="branch" defaultValue={branchFilter} className="h-9 w-44">

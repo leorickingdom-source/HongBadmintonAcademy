@@ -49,13 +49,13 @@ export default async function DirectoryPage({
   const supabase = await createClient();
   const [{ data: coaches }, { data: branches }] = await Promise.all([
     supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name"),
-    isSuper ? supabase.from("branches").select("id, name").order("name") : Promise.resolve({ data: [] as any[] }),
+    supabase.from("branches").select("id, name").order("name"),
   ]);
 
   const statusFilter = status === "active" || status === "inactive" ? status : "";
   const rankFilter = rank && (CLASS_RANKS as readonly string[]).includes(rank) ? rank : "";
   const coachFilter = coach && (coaches ?? []).some((c) => c.id === coach) ? coach : "";
-  const branchFilter = isSuper && branch && (branches ?? []).some((b: any) => b.id === branch) ? branch : "";
+  const branchFilter = branch && (branches ?? []).some((b: any) => b.id === branch) ? branch : "";
   const filtered = Boolean((q ?? "").trim() || statusFilter || rankFilter || coachFilter || branchFilter);
   const dirParam: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
   const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
@@ -142,7 +142,7 @@ export default async function DirectoryPage({
                 ))}
               </FilterSelect>
             </label>
-            {isSuper && (
+            {(branches ?? []).length > 1 && (
               <label className="block space-y-1.5">
                 <span className="text-xs font-medium text-slate-600">{L.branch}</span>
                 <FilterSelect name="branch" defaultValue={branchFilter} className="h-9 w-44">

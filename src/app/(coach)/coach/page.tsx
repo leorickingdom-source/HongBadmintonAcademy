@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Clock, MapPin, UserCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { BranchChip } from "@/components/branch-chip";
@@ -64,15 +65,16 @@ export default async function CoachDashboard() {
   }
 
   // Open cover requests this coach can pick up (broadcast by an admin). RLS
-  // (coach_leave_open_read) lets a coach read open leaves; we then keep only the
-  // ones they're actually free for, plus any they've already offered on.
+  // (coach_leave_open_read) lets a coach read the open leave ROWS, but NOT the
+  // joined session — a coach can't read a session they don't coach, so the embed
+  // comes back null. So we read the leave rows via RLS, then hydrate session +
+  // on-leave-coach names via the service-role client (not sensitive).
+  const admin = createAdminClient();
   const [{ data: openLeaves }, { data: myOffers }, { data: assignedPending }] = await Promise.all([
-    supabase
-      .from("coach_leave_requests")
-      .select("id, coach_id, session_id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), sessions(session_date, start_time, end_time, branch_id, classes(name))")
-      .eq("cover_status", "open"),
+    supabase.from("coach_leave_requests").select("id, coach_id, session_id").eq("cover_status", "open"),
     supabase.from("coach_cover_offers").select("leave_id").eq("coach_id", me.id).eq("status", "offered"),
-    // Covers an admin assigned directly to me, awaiting my Accept/Decline.
+    // Covers an admin assigned directly to me, awaiting my Accept/Decline. Here
+    // coach_of_replacement() lets me read the session, so the embed works.
     supabase
       .from("coach_leave_requests")
       .select("id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), sessions(session_date, start_time, end_time, classes(name))")
@@ -82,24 +84,45 @@ export default async function CoachDashboard() {
   ]);
   const assigned = (assignedPending ?? []) as any[];
   const offeredSet = new Set(((myOffers ?? []) as any[]).map((o) => o.leave_id));
+
+  const openList = ((openLeaves ?? []) as any[]).filter((l) => l.coach_id !== me.id);
+  const sessIds = [...new Set(openList.map((l) => l.session_id))];
+  const leaveCoachIds = [...new Set(openList.map((l) => l.coach_id))];
+  const [sDetail, cNames] = sessIds.length
+    ? await Promise.all([
+        admin.from("sessions").select("id, session_date, start_time, end_time, branch_id, classes(name)").in("id", sessIds),
+        admin.from("profiles").select("id, full_name").in("id", leaveCoachIds),
+      ])
+    : [{ data: [] as any[] }, { data: [] as any[] }];
+  const sById = new Map(((sDetail.data ?? []) as any[]).map((x) => [x.id, x]));
+  const cById = new Map(((cNames.data ?? []) as any[]).map((x) => [x.id, x.full_name]));
+
   const coverRequests: any[] = [];
-  for (const l of (openLeaves ?? []) as any[]) {
-    if (l.coach_id === me.id || !l.sessions) continue;
+  for (const l of openList) {
+    const s = sById.get(l.session_id);
+    if (!s) continue;
     const already = offeredSet.has(l.id);
     const ok =
       already ||
       (await isEligibleCover(
         {
           sessionId: l.session_id,
-          sessionDate: l.sessions.session_date,
-          startTime: l.sessions.start_time,
-          endTime: l.sessions.end_time,
-          branchId: l.sessions.branch_id ?? null,
+          sessionDate: s.session_date,
+          startTime: s.start_time,
+          endTime: s.end_time,
+          branchId: s.branch_id ?? null,
           onLeaveCoachId: l.coach_id,
         },
         me.id,
       ));
-    if (ok) coverRequests.push({ ...l, offered: already });
+    if (ok) {
+      coverRequests.push({
+        id: l.id,
+        offered: already,
+        sessions: { session_date: s.session_date, start_time: s.start_time, end_time: s.end_time, classes: { name: s.classes?.name ?? null } },
+        coach: { full_name: cById.get(l.coach_id) ?? null },
+      });
+    }
   }
 
   // Current class to check in: today's first session that hasn't ended yet

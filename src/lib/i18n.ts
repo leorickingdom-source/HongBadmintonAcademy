@@ -276,6 +276,7 @@ const en = {
   adm_leave_to_review: "Leave to review",
   adm_cover_to_confirm: "Cover to confirm",
   adm_new_leads: "New trial leads",
+  adm_overview: "Academy overview",
   st_scheduled: "scheduled",
   st_completed: "completed",
 
@@ -1527,6 +1528,7 @@ const zh: Dict = {
   adm_leave_to_review: "待审请假",
   adm_cover_to_confirm: "待确认代课",
   adm_new_leads: "新试课名单",
+  adm_overview: "学院概览",
   st_scheduled: "已排期",
   st_completed: "已完成",
 

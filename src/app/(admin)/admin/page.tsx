@@ -3,7 +3,7 @@ import { Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { getViewBranchId } from "@/lib/branch";
-import { PageHeader, StatCard, Section, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, StatCard, Collapsible, Badge, EmptyState } from "@/components/ui";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
 
@@ -116,60 +116,64 @@ export default async function AdminDashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <Link href="/admin/people?tab=students" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label={L.adm_active_students} value={students} tone="green" />
-        </Link>
-        <Link href="/admin/coaches/summary" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label={L.adm_coaches_payroll} value={coaches} tone="slate" />
-        </Link>
-        <Link href="/admin/classes" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label={L.adm_active_total_classes} value={`${activeClasses} / ${totalClasses}`} tone="blue" />
-        </Link>
-        <Link href="/admin/messages" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label={L.adm_queued_messages} value={queued} tone={queued ? "amber" : "slate"} />
-        </Link>
-      </div>
+      {/* Everything below is reference, not a to-do — folded away by default so
+          the page opens on "Needs attention" alone. One tap reveals the numbers. */}
+      <Collapsible title={L.adm_overview} defaultOpen={false}>
+        <div className="space-y-6 p-5">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Link href="/admin/people?tab=students" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+              <StatCard label={L.adm_active_students} value={students} tone="green" />
+            </Link>
+            <Link href="/admin/coaches/summary" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+              <StatCard label={L.adm_coaches_payroll} value={coaches} tone="slate" />
+            </Link>
+            <Link href="/admin/classes" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+              <StatCard label={L.adm_active_total_classes} value={`${activeClasses} / ${totalClasses}`} tone="blue" />
+            </Link>
+            <Link href="/admin/messages" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+              <StatCard label={L.adm_queued_messages} value={queued} tone={queued ? "amber" : "slate"} />
+            </Link>
+          </div>
 
-      {/* Finance — money still out (branch admins chase follow-ups only; the
-          "collected" revenue figure is super-admin only). */}
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3">
-        {isSuper && (
-          <Link href="/admin/collections" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-            <StatCard label={L.adm_collected_month} value={formatCurrency(collected, currency)} tone="green" />
-          </Link>
-        )}
-        <Link href="/admin/invoices?status=unpaid" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label={L.adm_outstanding} value={formatCurrency(outstanding, currency)} tone={outstanding ? "amber" : "slate"} />
-        </Link>
-        <Link href="/admin/invoices?status=overdue" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label={L.adm_overdue} value={formatCurrency(overdueSum, currency)} tone={overdueSum ? "red" : "slate"} />
-        </Link>
-      </div>
+          {/* Finance — money still out (collected revenue is super-admin only). */}
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+            {isSuper && (
+              <Link href="/admin/collections" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+                <StatCard label={L.adm_collected_month} value={formatCurrency(collected, currency)} tone="green" />
+              </Link>
+            )}
+            <Link href="/admin/invoices?status=unpaid" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+              <StatCard label={L.adm_outstanding} value={formatCurrency(outstanding, currency)} tone={outstanding ? "amber" : "slate"} />
+            </Link>
+            <Link href="/admin/invoices?status=overdue" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+              <StatCard label={L.adm_overdue} value={formatCurrency(overdueSum, currency)} tone={overdueSum ? "red" : "slate"} />
+            </Link>
+          </div>
 
-      <div className="mt-8">
-        <Section title={L.adm_todays_sessions} flush>
-          {todaySessions && todaySessions.length > 0 ? (
-            <div className="divide-y divide-slate-100">
-              {todaySessions.map((s: any) => (
-                <Link key={s.id} href={`/admin/attendance/${s.id}`} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50">
-                  <div className="flex h-12 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-blue-50">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <span className="mt-0.5 text-[11px] font-semibold leading-none text-blue-700">{formatTime(s.start_time)}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-900">{s.classes?.name ?? L.class_word}</div>
-                    <div className="text-sm text-slate-500">{formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}</div>
-                  </div>
-                  <Badge tone={s.status === "completed" ? "green" : "blue"}>{stLabel[s.status] ?? s.status}</Badge>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="p-5"><EmptyState message={L.no_sessions_today} /></div>
-          )}
-        </Section>
-      </div>
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">{L.adm_todays_sessions}</h3>
+            {todaySessions && todaySessions.length > 0 ? (
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
+                {todaySessions.map((s: any) => (
+                  <Link key={s.id} href={`/admin/attendance/${s.id}`} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50">
+                    <div className="flex h-12 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-blue-50">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span className="mt-0.5 text-[11px] font-semibold leading-none text-blue-700">{formatTime(s.start_time)}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-slate-900">{s.classes?.name ?? L.class_word}</div>
+                      <div className="text-sm text-slate-500">{formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}</div>
+                    </div>
+                    <Badge tone={s.status === "completed" ? "green" : "blue"}>{stLabel[s.status] ?? s.status}</Badge>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <EmptyState message={L.no_sessions_today} />
+            )}
+          </div>
+        </div>
+      </Collapsible>
     </div>
   );
 }

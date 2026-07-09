@@ -3,11 +3,14 @@ import { Clock, MapPin, UserCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { BranchChip } from "@/components/branch-chip";
 import { listBranches } from "@/lib/branch";
-import { formatTime } from "@/lib/format";
+import { formatDate, formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
+import { isEligibleCover } from "@/lib/cover";
 import { coachClassIds, coachCoverSessionIds } from "./_data";
+import { makeCoverOffer, withdrawCoverOffer } from "./cover-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +61,37 @@ export default async function CoachDashboard() {
     for (const s of merged) if (!dedup.has(s.id)) dedup.set(s.id, s);
     sessions = [...dedup.values()].sort((a, b) => (a.session_date + a.start_time).localeCompare(b.session_date + b.start_time)).slice(0, 5);
     for (const s of sessions) s.__cover = coverSet.has(s.id);
+  }
+
+  // Open cover requests this coach can pick up (broadcast by an admin). RLS
+  // (coach_leave_open_read) lets a coach read open leaves; we then keep only the
+  // ones they're actually free for, plus any they've already offered on.
+  const [{ data: openLeaves }, { data: myOffers }] = await Promise.all([
+    supabase
+      .from("coach_leave_requests")
+      .select("id, coach_id, session_id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), sessions(session_date, start_time, end_time, branch_id, classes(name))")
+      .eq("cover_status", "open"),
+    supabase.from("coach_cover_offers").select("leave_id").eq("coach_id", me.id).eq("status", "offered"),
+  ]);
+  const offeredSet = new Set(((myOffers ?? []) as any[]).map((o) => o.leave_id));
+  const coverRequests: any[] = [];
+  for (const l of (openLeaves ?? []) as any[]) {
+    if (l.coach_id === me.id || !l.sessions) continue;
+    const already = offeredSet.has(l.id);
+    const ok =
+      already ||
+      (await isEligibleCover(
+        {
+          sessionId: l.session_id,
+          sessionDate: l.sessions.session_date,
+          startTime: l.sessions.start_time,
+          endTime: l.sessions.end_time,
+          branchId: l.sessions.branch_id ?? null,
+          onLeaveCoachId: l.coach_id,
+        },
+        me.id,
+      ));
+    if (ok) coverRequests.push({ ...l, offered: already });
   }
 
   // Current class to check in: today's first session that hasn't ended yet
@@ -138,6 +172,38 @@ export default async function CoachDashboard() {
         </Link>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">{L.no_class_today}</div>
+      )}
+
+      {coverRequests.length > 0 && (
+        <div className="mt-6">
+          <Section title={`${L.cover_requests} (${coverRequests.length})`} flush>
+            <ul className="divide-y divide-slate-100">
+              {coverRequests.map((l) => (
+                <li key={l.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-900">{l.sessions?.classes?.name ?? "Class"}</div>
+                    <div className="mt-0.5 text-sm text-slate-500">
+                      {formatDate(l.sessions?.session_date)} · {formatTime(l.sessions?.start_time)}–{formatTime(l.sessions?.end_time)}
+                      {" · "}{L.cover_for}{l.coach?.full_name ?? L.adm_coach}
+                    </div>
+                  </div>
+                  {l.offered ? (
+                    <form action={withdrawCoverOffer} className="flex items-center gap-2">
+                      <input type="hidden" name="leave_id" value={l.id} />
+                      <span className="text-xs font-semibold text-emerald-700">{L.cover_offered}</span>
+                      <SubmitButton variant="ghost" pendingText="…">{L.cover_withdraw}</SubmitButton>
+                    </form>
+                  ) : (
+                    <form action={makeCoverOffer}>
+                      <input type="hidden" name="leave_id" value={l.id} />
+                      <SubmitButton pendingText="…">{L.cover_ill_cover}</SubmitButton>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        </div>
       )}
 
       <h2 className="mb-3 mt-8 text-lg font-semibold text-slate-900">{L.my_performance}</h2>

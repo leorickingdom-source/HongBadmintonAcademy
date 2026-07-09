@@ -7,7 +7,8 @@ import { PageHeader, Section, Badge, EmptyState, Select, cn } from "@/components
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
-import { approveLeave, declineLeave, assignMakeup, decideCoachLeave } from "./actions";
+import { approveLeave, declineLeave, assignMakeup, decideCoachLeave, confirmCoverOffer } from "./actions";
+import { eligibleCoverCoaches, type EligibleCoach } from "@/lib/cover";
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +41,11 @@ export default async function LeavePage() {
     `)
     .order("created_at", { ascending: false })
     .limit(100);
-  const [{ data: leavesRaw }, { data: coachLeavesRaw }, mkQ, coachesQ] = await Promise.all([
+  const [{ data: leavesRaw }, { data: coachLeavesRaw }, mkQ] = await Promise.all([
     lq,
     supabase
       .from("coach_leave_requests")
-      .select("id, status, reason, created_at, replacement_coach_id, coach_id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), replacement:profiles!coach_leave_requests_replacement_coach_id_fkey(full_name), sessions(id, session_date, start_time, branch_id, classes(name))")
+      .select("id, status, reason, created_at, replacement_coach_id, cover_status, coach_id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), replacement:profiles!coach_leave_requests_replacement_coach_id_fkey(full_name), sessions(id, session_date, start_time, end_time, branch_id, classes(name))")
       .order("created_at", { ascending: false })
       .limit(50),
     supabase
@@ -55,9 +56,7 @@ export default async function LeavePage() {
       .order("session_date")
       .order("start_time")
       .limit(120),
-    supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name"),
   ]);
-  const coachOptions = (coachesQ.data ?? []) as { id: string; full_name: string | null }[];
 
   // Branch focus (super-admin) — filter by the source session's branch.
   const leaves = ((leavesRaw ?? []) as any[]).filter((l) => !bf || l.session?.branch_id === bf);
@@ -77,7 +76,46 @@ export default async function LeavePage() {
     }
   }
   const coachPending = coachLeaves.filter((l) => l.status === "pending");
-  const coachDecided = coachLeaves.filter((l) => l.status !== "pending").slice(0, 10);
+  const coachOpen = coachLeaves.filter((l) => l.status === "approved" && l.cover_status === "open");
+  const coachDecided = coachLeaves
+    .filter((l) => l.status !== "pending" && !(l.status === "approved" && l.cover_status === "open"))
+    .slice(0, 10);
+
+  // Free coaches for each pending coach-leave (filtered by that session's exact
+  // date+time), so the admin never picks a coach who's already teaching then.
+  const eligibleByLeave = new Map<string, EligibleCoach[]>();
+  await Promise.all(
+    coachPending.map(async (l) => {
+      const ses = l.sessions;
+      if (!ses) return;
+      const list = await eligibleCoverCoaches({
+        sessionId: ses.id,
+        sessionDate: ses.session_date,
+        startTime: ses.start_time,
+        endTime: ses.end_time,
+        branchId: ses.branch_id ?? null,
+        onLeaveCoachId: l.coach_id,
+      });
+      eligibleByLeave.set(l.id, list);
+    }),
+  );
+
+  // Pending offers on the open covers, grouped by leave.
+  const offersByLeave = new Map<string, { id: string; coach_id: string; full_name: string | null }[]>();
+  const openIds = coachOpen.map((l) => l.id);
+  if (openIds.length) {
+    const { data: offers } = await supabase
+      .from("coach_cover_offers")
+      .select("id, leave_id, coach_id, status, coach:profiles!coach_cover_offers_coach_id_fkey(full_name)")
+      .in("leave_id", openIds)
+      .eq("status", "offered")
+      .order("created_at");
+    for (const o of (offers ?? []) as any[]) {
+      const arr = offersByLeave.get(o.leave_id) ?? [];
+      arr.push({ id: o.id, coach_id: o.coach_id, full_name: o.coach?.full_name ?? null });
+      offersByLeave.set(o.leave_id, arr);
+    }
+  }
 
   const mkLabel = (s: any) =>
     `${s.classes?.name ?? L.class_word} — ${formatDate(s.session_date)} ${formatTime(s.start_time)}`;
@@ -157,38 +195,52 @@ export default async function LeavePage() {
                   </span>
                 </div>
                 {l.reason && <div className="text-sm text-slate-600">“{l.reason}”</div>}
-                <div className="flex flex-wrap items-end gap-2">
-                  <form action={decideCoachLeave} className="flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="id" value={l.id} />
-                    <input type="hidden" name="decision" value="approved" />
-                    <label className="block space-y-1">
-                      <span className="text-xs font-medium text-slate-500">{L.lv_cover_coach}</span>
-                      <Select name="replacement_coach_id" defaultValue="" className="h-9 w-56">
-                        <option value="">{L.lv_no_cover}</option>
-                        {coachOptions
-                          .filter((c) => c.id !== l.coach_id)
-                          .map((c) => (
-                            <option key={c.id} value={c.id}>{c.full_name ?? "—"}</option>
-                          ))}
-                      </Select>
-                    </label>
-                    <SubmitButton pendingText="…">{L.lv_approve}</SubmitButton>
-                  </form>
-                  <form action={decideCoachLeave}>
-                    <input type="hidden" name="id" value={l.id} />
-                    <input type="hidden" name="decision" value="declined" />
-                    <SubmitButton variant="secondary" pendingText="…">{L.lv_decline}</SubmitButton>
-                  </form>
-                  {l.sessions?.id && (
-                    <Link
-                      href={`/admin/attendance/${l.sessions.id}`}
-                      className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                    >
-                      {L.lv_session_arrow}
-                    </Link>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400">{L.lv_coach_note}</p>
+                {(() => {
+                  const eligible = eligibleByLeave.get(l.id) ?? [];
+                  return (
+                    <>
+                      <div className="flex flex-wrap items-end gap-2">
+                        <form action={decideCoachLeave} className="flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="id" value={l.id} />
+                          <input type="hidden" name="decision" value="approved" />
+                          <label className="block space-y-1">
+                            <span className="text-xs font-medium text-slate-500">{L.lv_cover_coach}</span>
+                            <Select name="replacement_coach_id" defaultValue="" className="h-9 w-56">
+                              <option value="">{L.lv_no_cover}</option>
+                              {eligible.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.full_name ?? "—"}{c.sessionsThatDay ? ` · ${c.sessionsThatDay}${L.lv_today_sessions_suffix}` : ""}{!c.sameBranch ? ` · ${L.lv_other_branch}` : ""}
+                                </option>
+                              ))}
+                            </Select>
+                          </label>
+                          <SubmitButton name="cover_mode" value="assign" pendingText="…">{L.lv_approve}</SubmitButton>
+                        </form>
+                        <form action={decideCoachLeave}>
+                          <input type="hidden" name="id" value={l.id} />
+                          <input type="hidden" name="decision" value="approved" />
+                          <SubmitButton name="cover_mode" value="open" variant="secondary" pendingText="…">{L.lv_ask_coaches}</SubmitButton>
+                        </form>
+                        <form action={decideCoachLeave}>
+                          <input type="hidden" name="id" value={l.id} />
+                          <input type="hidden" name="decision" value="declined" />
+                          <SubmitButton variant="ghost" pendingText="…">{L.lv_decline}</SubmitButton>
+                        </form>
+                        {l.sessions?.id && (
+                          <Link
+                            href={`/admin/attendance/${l.sessions.id}`}
+                            className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                          >
+                            {L.lv_session_arrow}
+                          </Link>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {eligible.length === 0 ? L.lv_no_free_coach : `${eligible.length} ${L.lv_free_coaches} · ${L.lv_coach_note}`}
+                      </p>
+                    </>
+                  );
+                })()}
               </li>
             ))}
           </ul>
@@ -196,6 +248,43 @@ export default async function LeavePage() {
           <div className="p-5"><EmptyState message={L.lv_empty_coach} /></div>
         )}
       </Section>
+
+      {coachOpen.length > 0 && (
+        <Section title={`${L.lv_seeking_cover} (${coachOpen.length})`} flush>
+          <ul className="divide-y divide-slate-100">
+            {coachOpen.map((l) => {
+              const offers = offersByLeave.get(l.id) ?? [];
+              return (
+                <li key={l.id} className="space-y-2 px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="blue">{L.lv_open_badge}</Badge>
+                    <span className="font-semibold text-slate-900">{l.coach?.full_name ?? L.adm_coach}</span>
+                    <span className="text-sm text-slate-500">
+                      {l.sessions?.classes?.name ?? "—"} · {formatDate(l.sessions?.session_date)} {formatTime(l.sessions?.start_time)}
+                    </span>
+                  </div>
+                  {offers.length === 0 ? (
+                    <p className="text-sm text-slate-400">{L.lv_no_offers}</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {offers.map((o) => (
+                        <li key={o.id} className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium text-slate-800">{o.full_name ?? "—"}</span>
+                          <span className="text-xs text-slate-400">{L.lv_offered}</span>
+                          <form action={confirmCoverOffer} className="ml-auto">
+                            <input type="hidden" name="offer_id" value={o.id} />
+                            <SubmitButton pendingText="…">{L.lv_confirm_cover}</SubmitButton>
+                          </form>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
 
       {(decided.length > 0 || coachDecided.length > 0) && (
         <Section title={L.lv_recent} flush>

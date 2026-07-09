@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth";
 import { createNotifications } from "@/lib/notifications";
 import { pushToUsers } from "@/lib/push";
 import { formatDate, formatTime } from "@/lib/format";
+import { eligibleCoverCoaches } from "@/lib/cover";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -14,6 +15,8 @@ function revalidate() {
   revalidatePath("/admin/leave");
   revalidatePath("/parent/schedule");
   revalidatePath("/coach/checkin");
+  revalidatePath("/coach");
+  revalidatePath("/coach/schedule");
 }
 
 // Load a leave row + its session/student labels for notification copy.
@@ -128,25 +131,34 @@ export async function assignMakeup(formData: FormData) {
 }
 
 // ── Coach leave ──────────────────────────────────────────────────────────────
+// Approve a coach's leave one of three ways (cover_mode):
+//   'assign' — hand-pick a free replacement now (0053 behaviour) → cover_status 'filled'
+//   'open'   — broadcast the cover to eligible coaches; they claim, admin confirms → 'open'
+//   'none'   — approve with no cover
+// …or decline. The public /admin/leave form drives cover_mode via the button.
 export async function decideCoachLeave(formData: FormData) {
   const me = await requireRole("admin");
   const id = String(formData.get("id"));
   const decision = String(formData.get("decision")) === "approved" ? "approved" : "declined";
-  // Optional replacement coach when approving. Only honoured on "approved" —
-  // a declined leave doesn't need a cover. Blank / non-uuid => no cover.
+  const coverModeRaw = String(formData.get("cover_mode") ?? "assign");
+  const coverMode = coverModeRaw === "open" || coverModeRaw === "none" ? coverModeRaw : "assign";
   const replacementRaw = String(formData.get("replacement_coach_id") ?? "").trim();
-  const replacement_coach_id = decision === "approved" && UUID_RE.test(replacementRaw) ? replacementRaw : null;
+  const replacement_coach_id =
+    decision === "approved" && coverMode === "assign" && UUID_RE.test(replacementRaw) ? replacementRaw : null;
 
   const db = createAdminClient();
   const { data: leave } = await db
     .from("coach_leave_requests")
-    .select("id, session_id, coach_id, sessions(session_date, start_time, classes(name))")
+    .select("id, session_id, coach_id, sessions(session_date, start_time, end_time, branch_id, classes(name))")
     .eq("id", id)
     .maybeSingle();
   if (!leave) return;
 
-  // Guard: the substitute must actually be a coach, and different from the one
-  // going on leave (picking yourself is nonsense).
+  const s = (leave as any).sessions;
+  const when = `${formatDate(s?.session_date)} ${formatTime(s?.start_time)}`;
+  const className = s?.classes?.name ?? "class";
+
+  // Guard the hand-picked sub: must be a coach and not the one on leave.
   let finalReplacement: string | null = replacement_coach_id;
   if (finalReplacement) {
     if (finalReplacement === (leave as any).coach_id) {
@@ -157,6 +169,9 @@ export async function decideCoachLeave(formData: FormData) {
     }
   }
 
+  const opening = decision === "approved" && coverMode === "open";
+  const cover_status = decision !== "approved" ? "none" : finalReplacement ? "filled" : opening ? "open" : "none";
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("coach_leave_requests")
@@ -165,20 +180,18 @@ export async function decideCoachLeave(formData: FormData) {
       decided_by: me.id,
       decided_at: new Date().toISOString(),
       replacement_coach_id: finalReplacement,
+      cover_status,
     })
     .eq("id", id);
   if (error) return;
 
-  const s = (leave as any).sessions;
-  const when = `${formatDate(s?.session_date)} ${formatTime(s?.start_time)}`;
-  const className = s?.classes?.name ?? "class";
-
-  // Tell the requesting coach the outcome, mentioning the sub if one was set so
-  // they can confirm the class is covered.
+  // Tell the requesting coach the outcome.
   let coachBody = `Your leave for ${className} on ${when} was ${decision}.`;
   if (finalReplacement) {
     const { data: subP } = await db.from("profiles").select("full_name").eq("id", finalReplacement).maybeSingle();
     coachBody += ` Cover: ${(subP as any)?.full_name ?? "another coach"}.`;
+  } else if (opening) {
+    coachBody += " We're asking other coaches to cover.";
   }
   await createNotifications([(leave as any).coach_id], {
     type: "leave_decision",
@@ -187,7 +200,7 @@ export async function decideCoachLeave(formData: FormData) {
     url: "/coach/schedule",
   });
 
-  // Notify the substitute so they know they're covering — in-app + push.
+  // Assign path: tell the chosen sub they're covering (in-app + push).
   if (finalReplacement && decision === "approved") {
     const { data: onLeaveP } = await db.from("profiles").select("full_name").eq("id", (leave as any).coach_id).maybeSingle();
     const covBody = `You're covering ${className} on ${when} for ${(onLeaveP as any)?.full_name ?? "a colleague"}.`;
@@ -199,6 +212,99 @@ export async function decideCoachLeave(formData: FormData) {
     });
     try { await pushToUsers([finalReplacement], { title: "Covering a class", body: covBody, url: "/coach/schedule", tag: "cover" }); } catch { /* best-effort */ }
   }
+
+  // Open path: broadcast to every FREE coach so they can offer to cover.
+  if (opening && s) {
+    const eligible = await eligibleCoverCoaches({
+      sessionId: (leave as any).session_id,
+      sessionDate: s.session_date,
+      startTime: s.start_time,
+      endTime: s.end_time,
+      branchId: s.branch_id ?? null,
+      onLeaveCoachId: (leave as any).coach_id,
+    });
+    const ids = eligible.map((c) => c.id);
+    if (ids.length) {
+      const body = `Cover needed: ${className} on ${when}. Tap to offer.`;
+      await createNotifications(ids, { type: "coach_cover", title: "Cover needed", body, url: "/coach" });
+      try { await pushToUsers(ids, { title: "Cover needed", body, url: "/coach", tag: "cover" }); } catch { /* best-effort */ }
+    }
+  }
+
+  revalidate();
+}
+
+// Admin confirms one coach's offer to cover an OPEN leave. Locks in the
+// replacement, marks that offer confirmed + the rest declined, and notifies
+// everyone. This is the human gate — an offer alone never assigns a cover.
+export async function confirmCoverOffer(formData: FormData) {
+  await requireRole("admin");
+  const offerId = String(formData.get("offer_id") ?? "");
+  if (!UUID_RE.test(offerId)) return;
+
+  const db = createAdminClient();
+  const { data: offer } = await db
+    .from("coach_cover_offers")
+    .select("id, leave_id, coach_id, status")
+    .eq("id", offerId)
+    .maybeSingle();
+  if (!offer) return;
+
+  const { data: leave } = await db
+    .from("coach_leave_requests")
+    .select("id, coach_id, cover_status, session_id, sessions(session_date, start_time, classes(name))")
+    .eq("id", (offer as any).leave_id)
+    .maybeSingle();
+  if (!leave || (leave as any).cover_status === "filled") return; // already covered
+
+  const s = (leave as any).sessions;
+  const when = `${formatDate(s?.session_date)} ${formatTime(s?.start_time)}`;
+  const className = s?.classes?.name ?? "class";
+  const chosen = (offer as any).coach_id as string;
+
+  // Lock the cover in.
+  await db
+    .from("coach_leave_requests")
+    .update({ replacement_coach_id: chosen, cover_status: "filled" })
+    .eq("id", (leave as any).id);
+
+  // This offer confirmed; every other offer on the leave declined.
+  await db.from("coach_cover_offers").update({ status: "confirmed" }).eq("id", offerId);
+  await db
+    .from("coach_cover_offers")
+    .update({ status: "declined" })
+    .eq("leave_id", (offer as any).leave_id)
+    .neq("id", offerId);
+
+  // Tell the chosen coach (in-app + push).
+  const { data: onLeaveP } = await db.from("profiles").select("full_name").eq("id", (leave as any).coach_id).maybeSingle();
+  const covBody = `You're covering ${className} on ${when} for ${(onLeaveP as any)?.full_name ?? "a colleague"}.`;
+  await createNotifications([chosen], { type: "coach_cover", title: "You're covering a class", body: covBody, url: "/coach/schedule" });
+  try { await pushToUsers([chosen], { title: "You're covering a class", body: covBody, url: "/coach/schedule", tag: "cover" }); } catch { /* best-effort */ }
+
+  // Soft note to the coaches who offered but weren't picked.
+  const { data: others } = await db
+    .from("coach_cover_offers")
+    .select("coach_id")
+    .eq("leave_id", (offer as any).leave_id)
+    .neq("id", offerId);
+  const otherIds = [...new Set(((others ?? []) as any[]).map((o) => o.coach_id))];
+  if (otherIds.length) {
+    await createNotifications(otherIds, {
+      type: "coach_cover",
+      title: "Cover filled",
+      body: `Thanks for offering — ${className} on ${when} is covered by another coach.`,
+      url: "/coach",
+    });
+  }
+
+  // Requesting coach: their class is now covered.
+  await createNotifications([(leave as any).coach_id], {
+    type: "leave_decision",
+    title: "Cover confirmed",
+    body: `${className} on ${when} will be covered.`,
+    url: "/coach/schedule",
+  });
 
   revalidate();
 }

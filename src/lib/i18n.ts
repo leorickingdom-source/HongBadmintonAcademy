@@ -271,6 +271,11 @@ const en = {
   adm_outstanding: "Outstanding",
   adm_overdue: "Overdue",
   adm_todays_sessions: "Today's sessions",
+  adm_needs_action: "Needs attention",
+  adm_all_caught_up: "All caught up — nothing needs action.",
+  adm_leave_to_review: "Leave to review",
+  adm_cover_to_confirm: "Cover to confirm",
+  adm_new_leads: "New trial leads",
   st_scheduled: "scheduled",
   st_completed: "completed",
 
@@ -1517,6 +1522,11 @@ const zh: Dict = {
   adm_outstanding: "待收款",
   adm_overdue: "逾期",
   adm_todays_sessions: "今天的课程",
+  adm_needs_action: "待处理",
+  adm_all_caught_up: "全部处理完毕 — 暂无待办。",
+  adm_leave_to_review: "待审请假",
+  adm_cover_to_confirm: "待确认代课",
+  adm_new_leads: "新试课名单",
   st_scheduled: "已排期",
   st_completed: "已完成",
 

@@ -38,14 +38,30 @@ export default async function AdminDashboard() {
     return qq;
   };
 
-  const [students, coaches, activeClasses, totalClasses, unpaid, queued] = await Promise.all([
+  const [students, coaches, activeClasses, totalClasses, unpaid, queued, pendingLeave, pendingCoachLeave, openCover, newLeads] = await Promise.all([
     count("students", branched((q) => q.eq("status", "active"))),
     count("profiles", branched((q) => q.eq("role", "coach"))),
     count("classes", branched((q) => q.eq("is_active", true))),
     count("classes", branched()),
     count("invoices", branched((q) => q.in("status", ["unpaid", "overdue"]))),
     count("messages", (q) => q.eq("status", "queued")),
+    // Needs-attention sources. leave_requests has no direct branch_id (branch is
+    // via the joined session), so these count across all branches — the nudge is
+    // branch-agnostic and the linked page applies the branch focus itself.
+    count("leave_requests", (q) => q.eq("status", "pending")),
+    count("coach_leave_requests", (q) => q.eq("status", "pending")),
+    count("coach_leave_requests", (q) => q.eq("status", "approved").eq("cover_status", "open")),
+    count("trial_leads", branched((q) => q.eq("status", "new"))),
   ]);
+
+  // Task-first: only the things that actually need a decision today, non-zero
+  // only. Empty → an "all caught up" line rather than a wall of zeros.
+  const actions = [
+    { n: unpaid, label: L.adm_unpaid_invoices, href: "/admin/invoices?status=unpaid", tone: "red" as const },
+    { n: pendingLeave + pendingCoachLeave, label: L.adm_leave_to_review, href: "/admin/leave", tone: "amber" as const },
+    { n: openCover, label: L.adm_cover_to_confirm, href: "/admin/leave", tone: "blue" as const },
+    { n: newLeads, label: L.adm_new_leads, href: "/admin/leads?status=new", tone: "green" as const },
+  ].filter((a) => a.n > 0);
 
   let sessQ = supabase
     .from("sessions")
@@ -81,6 +97,25 @@ export default async function AdminDashboard() {
     <div>
       <PageHeader title={L.dashboard} description={L.dash_today_glance} />
 
+      {/* Needs attention — task-first: what to act on now, leads the page. Only
+          non-zero items show; nothing pending → a positive "all caught up" line. */}
+      <div className="mb-6 mt-4">
+        <h2 className="mb-2.5 text-sm font-semibold text-slate-500">{L.adm_needs_action}</h2>
+        {actions.length ? (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {actions.map((a) => (
+              <Link key={a.label} href={a.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+                <StatCard label={a.label} value={a.n} tone={a.tone} />
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+            {L.adm_all_caught_up}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <Link href="/admin/people?tab=students" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
           <StatCard label={L.adm_active_students} value={students} tone="green" />
@@ -90,9 +125,6 @@ export default async function AdminDashboard() {
         </Link>
         <Link href="/admin/classes" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
           <StatCard label={L.adm_active_total_classes} value={`${activeClasses} / ${totalClasses}`} tone="blue" />
-        </Link>
-        <Link href="/admin/invoices" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label={L.adm_unpaid_invoices} value={unpaid} tone={unpaid ? "red" : "slate"} />
         </Link>
         <Link href="/admin/messages" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
           <StatCard label={L.adm_queued_messages} value={queued} tone={queued ? "amber" : "slate"} />

@@ -24,7 +24,13 @@ export default async function LoginPage({
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
       <Card className="w-full max-w-sm p-8">
-        <div className="mb-2 flex justify-end">
+        <div className="mb-2 flex items-center justify-between">
+          <a
+            href="/welcome"
+            className="text-xs font-medium text-slate-500 hover:text-green-700 hover:underline"
+          >
+            {L.li_back_home}
+          </a>
           <PublicLangToggle locale={locale} />
         </div>
         <div className="mb-6 text-center">

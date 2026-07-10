@@ -1240,6 +1240,7 @@ const en = {
   li_staff_reset: "Coaches & admins: contact the academy to reset.",
   li_new_here: "New here? Try us first —",
   li_book_trial: "Book a free trial →",
+  li_back_home: "← Back to home",
 
   // ── public: trial ──
   trp_title: "Book a free trial",
@@ -2486,6 +2487,7 @@ const zh: Dict = {
   li_staff_reset: "教练与管理员：请联系学院重置。",
   li_new_here: "第一次来？先试试 —",
   li_book_trial: "预约免费试课 →",
+  li_back_home: "← 返回主页",
 
   // ── public: trial ──
   trp_title: "预约免费试课",

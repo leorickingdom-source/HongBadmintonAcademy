@@ -75,14 +75,73 @@ just creates fresh ones.
 - Verify the key any time: `node --env-file=.env.local scripts/stripe-smoke.mjs`
 - Fire a webhook locally: `stripe trigger checkout.session.completed`
 
-## Go-live checklist
+## Taking Stripe live — when the client gives their business details
 
-- [ ] Put **live** keys (`sk_live_`, `pk_live_`) in Vercel.
-- [ ] Create a **live** webhook endpoint → set the live `STRIPE_WEBHOOK_SECRET` in Vercel.
-- [ ] Enable MYR + the payment methods you want (Cards, FPX, GrabPay…) under
-      Stripe → Settings → Payment methods.
-- [ ] Re-run **Sync to Stripe** on the live account.
-- [ ] Do one small real end-to-end transaction.
+Today the account is in **TEST mode** (fake money — the test keys, the sandbox
+`acct_…`, and every existing `payments`/paid-invoice row are all pretend). Going
+live has **two halves in order**: the **owner activates the business** in Stripe,
+then the **developer swaps the keys**. The live keys will not settle real money
+until activation is submitted and approved.
+
+### Step 1 — OWNER: activate the account (the business details)
+
+In the **real** Stripe Dashboard (not the sandbox), the client/owner completes
+account activation. This is the "business details" hand-over:
+
+- **Business:** legal name, business type, **SSM / registration number**, address.
+- **Representative:** owner's name, DOB, and **ID (IC / passport)** for identity
+  verification (KYC — Stripe is legally required to collect this).
+- **Bank account (Malaysian)** for **payouts**, currency **MYR**.
+- **Public details:** support email + **statement descriptor** (the short text
+  that shows on the payer's card statement — set it so parents recognise it).
+- **Submit for activation.** Stripe reviews (usually minutes to ~1 business day).
+  Payouts only start once approved.
+
+### Step 2 — DEVELOPER: get the LIVE keys + webhook
+
+- Toggle the dashboard **out of Test mode** (top-right switch) → you're in **Live**.
+- **Developers → API keys** → copy `sk_live_…` (secret) and `pk_live_…` (publishable).
+- **Developers → Webhooks → Add endpoint:**
+  - URL `https://hong-badminton-academy.vercel.app/api/webhooks/stripe`
+  - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+    `checkout.session.async_payment_failed`, `charge.refunded`
+  - Copy the endpoint's **live** signing secret `whsec_…`.
+
+### Step 3 — DEVELOPER: update Vercel + redeploy
+
+In **Vercel → Settings → Environment Variables** (Production), set the **live** values:
+
+- `STRIPE_SECRET_KEY = sk_live_…`
+- `STRIPE_WEBHOOK_SECRET = whsec_…` (the **live** endpoint's secret)
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = pk_live_…`
+- `PAYMENT_CURRENCY = MYR`
+
+Then **redeploy** — env changes don't take effect until a new deploy.
+
+### Step 4 — DEVELOPER: payment methods + re-sync the catalog
+
+- Stripe (Live) → **Settings → Payment methods** → enable **Cards + FPX + GrabPay**
+  (the Malaysian methods you want).
+- App → **Admin → Fee Plans** → the status banner should now read **LIVE** → click
+  **Sync to Stripe**. Test products/prices do **not** carry over; this creates fresh
+  live Product+Price ids and stores them (self-healing).
+
+### Step 5 — Verify with one real transaction
+
+- Raise a small real invoice → pay with a real card → confirm the webhook flipped it
+  to **paid** (Admin → Invoices, and Stripe → Payments) → then **refund** it and
+  confirm the invoice returns to refunded.
+
+### Gotchas
+
+- **Webhook secret is per-endpoint AND per-mode.** The test `whsec_` will not verify
+  live events → payments succeed but invoices never flip to paid. This is the #1
+  go-live mistake — double-check Step 3.
+- **Test rows are fake.** Sandbox `payments` / paid invoices are not real money;
+  real revenue starts only after go-live. The app distinguishes them via `stripeMode()`.
+- **Payouts** land in the client's bank on Stripe's schedule (a longer hold on the
+  first payout, then rolling) — verify under Settings → Payouts.
+- **Rollback:** put the test keys back in Vercel + redeploy.
 
 ## Files
 

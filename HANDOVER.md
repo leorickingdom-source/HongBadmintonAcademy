@@ -188,15 +188,16 @@ any account.
 
 ### Roles at a glance
 
-There are **four** roles (`profiles.role`). Note the app *labels* a plain admin
-"**Branch admin**" (`ROLE_LABEL` in `src/lib/constants.ts`) — so wherever these
-docs say "admin" without qualification, read it as **branch admin**; the owner
-tier is always spelled out as **super-admin**.
+There are **four** roles (`profiles.role`). A plain `admin` is labelled simply
+"**Admin**" (`ROLE_LABEL` in `src/lib/constants.ts`). Since the per-branch wall
+was removed (migration `0052`), an admin is **not** tied to one branch — the two
+tiers now differ only by *powers* (finance/settings/staff), not by branch. The
+owner tier is always spelled out as **super-admin**.
 
 | Role | App label | Auth | Scope |
 |------|-----------|------|-------|
-| `super_admin` | Super admin | Supabase session + MFA | **Owner tier.** Every branch, all money, all global config. Strict superset of admin. |
-| `admin` | Branch admin | Supabase session + MFA | Daily ops for their own branch. **No** revenue, settings, branches, staff, refunds, or fee-price edits. |
+| `super_admin` | Super admin | Supabase session + MFA | **Owner tier.** All money, settings, staff, branches, refunds. Strict superset of admin. |
+| `admin` | Admin | Supabase session + MFA | Daily ops across **all** branches. **No** revenue, settings, branches, staff, refunds, or fee-price edits. |
 | `coach` | Coach | Supabase session + MFA | Own classes: check-in, marking, assessments, exams, own payroll. |
 | `parent` | Parent | `hba_parent` cookie (no session) | Own children: progress, schedule, leave, fees. |
 

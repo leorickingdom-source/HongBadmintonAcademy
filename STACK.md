@@ -61,6 +61,21 @@ One Supabase project provides three things:
 - Payments are reconciled by a **webhook** (`checkout.session.completed` →
   `/api/webhooks/stripe`), verified with `STRIPE_WEBHOOK_SECRET`.
 
+**Going live (when the client provides business details).** The account is in
+TEST mode today. Two halves, in order:
+
+1. **Owner activates the business** in Stripe — legal name + **SSM number**,
+   representative **ID (KYC)**, a **Malaysian bank account** for MYR payouts, and a
+   statement descriptor → submit for activation (Stripe reviews, ~minutes to a day).
+2. **Developer swaps to live** — copy the `sk_live_` / `pk_live_` keys + create a
+   **live** webhook (its own `whsec_`), set the three keys + `PAYMENT_CURRENCY` in
+   **Vercel → Environment Variables**, **redeploy**, enable Cards / FPX / GrabPay,
+   then **Admin → Fee Plans → Sync to Stripe**, and verify with one real charge + refund.
+
+> ⚠️ The webhook secret is **per-mode** — a test `whsec_` won't verify live events
+> (payments succeed but invoices never flip to paid). This is the #1 go-live
+> mistake. Full step-by-step: **STRIPE.md → "Taking Stripe live"**.
+
 ## 4. Messaging
 
 Two independent channels:

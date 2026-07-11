@@ -138,6 +138,43 @@ Two independent channels:
 
 ---
 
+## Where each dashboard lives
+
+| Service | Dashboard URL |
+|---------|---------------|
+| Vercel | `https://vercel.com/dashboard` → project **hong-badminton-academy** |
+| Supabase | `https://supabase.com/dashboard/project/njxrxpdxttwuawsqvkku` |
+| Stripe | `https://dashboard.stripe.com` (currently TEST mode) |
+| GitHub | `https://github.com/Hide-and-Seeds/HongBadmintonAcademy` |
+| Cloudflare (tunnel) | `https://dash.cloudflare.com` |
+| WhatsApp worker | No dashboard — it's the academy's Windows PC (see OPERATIONS) |
+
+---
+
+## Account access & recovery — fill in, keep secrets elsewhere
+
+> ⚠️ **Do NOT write passwords or API keys in this document.** A handover doc gets
+> emailed and copied around. Store the actual secrets in a shared **password
+> manager** (1Password / Bitwarden). This sheet records only *where* each account
+> is, *how* you sign in, and *how to recover* it — enough to regain access, never
+> the secret itself.
+
+| Service | Login email / account | Sign-in method (password / Google SSO / GitHub) | 2FA on? Recovery codes stored where? | Who has access |
+|---------|----------------------|--------------------------------------------------|--------------------------------------|----------------|
+| Vercel | | | | |
+| Supabase | | | | |
+| Stripe | | | | |
+| GitHub | | | | |
+| Cloudflare | | | | |
+| Domain registrar (if any) | | | | |
+| Academy PC (WhatsApp worker) | | Windows login | | |
+
+> **Screenshots of each dashboard:** paste them beneath each service above, or in
+> an appendix. Capture them yourself from your own logged-in session — they show
+> private billing/usage, so keep this file access-controlled if you add them.
+
+---
+
 *Snapshot — confirm plan tiers and account access live before relying on them.
 Pairs with [`HANDOVER.md`](HANDOVER.md) (full handover), [`DEVELOPER.md`](DEVELOPER.md)
 (code patterns) and [`OPERATIONS.md`](OPERATIONS.md) (day-to-day).*

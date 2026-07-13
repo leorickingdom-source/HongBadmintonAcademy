@@ -49,11 +49,23 @@ export async function createBranch(formData: FormData) {
   redirect("/admin/branches?saved=1");
 }
 
+// Parse a finite lat/lng from the form, else null (blank = clear the coordinate).
+const cleanCoord = (v: FormDataEntryValue | null, min: number, max: number): number | null => {
+  const n = Number.parseFloat(String(v ?? "").trim());
+  return Number.isFinite(n) && n >= min && n <= max ? n : null;
+};
+
 export async function updateBranch(formData: FormData) {
   await requireSuperAdmin();
   const id = String(formData.get("id"));
   const name = clean(formData.get("name"));
   if (!name) err("Branch name is required.");
+
+  // Geofence: coords are optional; radius clamped to a sane range. "enabled" only
+  // bites once coordinates exist, but we store the flag as the admin set it.
+  const radiusRaw = Number.parseInt(String(formData.get("geofence_radius_m") ?? ""), 10);
+  const geofence_radius_m = Number.isFinite(radiusRaw) ? Math.min(5000, Math.max(20, radiusRaw)) : 300;
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("branches")
@@ -63,6 +75,11 @@ export async function updateBranch(formData: FormData) {
       address: clean(formData.get("address")),
       phone: clean(formData.get("phone")),
       color: cleanColor(formData.get("color")),
+      lat: cleanCoord(formData.get("lat"), -90, 90),
+      lng: cleanCoord(formData.get("lng"), -180, 180),
+      geofence_radius_m,
+      geofence_enabled: formData.get("geofence_enabled") === "on",
+      geofence_required: formData.get("geofence_required") === "on",
     })
     .eq("id", id);
   if (error) err(error.message);

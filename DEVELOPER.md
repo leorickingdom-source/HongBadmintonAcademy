@@ -225,6 +225,21 @@ Use `admin_branch_ok(branch_id)` in the admin policy (direct `branch_id`), or
 `admin_of_class/session/student(...)` when the branch lives on a parent row. See
 `0038`/`0031`. Coach/parent policies stay keyed on `coach_of_*` / the parent id.
 
+### The coach check-in geofence
+Per-branch: `branches.lat/lng/geofence_radius_m/geofence_enabled/geofence_required`
+(migration `0060`). `src/lib/geofence.ts` `getBranchGeofence(branchId)` is the
+single source of truth (branch overrides → env `ACADEMY_*` fallback → off). The
+server guard lives in `setCoachCheckin` (`checkin/board-actions.ts`): it resolves
+the session's branch geofence and rejects an out-of-radius tap, subtracting the
+device's GPS accuracy so a fuzzy fix doesn't false-reject. Proof is stored on
+`coach_checkins` (`lat/lng/distance_m`, `method='self_geo'`) and surfaced on the
+admin coverage page. Admins set a venue's coords from **Admin → Branches → Edit →
+"Use my current location"**. Coaches get a live on-site chip on the check-in
+board plus a self-test at **`/coach/checkin/geo-check`**.
+**Browser geolocation needs a secure context** — it only works on HTTPS or
+`localhost`. Testing on a phone over the LAN (`http://192.168.x.x`) returns no
+position; use the deployed HTTPS URL (or a tunnel).
+
 ### A new cron
 Route `src/app/api/cron/<name>/route.ts` — first check the secret:
 ```ts

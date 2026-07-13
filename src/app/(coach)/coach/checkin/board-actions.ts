@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
+import { haversineMeters } from "@/lib/geo";
+import { getBranchGeofence } from "@/lib/geofence";
 import { coachClassIds } from "../_data";
 import type { AttendanceStatus } from "@/lib/types";
 
@@ -51,9 +53,11 @@ export async function clearAttendanceAction(input: {
 }
 
 // Coach self-check-in: record (or undo) that the coach showed up to a session.
+// coords (when the browser shares them) drive the geofence guard below.
 export async function setCoachCheckin(input: {
   session_id: string;
   on: boolean;
+  coords?: { lat: number; lng: number; accuracy?: number };
 }): Promise<{ ok: boolean; error?: string }> {
   if (!input?.session_id) return { ok: false, error: "missing" };
   const supabase = await createClient();
@@ -68,7 +72,7 @@ export async function setCoachCheckin(input: {
     // admin coverage page — a check-in with no marks is the tell-tale of a fake.
     const { data: sess } = await createAdminClient()
       .from("sessions")
-      .select("session_date, start_time, end_time")
+      .select("session_date, start_time, end_time, branch_id")
       .eq("id", input.session_id)
       .maybeSingle();
     if (sess?.session_date && sess.start_time && sess.end_time) {
@@ -81,10 +85,46 @@ export async function setCoachCheckin(input: {
         return { ok: false, error: "You can only check in around the session time." };
       }
     }
-    const { error } = await supabase.from("coach_checkins").upsert(
-      { session_id: input.session_id, coach_id: user.id, method: "self" },
-      { onConflict: "session_id,coach_id" },
-    );
+
+    // Geofence guard: when the session's branch has a configured venue location,
+    // the coach must be physically near it. We subtract the device's reported
+    // accuracy so a fuzzy GPS fix doesn't produce a false rejection — reject only
+    // when even the best-case position is outside the radius.
+    const gf = await getBranchGeofence((sess as { branch_id?: string | null } | null)?.branch_id ?? null);
+    const row: Record<string, unknown> = {
+      session_id: input.session_id,
+      coach_id: user.id,
+      method: "self",
+    };
+    if (gf.enabled && gf.lat !== null && gf.lng !== null) {
+      const c = input.coords;
+      if (!c || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)) {
+        if (gf.required) {
+          return {
+            ok: false,
+            error: "Turn on location to check in — the venue confirms you're on-site.",
+          };
+        }
+        // Optional geofence + no fix: let it through, recorded as plain 'self'.
+      } else {
+        const dist = haversineMeters({ lat: gf.lat, lng: gf.lng }, { lat: c.lat, lng: c.lng });
+        const slack = Number.isFinite(c.accuracy) ? Math.max(0, c.accuracy as number) : 0;
+        if (dist - slack > gf.radiusM) {
+          return {
+            ok: false,
+            error: `Too far from the venue (~${Math.round(dist)} m away). Move closer to check in.`,
+          };
+        }
+        row.method = "self_geo";
+        row.lat = c.lat;
+        row.lng = c.lng;
+        row.distance_m = Math.round(dist);
+      }
+    }
+
+    const { error } = await supabase
+      .from("coach_checkins")
+      .upsert(row, { onConflict: "session_id,coach_id" });
     if (error) return { ok: false, error: error.message };
   } else {
     const { error } = await supabase

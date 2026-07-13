@@ -2,6 +2,12 @@
 // configured (placeholders in .env.local). When not configured, auth/DB calls
 // are skipped instead of throwing.
 
+// Parse a finite float from an env string, else null (used for optional coords).
+const numOrNull = (v?: string): number | null => {
+  const n = Number.parseFloat(v ?? "");
+  return Number.isFinite(n) ? n : null;
+};
+
 export const env = {
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
@@ -38,6 +44,16 @@ export const env = {
 
   nfcApiKey: process.env.NFC_API_KEY ?? "",
   cronSecret: process.env.CRON_SECRET ?? "",
+
+  // Coach check-in geofence. When academyLat/academyLng are set, the "I'm here"
+  // self-check-in captures the coach's device location and the server rejects
+  // taps further than geofenceRadiusM from the academy. geofenceRequired=true
+  // hard-blocks a check-in when the browser can't/won't share a location;
+  // false lets it through but records it without geo proof.
+  academyLat: numOrNull(process.env.ACADEMY_LAT),
+  academyLng: numOrNull(process.env.ACADEMY_LNG),
+  geofenceRadiusM: Number.parseInt(process.env.GEOFENCE_RADIUS_M ?? "300", 10) || 300,
+  geofenceRequired: process.env.GEOFENCE_REQUIRED === "true",
 };
 
 // NB: do not add "" here — String.includes("") is always true.
@@ -64,4 +80,9 @@ export function isWhatsappConfigured(): boolean {
 
 export function isWaWorkerConfigured(): boolean {
   return !!env.waWorkerUrl && !!env.waWorkerSecret;
+}
+
+// Geofence is active only when a valid academy coordinate is configured.
+export function isGeofenceConfigured(): boolean {
+  return env.academyLat !== null && env.academyLng !== null;
 }

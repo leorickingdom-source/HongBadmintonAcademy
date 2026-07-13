@@ -1,9 +1,12 @@
+import Link from "next/link";
+import { MapPin } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { dict } from "@/lib/i18n";
 import { coachClassIds, coachCoverSessionIds } from "../_data";
+import { getBranchGeofence, type Geofence } from "@/lib/geofence";
 import { NfcScanner } from "@/components/nfc-scanner";
 import { scanTap } from "./actions";
 import { type Block } from "./checkin-board";
@@ -28,7 +31,7 @@ export default async function CheckinPage() {
     classIds.length
       ? supabase
           .from("sessions")
-          .select("id, class_id, session_date, start_time, end_time, location, grace_minutes, classes(name)")
+          .select("id, class_id, session_date, start_time, end_time, location, grace_minutes, branch_id, classes(name)")
           .in("class_id", classIds)
           .eq("session_date", today)
           .order("start_time")
@@ -36,7 +39,7 @@ export default async function CheckinPage() {
     coverSessionIds.length
       ? supabase
           .from("sessions")
-          .select("id, class_id, session_date, start_time, end_time, location, grace_minutes, classes(name)")
+          .select("id, class_id, session_date, start_time, end_time, location, grace_minutes, branch_id, classes(name)")
           .in("id", coverSessionIds)
           .eq("session_date", today)
           .order("start_time")
@@ -77,6 +80,13 @@ export default async function CheckinPage() {
       arr.push({ child_name: g.child_name, experience: g.experience });
       guestsBySession.set(g.preferred_session_id, arr);
     }
+  }
+
+  // Resolve each session's branch geofence once per distinct branch, so the
+  // coach board can show live "on-site / too far" status client-side.
+  const geoByBranch = new Map<string, Geofence>();
+  for (const bId of new Set((sessions ?? []).map((s: any) => s.branch_id).filter(Boolean) as string[])) {
+    geoByBranch.set(bId, await getBranchGeofence(bId));
   }
 
   const blocks: Block[] = [];
@@ -123,7 +133,15 @@ export default async function CheckinPage() {
         dropIn: true,
       } as any);
     }
-    blocks.push({ session: s as any, roster: roster as any, coachedIn: coachedSet.has(s.id), covering: coverSet.has(s.id), trialGuests: guestsBySession.get(s.id) ?? [] });
+    const gf = s.branch_id ? geoByBranch.get(s.branch_id) : undefined;
+    blocks.push({
+      session: s as any,
+      roster: roster as any,
+      coachedIn: coachedSet.has(s.id),
+      covering: coverSet.has(s.id),
+      trialGuests: guestsBySession.get(s.id) ?? [],
+      geofence: gf && gf.enabled ? { lat: gf.lat, lng: gf.lng, radiusM: gf.radiusM, required: gf.required } : undefined,
+    });
   }
 
   return (
@@ -137,6 +155,15 @@ export default async function CheckinPage() {
         <EmptyState message={L.no_sessions_today} />
       ) : (
         <CheckinSwitcher blocks={blocks} locale={me.locale} nfc={<NfcScanner action={scanTap} />} />
+      )}
+
+      {blocks.some((b) => b.geofence) && (
+        <Link
+          href="/coach/checkin/geo-check"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:underline"
+        >
+          <MapPin className="h-4 w-4" /> Test my location
+        </Link>
       )}
     </div>
   );

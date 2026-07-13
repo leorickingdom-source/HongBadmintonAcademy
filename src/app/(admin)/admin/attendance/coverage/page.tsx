@@ -33,18 +33,21 @@ export default async function CoachCoveragePage() {
 
   const empty = Promise.resolve({ data: [] as any[] });
   const [{ data: checkins }, { data: att }, { data: coCoaches }, { data: enr }] = await Promise.all([
-    ids.length ? supabase.from("coach_checkins").select("session_id, coach_id").in("session_id", ids) : empty,
+    ids.length ? supabase.from("coach_checkins").select("session_id, coach_id, method, distance_m").in("session_id", ids) : empty,
     ids.length ? supabase.from("attendance").select("session_id, status").in("session_id", ids) : empty,
     classIds.length ? supabase.from("class_coaches").select("class_id, coach_id, profiles(full_name)").in("class_id", classIds) : empty,
     classIds.length ? supabase.from("enrollments").select("class_id").eq("active", true).in("class_id", classIds) : empty,
   ]);
 
-  // session -> set of coach ids that checked in
+  // session -> set of coach ids that checked in, + the geo proof (distance) when
+  // the check-in captured a location (method 'self_geo').
   const checkedBySession = new Map<string, Set<string>>();
+  const geoBySession = new Map<string, { distance_m: number | null; method: string }>();
   for (const c of (checkins ?? []) as any[]) {
     const s = checkedBySession.get(c.session_id) ?? new Set<string>();
     s.add(c.coach_id);
     checkedBySession.set(c.session_id, s);
+    if (c.method === "self_geo") geoBySession.set(c.session_id, { distance_m: c.distance_m ?? null, method: c.method });
   }
   // session -> { marked, present }
   const attBySession = new Map<string, { marked: number; present: number }>();
@@ -91,6 +94,7 @@ export default async function CoachCoveragePage() {
                 const coaches = coachesByClass.get(s.class_id) ?? [];
                 const checked = checkedBySession.get(s.id) ?? new Set<string>();
                 const anyIn = coaches.some((c) => checked.has(c.id));
+                const geo = geoBySession.get(s.id);
                 const a = attBySession.get(s.id) ?? { marked: 0, present: 0 };
                 const roster = rosterByClass.get(s.class_id) ?? 0;
                 return (
@@ -106,7 +110,17 @@ export default async function CoachCoveragePage() {
                       {coaches.length === 0 ? (
                         <span className="text-slate-300">—</span>
                       ) : (
-                        <Badge tone={anyIn ? "green" : "red"}>{anyIn ? "yes" : "no"}</Badge>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Badge tone={anyIn ? "green" : "red"}>{anyIn ? "yes" : "no"}</Badge>
+                          {anyIn && geo && (
+                            <span
+                              className="text-xs text-slate-400"
+                              title="Location verified at check-in (distance from academy)"
+                            >
+                              📍 {geo.distance_m != null ? `~${geo.distance_m} m` : "on-site"}
+                            </span>
+                          )}
+                        </span>
                       )}
                     </Td>
                     <Td>

@@ -36,6 +36,12 @@ export interface Branch {
   color: string | null;
   is_active: boolean;
   created_at: string;
+  // Check-in geofence (0060). Off unless geofence_enabled + coords are set.
+  lat: number | null;
+  lng: number | null;
+  geofence_radius_m: number;
+  geofence_enabled: boolean;
+  geofence_required: boolean;
 }
 
 export interface Student {

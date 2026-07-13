@@ -4,6 +4,7 @@ import {
   PageHeader, Collapsible, Section, Field, Input, Badge, EmptyState, cn,
 } from "@/components/ui";
 import { BranchDot, BranchColorPicker } from "@/components/branch-chip";
+import { BranchGeofenceFields } from "./branch-geofence-fields";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { dict } from "@/lib/i18n";
@@ -130,6 +131,13 @@ export default async function BranchesPage({
                         <BranchColorPicker value={b.color} />
                       </Field>
                     </div>
+                    <BranchGeofenceFields
+                      defaultEnabled={!!b.geofence_enabled}
+                      defaultRequired={!!b.geofence_required}
+                      defaultRadius={b.geofence_radius_m ?? 300}
+                      defaultLat={b.lat ?? null}
+                      defaultLng={b.lng ?? null}
+                    />
                     <div className="sm:col-span-2">
                       <SubmitButton pendingText={L.cr_saving}>{L.br_save_changes}</SubmitButton>
                     </div>

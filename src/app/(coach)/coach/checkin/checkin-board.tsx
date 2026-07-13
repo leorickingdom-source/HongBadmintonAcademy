@@ -6,6 +6,7 @@ import { useFlash } from "@/components/flash";
 import { dict } from "@/lib/i18n";
 import { Check, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { formatTime } from "@/lib/format";
+import { haversineMeters } from "@/lib/geo";
 import type { AttendanceStatus } from "@/lib/types";
 import {
   setAttendanceAction, setPerfAction, markAllPresentAction,
@@ -39,6 +40,9 @@ export interface Block {
   // Trial leads who booked this session but aren't students yet — shown as a
   // read-only "expected" strip (no attendance row; they have no student id).
   trialGuests?: { child_name: string; experience: string | null }[];
+  // Active check-in geofence for this session's branch (present only when the
+  // branch has one configured). Drives the on-site status chip.
+  geofence?: { lat: number | null; lng: number | null; radiusM: number; required: boolean };
 }
 
 type AddableStudent = { id: string; full_name: string; photo_url: string | null };
@@ -51,6 +55,58 @@ const MARKS: { status: AttendanceStatus; label: string; on: string }[] = [
   { status: "excused", label: "Excused", on: "bg-slate-600 text-white" },
 ];
 
+// Best-effort device location for the check-in geofence. Resolves null on
+// denial, timeout, insecure context, or unsupported browser — never throws, so
+// a missing fix degrades to a server-side decision rather than a broken button.
+function getCoords(): Promise<{ lat: number; lng: number; accuracy?: number } | undefined> {
+  return new Promise((resolve) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return resolve(undefined);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+      () => resolve(undefined),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
+    );
+  });
+}
+
+function fmtDist(m?: number): string {
+  if (m == null) return "";
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`;
+}
+
+// On-site status chip beside "I'm here". Tap to (re)measure device location
+// against the branch geofence. Idle → prompt; then coloured verdict.
+function GeoChip({
+  check,
+  onCheck,
+}: {
+  check?: { state: "checking" | "ok" | "far" | "nofix"; distance?: number };
+  onCheck: () => void;
+}) {
+  const base =
+    "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold ring-1 ring-inset transition-colors";
+  if (!check) {
+    return (
+      <button type="button" onClick={onCheck} className={cn(base, "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50")}>
+        📍 Check location
+      </button>
+    );
+  }
+  if (check.state === "checking") {
+    return <span className={cn(base, "bg-white text-slate-500 ring-slate-300")}>📍 Checking…</span>;
+  }
+  const view = {
+    ok: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", label: `On-site · ${fmtDist(check.distance)}` },
+    far: { cls: "bg-red-50 text-red-700 ring-red-200", label: `Too far · ${fmtDist(check.distance)}` },
+    nofix: { cls: "bg-amber-50 text-amber-700 ring-amber-200", label: "Location off" },
+  }[check.state];
+  return (
+    <button type="button" onClick={onCheck} className={cn(base, view.cls)} title="Tap to re-check">
+      📍 {view.label}
+    </button>
+  );
+}
+
 export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]; locale?: string | null }) {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const { flash, node } = useFlash();
@@ -58,6 +114,10 @@ export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]
   const [, startTransition] = useTransition();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
+  // Live geofence self-check per session (a one-tap "am I on-site?" test).
+  const [geoChk, setGeoChk] = useState<
+    Record<string, { state: "checking" | "ok" | "far" | "nofix"; distance?: number }>
+  >({});
 
   // When a coach has more than one class today, show one session at a time.
   const [activeIdx, setActiveIdx] = useState(0);
@@ -115,16 +175,36 @@ export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]
     });
   }
 
-  function setCoach(sId: string, on: boolean) {
+  async function setCoach(sId: string, on: boolean) {
     const snapshot = blocks;
     setBlocks((prev) => prev.map((b) => (b.session.id !== sId ? b : { ...b, coachedIn: on })));
+    // Capture the coach's location for the geofence when checking in. If the
+    // browser can't/won't share it, we send nothing and the server decides
+    // whether that's allowed (depends on GEOFENCE_REQUIRED).
+    const coords = on ? await getCoords() : undefined;
     startTransition(async () => {
-      const r = await setCoachCheckin({ session_id: sId, on });
+      const r = await setCoachCheckin({ session_id: sId, on, coords });
       if (!r.ok) {
         setBlocks(snapshot);
         flash(r.error ?? L.checkin_update_fail);
       }
     });
+  }
+
+  // One-tap "am I on-site?" check — reads the device location and measures it
+  // against the branch geofence, entirely client-side, so a coach (or the client
+  // testing on their phone) sees exactly where they stand before check-in.
+  async function checkGeo(sId: string, gf: NonNullable<Block["geofence"]>) {
+    if (gf.lat == null || gf.lng == null) return;
+    setGeoChk((g) => ({ ...g, [sId]: { state: "checking" } }));
+    const c = await getCoords();
+    if (!c) {
+      setGeoChk((g) => ({ ...g, [sId]: { state: "nofix" } }));
+      return;
+    }
+    const dist = Math.round(haversineMeters({ lat: gf.lat, lng: gf.lng }, { lat: c.lat, lng: c.lng }));
+    const ok = dist - (c.accuracy ?? 0) <= gf.radiusM;
+    setGeoChk((g) => ({ ...g, [sId]: { state: ok ? "ok" : "far", distance: dist } }));
   }
 
   function setPerf(sId: string, stId: string, rating: number) {
@@ -246,7 +326,7 @@ export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]
       )}
 
       <div className="space-y-6">
-        {visible.map(({ session, roster, coachedIn, covering, trialGuests }) => {
+        {visible.map(({ session, roster, coachedIn, covering, trialGuests, geofence }) => {
           const present = roster.filter(
             (r) => r.att && (r.att.status === "present" || r.att.status === "late"),
           ).length;
@@ -275,6 +355,7 @@ export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]
                   >
                     {coachedIn ? L.im_on_court : L.im_here}
                   </button>
+                  {geofence && <GeoChip check={geoChk[session.id]} onCheck={() => checkGeo(session.id, geofence)} />}
                   <Badge tone={roster.length && present === roster.length ? "green" : "blue"}>
                     {present}/{roster.length} {L.present_word}
                   </Badge>
